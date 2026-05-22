@@ -1,0 +1,69 @@
+const bcrypt = require('bcrypt');
+const db = require('./db');
+const dayjs = require('dayjs');
+
+const senhaAdmin = bcrypt.hashSync('admin123', 10);
+const senhaMotorista = bcrypt.hashSync('motorista123', 10);
+const senhaColaborador = bcrypt.hashSync('colaborador123', 10);
+
+const colaboradores = [
+  { matricula: '1000', nome_completo: 'Administrador RH', cpf: '11111111111', telefone_whatsapp: '11999990000', email: 'admin@empresa.com', cargo: 'Admin RH', setor: 'Recursos Humanos', unidade: 'Sede', tipo_colaborador: 'Interno', status: 'Ativo', data_admissao: '2020-01-10', senha_hash: senhaAdmin, perfil: 'admin' },
+  { matricula: '2000', nome_completo: 'João Motorista', cpf: '22222222222', telefone_whatsapp: '11988880000', email: 'joao.motorista@empresa.com', cargo: 'Motorista', setor: 'Logística', unidade: 'Filial A', tipo_colaborador: 'Externo', status: 'Ativo', data_admissao: '2019-05-20', senha_hash: senhaMotorista, perfil: 'motorista' },
+  { matricula: '3000', nome_completo: 'Maria Colaboradora', cpf: '33333333333', telefone_whatsapp: '11977770000', email: 'maria.colab@empresa.com', cargo: 'Analista', setor: 'Financeiro', unidade: 'Sede', tipo_colaborador: 'Interno', status: 'Ativo', data_admissao: '2021-07-15', senha_hash: senhaColaborador, perfil: 'colaborador' }
+];
+
+const prontuarios = [
+  { colaborador_matricula: '2000', pontuacao_atual: 82, faixa_atual: 'Verde', pontos_de_atencao: 'Use cinto de segurança, respeite velocidades', orientacoes: 'Revisar checklist diário', observacoes: 'Boa atenção nos retornos', data_atualizacao: dayjs().format('YYYY-MM-DD HH:mm:ss') }
+];
+
+const respostas = [
+  { categoria: 'Clima', pergunta: 'como está o clima', resposta: 'O clima segue estável; confira detalhes com o setor de segurança.', ativo: 1 },
+  { categoria: 'SKAP', pergunta: 'o que é skap', resposta: 'SKAP é a pesquisa de conhecimento e atitude em processos de segurança.', ativo: 1 },
+  { categoria: 'Segurança', pergunta: 'campeão de segurança', resposta: 'O campeão de segurança é o colaborador que promove as melhores ações preventivas.', ativo: 1 },
+  { categoria: 'Produtividade', pergunta: 'prêmio de produtividade', resposta: 'O prêmio reconhece os colaboradores com maior eficiência e qualidade no trabalho.', ativo: 1 },
+  { categoria: 'Ouvidoria', pergunta: 'ouvidoria', resposta: 'A ouvidoria está disponível em https://www.log20.com.br/ouvidorias', ativo: 1 }
+];
+
+const atendimentos = [
+  { colaborador_matricula: '3000', telefone: '11977770000', mensagem: 'Preciso de suporte no RH', resposta: 'Aguardando contato do RH', categoria: 'Geral', status: 'Pendente', data_hora: dayjs().format('YYYY-MM-DD HH:mm:ss') }
+];
+
+function loadSeed() {
+  db.serialize(() => {
+    db.run('DELETE FROM atendimentos');
+    db.run('DELETE FROM respostas_chatbot');
+    db.run('DELETE FROM prontuario_motoristas');
+    db.run('DELETE FROM historico_pontuacao');
+    db.run('DELETE FROM colaboradores');
+
+    const insertColab = db.prepare(`INSERT INTO colaboradores (matricula, nome_completo, cpf, telefone_whatsapp, email, cargo, setor, unidade, tipo_colaborador, status, data_admissao, senha_hash, perfil)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    colaboradores.forEach((col) => {
+      insertColab.run([col.matricula, col.nome_completo, col.cpf, col.telefone_whatsapp, col.email, col.cargo, col.setor, col.unidade, col.tipo_colaborador, col.status, col.data_admissao, col.senha_hash, col.perfil]);
+    });
+    insertColab.finalize();
+
+    const insertPront = db.prepare(`INSERT INTO prontuario_motoristas (colaborador_id, pontuacao_atual, faixa_atual, pontos_de_atencao, orientacoes, observacoes, data_atualizacao)
+      VALUES ((SELECT id FROM colaboradores WHERE matricula = ?), ?, ?, ?, ?, ?, ?)`);
+    prontuarios.forEach((item) => {
+      insertPront.run([item.colaborador_matricula, item.pontuacao_atual, item.faixa_atual, item.pontos_de_atencao, item.orientacoes, item.observacoes, item.data_atualizacao]);
+    });
+    insertPront.finalize();
+
+    const insertResp = db.prepare('INSERT INTO respostas_chatbot (categoria, pergunta, resposta, ativo) VALUES (?, ?, ?, ?)');
+    respostas.forEach((item) => {
+      insertResp.run([item.categoria, item.pergunta, item.resposta, item.ativo]);
+    });
+    insertResp.finalize();
+
+    const insertAtend = db.prepare('INSERT INTO atendimentos (colaborador_id, telefone, mensagem, resposta, categoria, status, data_hora) VALUES ((SELECT id FROM colaboradores WHERE matricula = ?), ?, ?, ?, ?, ?, ?)');
+    atendimentos.forEach((item) => {
+      insertAtend.run([item.colaborador_matricula, item.telefone, item.mensagem, item.resposta, item.categoria, item.status, item.data_hora]);
+    });
+    insertAtend.finalize();
+
+    console.log('Dados fake carregados com sucesso.');
+  });
+}
+
+loadSeed();

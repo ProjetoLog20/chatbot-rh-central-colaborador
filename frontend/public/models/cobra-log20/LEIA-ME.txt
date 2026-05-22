@@ -1,0 +1,35 @@
+# Cobra LOG20 CDD Cascavel — Modelo para impressão 3D
+
+Arquivo principal:
+- cobra_log20_cdd_cascavel_printavel.stl
+
+Descrição:
+- Mascote em formato de cobra, inspirado no CDD de Cascavel/PR.
+- Base circular para estabilidade.
+- Boné, colete, tablet e placa frontal.
+- Modelo pensado para impressão de protótipo/estatueta.
+
+Observações importantes:
+- STL é monocromático. Para ter cores LOG20, pinte após a impressão ou use impressão multicolor.
+- O texto/logotipo foi simplificado em relevo geométrico para ficar mais imprimível.
+- Para resultado profissional com logo perfeito, use decalque/adesivo após pintar.
+
+Configuração sugerida em FDM/PLA:
+- Altura final: 90 a 120 mm.
+- Layer height: 0,16 mm ou 0,20 mm.
+- Infill: 12% a 18%.
+- Paredes: 3.
+- Suporte: ativado, preferencialmente tree support/orgânico.
+- Brim: recomendado.
+
+Configuração sugerida em resina:
+- Altura final: 80 a 110 mm.
+- Inclinar 20° a 30°.
+- Suportes médios nas áreas do boné, tablet, braços e focinho.
+- Lavar e curar conforme a resina.
+
+Pintura sugerida:
+- Corpo: verde/amarelo cascavel.
+- Boné e uniforme: azul LOG20.
+- Detalhes: laranja LOG20.
+- Placa/peito: LOG20 CDD Cascavel.

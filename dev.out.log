@@ -1,0 +1,23 @@
+
+> dev
+> vite
+
+Re-optimizing dependencies because lockfile has changed
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m337[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[2m17:18:21[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ChatAssistant.jsx[22m
+[2m17:18:27[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Mascot3D.jsx[22m
+[2m17:18:38[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles.css[22m
+[2m17:23:39[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ChatAssistant.jsx[22m
+[2m17:23:53[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles.css[22m
+[2m17:24:02[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles.css[22m
+[2m18:13:14[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/LoginPage.jsx, /src/components/ProfilePage.jsx, /src/components/DriverPage.jsx, /src/components/ChatAssistant.jsx, /src/components/AdminPage.jsx[22m
+[2m18:13:44[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Dashboard.jsx[22m
+[2m18:14:22[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/AdminPage.jsx[22m
+[2m18:14:39[22m [36m[1m[vite][22m[39m [32mvite.config.js changed, restarting server...[39m
+Re-optimizing dependencies because lockfile has changed
+[2m18:14:39[22m [36m[1m[vite][22m[39m server restarted.
+[2m18:15:17[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles.css[22m

@@ -1,0 +1,142 @@
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
+
+function getHeaders(token) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
+async function request(path, options = {}) {
+  const token = localStorage.getItem('token');
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: getHeaders(token)
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw body || { error: 'Erro de requisição' };
+  return body;
+}
+
+export async function login(matricula, senha) {
+  return request('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ matricula, senha })
+  });
+}
+
+export async function getProfile() {
+  return request('/colaboradores/me');
+}
+
+export async function getProntuarioMe() {
+  return request('/prontuario_motoristas/me');
+}
+
+export async function getCollaborators() {
+  return request('/colaboradores');
+}
+
+export async function getProntuarios() {
+  return request('/prontuario_motoristas');
+}
+
+export async function getRespostas() {
+  return request('/respostas_chatbot');
+}
+
+export async function getPublicAcoes() {
+  return request('/acoes/publicas');
+}
+
+export async function getAdminAcoes() {
+  return request('/acoes');
+}
+
+export async function createAcao(payload) {
+  const token = localStorage.getItem('token');
+  const formData = new FormData();
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) formData.append(key, value);
+  });
+
+  const res = await fetch(`${API_BASE}/acoes`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw body || { error: 'Erro ao criar acao' };
+  return body;
+}
+
+export async function updateAcao(id, payload) {
+  return request(`/acoes/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function deleteAcao(id) {
+  return request(`/acoes/${id}`, { method: 'DELETE' });
+}
+
+export async function createResposta(payload) {
+  return request('/respostas_chatbot', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function updateResposta(id, payload) {
+  return request(`/respostas_chatbot/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function deleteResposta(id) {
+  return request(`/respostas_chatbot/${id}`, { method: 'DELETE' });
+}
+
+export async function importFile(path, file) {
+  const token = localStorage.getItem('token');
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw body || { error: 'Erro na importação' };
+  return body;
+}
+
+export async function downloadImportTemplate(type) {
+  const token = localStorage.getItem('token');
+  const res = await fetch(`${API_BASE}/import/modelos/${type}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw body || { error: 'Erro ao baixar modelo' };
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `modelo_${type}.xlsx`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+export async function askChatbot(question, previousResponseId) {
+  return request('/chatbot/assistance', {
+    method: 'POST',
+    body: JSON.stringify({ question, previousResponseId })
+  });
+}
