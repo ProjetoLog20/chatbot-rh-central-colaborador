@@ -27,7 +27,86 @@ function connectSqlite() {
 
   const dbFile = path.join(dataDir, 'db.sqlite');
   sqliteDb = new sqlite3.Database(dbFile);
-  sqliteDb.run('PRAGMA foreign_keys = ON');
+  sqliteDb.serialize(() => {
+    sqliteDb.run('PRAGMA foreign_keys = ON');
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS colaboradores (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      matricula TEXT NOT NULL UNIQUE,
+      nome_completo TEXT NOT NULL,
+      cpf TEXT,
+      telefone_whatsapp TEXT,
+      email TEXT,
+      cargo TEXT,
+      setor TEXT,
+      unidade TEXT,
+      tipo_colaborador TEXT,
+      status TEXT,
+      data_admissao TEXT,
+      senha_hash TEXT NOT NULL,
+      perfil TEXT NOT NULL
+    )`);
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS prontuario_motoristas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      colaborador_id INTEGER NOT NULL,
+      pontuacao_atual INTEGER,
+      faixa_atual TEXT,
+      pontos_de_atencao TEXT,
+      orientacoes TEXT,
+      observacoes TEXT,
+      data_atualizacao TEXT,
+      FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE CASCADE
+    )`);
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS historico_pontuacao (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      colaborador_id INTEGER NOT NULL,
+      pontuacao_anterior INTEGER,
+      pontuacao_nova INTEGER,
+      faixa_anterior TEXT,
+      faixa_nova TEXT,
+      motivo TEXT,
+      responsavel TEXT,
+      data_alteracao TEXT,
+      FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE CASCADE
+    )`);
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS respostas_chatbot (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      categoria TEXT,
+      pergunta TEXT NOT NULL,
+      resposta TEXT NOT NULL,
+      ativo INTEGER DEFAULT 1
+    )`);
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS atendimentos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      colaborador_id INTEGER,
+      telefone TEXT,
+      mensagem TEXT,
+      resposta TEXT,
+      categoria TEXT,
+      status TEXT,
+      data_hora TEXT,
+      FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE CASCADE
+    )`);
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS acoes_comunicacao (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      categoria TEXT NOT NULL,
+      titulo TEXT NOT NULL,
+      descricao TEXT NOT NULL,
+      imagem_url TEXT NOT NULL,
+      ativo INTEGER DEFAULT 1,
+      data_evento TEXT,
+      criado_em TEXT,
+      atualizado_em TEXT
+    )`);
+
+    sqliteDb.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_prontuario_motoristas_colaborador ON prontuario_motoristas(colaborador_id)');
+  });
+
   return sqliteDb;
 }
 
