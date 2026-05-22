@@ -12,18 +12,20 @@ Aplicacao fullstack com React + Vite no frontend, Express + SQLite no backend, a
 Crie `backend/.env` a partir de `backend/.env.example`:
 
 ```env
+DATABASE_URL=postgresql://user:password@host:5432/database
 JWT_SECRET=troque_por_um_segredo_forte
 FRONTEND_URL=http://localhost:5173
-PORT=4000
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-5-mini
+NODE_ENV=production
 ```
 
 Observacoes:
 
-- `JWT_SECRET` e obrigatorio para login e validacao de token.
+- `DATABASE_URL` e obrigatorio em produção. Ele deve apontar para o banco PostgreSQL do Supabase.
+- `JWT_SECRET` e obrigatorio para login e validação de token.
 - `FRONTEND_URL` controla a origem permitida no CORS.
-- `OPENAI_API_KEY` e opcional. Sem ela, o chatbot usa a base local do RH e contexto permitido do usuario.
+- `NODE_ENV` deve ser `production` no Render para a aplicação rodar em modo de produção.
+
+Para desenvolvimento local simples, o backend continua suportando SQLite se `DATABASE_URL` não estiver definido.
 
 ## Instalacao
 
@@ -49,13 +51,31 @@ Use o diretório raiz do projeto para o serviço Web no Render.
 
 Variáveis de ambiente necessárias:
 
+- `DATABASE_URL` (conexão PostgreSQL do Supabase)
 - `JWT_SECRET`
-- `PORT` (Render define automaticamente se não for configurado)
 - `FRONTEND_URL` (por exemplo `https://seu-app.onrender.com`)
-- `OPENAI_API_KEY` (opcional, se usar o assistente OpenAI)
-- `OPENAI_MODEL` (opcional, por exemplo `gpt-5-mini`)
+- `NODE_ENV=production`
 
-O backend serve o frontend gerado em `frontend/dist` e mantém as rotas da API em `/api`.
+Opcional:
+
+- `OPENAI_API_KEY` se usar o assistente OpenAI
+- `OPENAI_MODEL` (por exemplo `gpt-5-mini`)
+
+No Render, execute as migrations uma vez antes de subir a aplicação para garantir que o banco PostgreSQL esteja com o schema correto. Use:
+
+```bash
+npm --prefix backend run migrate
+```
+
+Em producão, o backend serve o frontend gerado em `frontend/dist` e mantém as rotas da API em `/api`.
+
+### Configuração do Supabase
+
+1. Crie um projeto no Supabase.
+2. No painel do projeto, copie o `Connection string` do banco de dados PostgreSQL.
+3. Defina o valor em `DATABASE_URL` no Render.
+4. Defina `JWT_SECRET`, `FRONTEND_URL` e `NODE_ENV=production`.
+5. Rode `npm --prefix backend run migrate` antes de iniciar o backend.
 
 ## Usuarios de teste
 

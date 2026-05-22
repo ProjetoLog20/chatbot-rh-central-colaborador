@@ -1,3 +1,5 @@
+require('./config/env');
+
 const bcrypt = require('bcrypt');
 const db = require('./db');
 const dayjs = require('dayjs');
@@ -28,42 +30,59 @@ const atendimentos = [
   { colaborador_matricula: '3000', telefone: '11977770000', mensagem: 'Preciso de suporte no RH', resposta: 'Aguardando contato do RH', categoria: 'Geral', status: 'Pendente', data_hora: dayjs().format('YYYY-MM-DD HH:mm:ss') }
 ];
 
-function loadSeed() {
-  db.serialize(() => {
-    db.run('DELETE FROM atendimentos');
-    db.run('DELETE FROM respostas_chatbot');
-    db.run('DELETE FROM prontuario_motoristas');
-    db.run('DELETE FROM historico_pontuacao');
-    db.run('DELETE FROM colaboradores');
+async function loadSeed() {
+  await db.run('DELETE FROM atendimentos');
+  await db.run('DELETE FROM respostas_chatbot');
+  await db.run('DELETE FROM prontuario_motoristas');
+  await db.run('DELETE FROM historico_pontuacao');
+  await db.run('DELETE FROM colaboradores');
 
-    const insertColab = db.prepare(`INSERT INTO colaboradores (matricula, nome_completo, cpf, telefone_whatsapp, email, cargo, setor, unidade, tipo_colaborador, status, data_admissao, senha_hash, perfil)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-    colaboradores.forEach((col) => {
-      insertColab.run([col.matricula, col.nome_completo, col.cpf, col.telefone_whatsapp, col.email, col.cargo, col.setor, col.unidade, col.tipo_colaborador, col.status, col.data_admissao, col.senha_hash, col.perfil]);
-    });
-    insertColab.finalize();
+  for (const col of colaboradores) {
+    await db.run(
+      `INSERT INTO colaboradores (matricula, nome_completo, cpf, telefone_whatsapp, email, cargo, setor, unidade, tipo_colaborador, status, data_admissao, senha_hash, perfil)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        col.matricula,
+        col.nome_completo,
+        col.cpf,
+        col.telefone_whatsapp,
+        col.email,
+        col.cargo,
+        col.setor,
+        col.unidade,
+        col.tipo_colaborador,
+        col.status,
+        col.data_admissao,
+        col.senha_hash,
+        col.perfil
+      ]
+    );
+  }
 
-    const insertPront = db.prepare(`INSERT INTO prontuario_motoristas (colaborador_id, pontuacao_atual, faixa_atual, pontos_de_atencao, orientacoes, observacoes, data_atualizacao)
-      VALUES ((SELECT id FROM colaboradores WHERE matricula = ?), ?, ?, ?, ?, ?, ?)`);
-    prontuarios.forEach((item) => {
-      insertPront.run([item.colaborador_matricula, item.pontuacao_atual, item.faixa_atual, item.pontos_de_atencao, item.orientacoes, item.observacoes, item.data_atualizacao]);
-    });
-    insertPront.finalize();
+  for (const item of prontuarios) {
+    await db.run(
+      `INSERT INTO prontuario_motoristas (colaborador_id, pontuacao_atual, faixa_atual, pontos_de_atencao, orientacoes, observacoes, data_atualizacao)
+       VALUES ((SELECT id FROM colaboradores WHERE matricula = ?), ?, ?, ?, ?, ?, ?)`,
+      [item.colaborador_matricula, item.pontuacao_atual, item.faixa_atual, item.pontos_de_atencao, item.orientacoes, item.observacoes, item.data_atualizacao]
+    );
+  }
 
-    const insertResp = db.prepare('INSERT INTO respostas_chatbot (categoria, pergunta, resposta, ativo) VALUES (?, ?, ?, ?)');
-    respostas.forEach((item) => {
-      insertResp.run([item.categoria, item.pergunta, item.resposta, item.ativo]);
-    });
-    insertResp.finalize();
+  for (const item of respostas) {
+    await db.run('INSERT INTO respostas_chatbot (categoria, pergunta, resposta, ativo) VALUES (?, ?, ?, ?)', [item.categoria, item.pergunta, item.resposta, item.ativo]);
+  }
 
-    const insertAtend = db.prepare('INSERT INTO atendimentos (colaborador_id, telefone, mensagem, resposta, categoria, status, data_hora) VALUES ((SELECT id FROM colaboradores WHERE matricula = ?), ?, ?, ?, ?, ?, ?)');
-    atendimentos.forEach((item) => {
-      insertAtend.run([item.colaborador_matricula, item.telefone, item.mensagem, item.resposta, item.categoria, item.status, item.data_hora]);
-    });
-    insertAtend.finalize();
+  for (const item of atendimentos) {
+    await db.run(
+      `INSERT INTO atendimentos (colaborador_id, telefone, mensagem, resposta, categoria, status, data_hora)
+       VALUES ((SELECT id FROM colaboradores WHERE matricula = ?), ?, ?, ?, ?, ?, ?)`,
+      [item.colaborador_matricula, item.telefone, item.mensagem, item.resposta, item.categoria, item.status, item.data_hora]
+    );
+  }
 
-    console.log('Dados fake carregados com sucesso.');
-  });
+  console.log('Dados fake carregados com sucesso.');
 }
 
-loadSeed();
+loadSeed().catch((err) => {
+  console.error('Erro ao semear banco:', err);
+  process.exit(1);
+});
