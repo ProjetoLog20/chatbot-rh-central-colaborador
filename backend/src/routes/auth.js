@@ -13,18 +13,21 @@ router.post('/login', async (req, res) => {
   }
 
   try {
-    const result = await db.query(
-      'SELECT * FROM colaboradores WHERE matricula = $1',
-      [matricula]
-    );
+    const sql = `
+      SELECT id, matricula, nome_completo, senha_hash, perfil, tipo_colaborador, status
+      FROM colaboradores
+      WHERE matricula = $1
+    `;
 
+    const result = await db.query(sql, [matricula]);
     const usuario = result.rows ? result.rows[0] : null;
+
     if (!usuario || !usuario.senha_hash) {
       return res.status(401).json({ error: 'Matrícula ou senha inválidos' });
     }
 
-    const valid = await bcrypt.compare(senha, usuario.senha_hash);
-    if (!valid) {
+    const senhaOk = await bcrypt.compare(senha, usuario.senha_hash);
+    if (!senhaOk) {
       return res.status(401).json({ error: 'Matrícula ou senha inválidos' });
     }
 
@@ -32,20 +35,25 @@ router.post('/login', async (req, res) => {
       {
         id: usuario.id,
         matricula: usuario.matricula,
-        perfil: usuario.perfil,
-        nome_completo: usuario.nome_completo
+        perfil: usuario.perfil
       },
       getJwtSecret(),
       { expiresIn: '8h' }
     );
 
-    res.json({ token, perfil: usuario.perfil, nome_completo: usuario.nome_completo });
+    const usuarioResponse = {
+      id: usuario.id,
+      matricula: usuario.matricula,
+      nome_completo: usuario.nome_completo,
+      perfil: usuario.perfil,
+      tipo_colaborador: usuario.tipo_colaborador,
+      status: usuario.status
+    };
+
+    res.json({ token, usuario: usuarioResponse });
   } catch (error) {
     console.error('ERRO LOGIN:', error);
-    return res.status(500).json({
-      error: 'Erro no banco de dados',
-      details: process.env.NODE_ENV === 'production' ? undefined : error.message
-    });
+    return res.status(500).json({ error: 'Erro no banco de dados' });
   }
 });
 
