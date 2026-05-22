@@ -17,36 +17,30 @@ const errorHandler = require('./errorHandler');
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// CORS configuration: more permissive for dev, can be restricted in production
-app.use(cors({
+const corsOptions = {
   origin(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) {
       return callback(null, true);
     }
-    
-    // In production, be more restrictive
-    if (process.env.NODE_ENV === 'production') {
-      // Allow same-origin requests and configured frontend URLs
-      const allowedOrigins = [
-        process.env.FRONTEND_URL,
-        'localhost',
-        '127.0.0.1',
-        // Add your production domain here
-      ].filter(Boolean);
-      
-      if (allowedOrigins.some(allowed => origin.includes(allowed))) {
-        return callback(null, true);
-      }
-      return callback(new Error('Origem não permitida pelo CORS'));
-    }
-    
-    // In development, allow all origins
-    return callback(null, true);
-  },
-  credentials: true
-}));
 
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:4000',
+      'http://localhost:4001',
+      'https://chatbot-rh-central-colaborador-preset.onrender.com',
+      process.env.FRONTEND_URL,
+    ].filter(Boolean);
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error('Origem não permitida pelo CORS'));
+  },
+  credentials: true,
+};
+
+app.use('/api', cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
