@@ -135,6 +135,32 @@ Modelos disponiveis:
 - Prontuario dos motoristas
 - Base do chatbot
 
+### Importacao SKAP no Supabase/PostgreSQL
+
+Antes de importar, garanta que o `DATABASE_URL` esteja configurado em `backend/.env` e rode as migrations:
+
+```bash
+npm --prefix backend run migrate
+```
+
+Para importar uma planilha SKAP:
+
+```bash
+cd backend
+npm run import:skap -- ../caminho/arquivo.xlsx
+```
+
+Exemplo com a planilha pronta:
+
+```bash
+cd backend
+npm run import:skap -- "C:\Users\ArT\Downloads\skap_log20_importacao_pronta.xlsx"
+```
+
+Se nenhum arquivo for informado, o script usa `backend/data/skap_log20_importacao_pronta.xlsx`.
+
+O importador atualiza/cria apenas dados em `skap_avaliacoes` e `skap_historico`, vinculando pela `matricula` da tabela `colaboradores`. Ele nao altera senha, perfil ou dados cadastrais do colaborador. Ao final, grava um log em `backend/logs/importacao_skap_YYYY-MM-DD_HH-mm.txt`.
+
 Regras:
 
 - Arquivos aceitos: `.xlsx` e `.csv`

@@ -6,7 +6,8 @@
     "dev": "node src/index.js",
     "start": "node src/index.js",
     "seed": "node src/seed.js",
-    "migrate": "node scripts/migrate.js"
+    "migrate": "node scripts/migrate.js",
+    "import:skap": "node scripts/importSkapXlsx.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
