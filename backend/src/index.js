@@ -12,6 +12,7 @@ const respostasRoutes = require('./routes/respostas');
 const importsRoutes = require('./routes/imports');
 const atendimentosRoutes = require('./routes/atendimentos');
 const acoesRoutes = require('./routes/acoes');
+const pesquisaClimaRoutes = require('./routes/pesquisa-clima');
 const errorHandler = require('./errorHandler');
 
 const app = express();
@@ -54,6 +55,7 @@ app.use('/api/respostas_chatbot', respostasRoutes);
 app.use('/api/import', importsRoutes);
 app.use('/api/atendimentos', atendimentosRoutes);
 app.use('/api/acoes', acoesRoutes);
+app.use('/api/pesquisa-clima', pesquisaClimaRoutes);
 
 // Serve static files from frontend dist
 const frontendDist = path.resolve(__dirname, "../../frontend/dist");

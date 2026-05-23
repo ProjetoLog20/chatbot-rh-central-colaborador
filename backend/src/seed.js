@@ -30,7 +30,21 @@ const atendimentos = [
   { colaborador_matricula: '3000', telefone: '11977770000', mensagem: 'Preciso de suporte no RH', resposta: 'Aguardando contato do RH', categoria: 'Geral', status: 'Pendente', data_hora: dayjs().format('YYYY-MM-DD HH:mm:ss') }
 ];
 
+const pesquisasClima = [
+  { titulo: 'Pesquisa de Clima 2025', descricao: 'Avaliação de satisfação e ambiente de trabalho', status: 'rascunho', anonima: false, criado_por_matricula: '1000' }
+];
+
+const perguntasClima = [
+  { pesquisa_ordem: 0, pergunta: 'Como você avalia o seu ambiente de trabalho?', tipo: 'nota', ordem: 1, obrigatoria: true },
+  { pesquisa_ordem: 0, pergunta: 'Você se sente valorizado pelo seu gestor?', tipo: 'sim_nao', ordem: 2, obrigatoria: true },
+  { pesquisa_ordem: 0, pergunta: 'Qual é sua principal sugestão de melhoria?', tipo: 'texto', ordem: 3, obrigatoria: false },
+  { pesquisa_ordem: 0, pergunta: 'Como você avalia a comunicação interna?', tipo: 'nota', ordem: 4, obrigatoria: true }
+];
+
 async function loadSeed() {
+  await db.run('DELETE FROM respostas_clima');
+  await db.run('DELETE FROM perguntas_clima');
+  await db.run('DELETE FROM pesquisas_clima');
   await db.run('DELETE FROM atendimentos');
   await db.run('DELETE FROM respostas_chatbot');
   await db.run('DELETE FROM prontuario_motoristas');
@@ -77,6 +91,23 @@ async function loadSeed() {
        VALUES ((SELECT id FROM colaboradores WHERE matricula = ?), ?, ?, ?, ?, ?, ?)`,
       [item.colaborador_matricula, item.telefone, item.mensagem, item.resposta, item.categoria, item.status, item.data_hora]
     );
+  }
+
+  for (const pesquisa of pesquisasClima) {
+    await db.run(
+      `INSERT INTO pesquisas_clima (titulo, descricao, status, anonima, criado_por) VALUES (?, ?, ?, ?, (SELECT id FROM colaboradores WHERE matricula = ?))`,
+      [pesquisa.titulo, pesquisa.descricao, pesquisa.status, pesquisa.anonima, pesquisa.criado_por_matricula]
+    );
+  }
+
+  const pesquisaResult = await db.get('SELECT id FROM pesquisas_clima LIMIT 1', []);
+  if (pesquisaResult?.id) {
+    for (const pergunta of perguntasClima) {
+      await db.run(
+        `INSERT INTO perguntas_clima (pesquisa_id, pergunta, tipo, ordem, obrigatoria, ativa) VALUES (?, ?, ?, ?, ?, true)`,
+        [pesquisaResult.id, pergunta.pergunta, pergunta.tipo, pergunta.ordem, pergunta.obrigatoria]
+      );
+    }
   }
 
   console.log('Dados fake carregados com sucesso.');

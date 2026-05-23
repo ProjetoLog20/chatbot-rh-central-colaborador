@@ -8,6 +8,8 @@ import DriverPage from './components/DriverPage.jsx';
 import AdminPage from './components/AdminPage.jsx';
 import ChatAssistant from './components/ChatAssistant.jsx';
 import NotFound from './components/NotFound.jsx';
+import PesquisaClimaPage from './components/PesquisaClimaPage.jsx';
+import AdminPesquisaClimaPage from './components/AdminPesquisaClimaPage.jsx';
 
 function App() {
   const navigate = useNavigate();
@@ -59,7 +61,9 @@ function App() {
           <Route path="/" element={requireAuth(<Dashboard user={user} />)} />
           <Route path="/profile" element={requireAuth(<ProfilePage />)} />
           <Route path="/motorista" element={requireAuth(<DriverPage />, ['motorista', 'admin'])} />
+          <Route path="/pesquisa-clima" element={requireAuth(<PesquisaClimaPage />)} />
           <Route path="/admin" element={requireAuth(<AdminPage />, ['admin'])} />
+          <Route path="/admin/pesquisa-clima" element={requireAuth(<AdminPesquisaClimaPage />, ['admin'])} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
