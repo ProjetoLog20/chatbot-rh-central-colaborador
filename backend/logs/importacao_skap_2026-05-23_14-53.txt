@@ -1,0 +1,10 @@
+Importacao SKAP concluida.
+Arquivo: C:\Users\ArT\Downloads\skap_log20_importacao_pronta.xlsx
+Total de linhas lidas: 66
+Importadas novas: 66
+Atualizadas: 0
+Ignoradas: 0
+Historicos criados: 66
+Erros: 0
+Matriculas nao encontradas: nenhuma
+Niveis identificados: bronze=14, verde=13, ouro=39

@@ -5,7 +5,7 @@ import ActionsCarousel from './ActionsCarousel.jsx';
 
 const baseCards = [
   { label: 'Pesquisa de Clima', description: 'Acompanhe o ambiente e satisfacao.', color: '#005A8C', route: '/pesquisa-clima' },
-  { label: 'SKAP', description: 'Saiba mais sobre avaliacao de seguranca.', color: '#003B68', route: '/profile' },
+  { label: 'SKAP', description: 'Acompanhe sua avaliacao e evolucao.', color: '#003B68', route: '/skap' },
   { label: 'Campeao de Seguranca', description: 'Destaque quem pratica seguranca.', color: '#E87522', route: '/profile' },
   { label: '3 Rs', description: 'Reduza, reuse e recicle informacoes.', color: '#005A8C', route: '/profile' },
   { label: 'Premio de Produtividade', description: 'Veja reconhecimentos e metas.', color: '#003B68', route: '/profile' },

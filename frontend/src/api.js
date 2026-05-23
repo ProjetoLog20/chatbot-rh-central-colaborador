@@ -54,6 +54,44 @@ export async function getProntuarios() {
   return request('/prontuario_motoristas');
 }
 
+export async function getMeuSkap() {
+  return request('/skap/meu');
+}
+
+export async function getAdminSkap(filters = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) params.set(key, value);
+  });
+  const query = params.toString();
+  return request(`/skap/admin${query ? `?${query}` : ''}`);
+}
+
+export async function getAdminSkapDetail(colaboradorId) {
+  return request(`/skap/admin/${colaboradorId}`);
+}
+
+export async function updateAdminSkap(colaboradorId, payload) {
+  return request(`/skap/admin/${colaboradorId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function importSkapFile(file) {
+  const token = localStorage.getItem('token');
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE}/skap/admin/import`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw body || { error: 'Erro na importacao SKAP' };
+  return body;
+}
+
 export async function getRespostas() {
   return request('/respostas_chatbot');
 }

@@ -11,6 +11,7 @@ import NotFound from './components/NotFound.jsx';
 import PesquisaClimaPage from './components/PesquisaClimaPage.jsx';
 import AdminPesquisaClimaPage from './components/AdminPesquisaClimaPage.jsx';
 import FirstAccessPage from './components/FirstAccessPage.jsx';
+import SkapPage from './components/SkapPage.jsx';
 
 function App() {
   const navigate = useNavigate();
@@ -70,6 +71,7 @@ function App() {
           <Route path="/profile" element={requireAuth(<ProfilePage />)} />
           <Route path="/motorista" element={requireAuth(<DriverPage />, ['motorista', 'admin'])} />
           <Route path="/pesquisa-clima" element={requireAuth(<PesquisaClimaPage />)} />
+          <Route path="/skap" element={requireAuth(<SkapPage user={user} />)} />
           <Route path="/admin" element={requireAuth(<AdminPage />, ['admin'])} />
           <Route path="/admin/pesquisa-clima" element={requireAuth(<AdminPesquisaClimaPage />, ['admin'])} />
           <Route path="/primeiro-acesso" element={<FirstAccessPage onComplete={() => setUser(null)} />} />

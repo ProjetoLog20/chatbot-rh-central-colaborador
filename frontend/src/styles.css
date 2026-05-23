@@ -1188,6 +1188,191 @@ tr:not(:last-child) td {
   border-radius: 18px;
 }
 
+.skap-page {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.skap-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.skap-actions button,
+.skap-actions label,
+.skap-primary {
+  border: none;
+  border-radius: 8px;
+  background: #003B68;
+  color: #fff;
+  padding: 0.8rem 1rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.skap-actions input {
+  display: none;
+}
+
+.skap-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1rem;
+  background: #F4F7F9;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.skap-filters label,
+.skap-edit-grid label,
+.skap-observation,
+.criteria-item {
+  display: grid;
+  gap: 0.5rem;
+  font-weight: 700;
+}
+
+.skap-filters input,
+.skap-filters select,
+.skap-edit-grid input,
+.skap-edit-grid select,
+.criteria-item select,
+.skap-observation textarea {
+  width: 100%;
+  border: 1px solid #C9D7E2;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0.75rem 0.85rem;
+}
+
+.skap-detail {
+  border: 1px solid #DCE5EC;
+  border-radius: 8px;
+  padding: 1.25rem;
+  display: grid;
+  gap: 1rem;
+  background: #fff;
+}
+
+.skap-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.skap-detail-header h2,
+.skap-detail-header p {
+  margin: 0;
+}
+
+.skap-detail-header p {
+  margin-top: 0.35rem;
+  color: #6B7280;
+}
+
+.skap-level {
+  border-radius: 8px;
+  padding: 0.5rem 0.8rem;
+  background: #E9F2FB;
+  color: #003B68;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.skap-level.bronze {
+  background: #FEF3C7;
+  color: #92400E;
+}
+
+.skap-level.verde {
+  background: #DCFCE7;
+  color: #166534;
+}
+
+.skap-level.ouro {
+  background: #FFEDD5;
+  color: #9A3412;
+}
+
+.skap-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+
+.skap-summary-grid > div {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 0.9rem;
+}
+
+.skap-summary-grid span {
+  display: block;
+  color: #6B7280;
+  font-size: 0.84rem;
+}
+
+.skap-summary-grid strong {
+  display: block;
+  margin-top: 0.3rem;
+  color: #003B68;
+}
+
+.skap-edit-grid,
+.criteria-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1rem;
+}
+
+.criteria-item {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 0.85rem;
+}
+
+.criteria-item strong {
+  color: #003B68;
+}
+
+.skap-observation p {
+  margin: 0;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 0.85rem;
+  color: #4B5563;
+}
+
+.skap-history {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.skap-history h3,
+.skap-history p {
+  margin: 0;
+}
+
+.history-row {
+  border-left: 4px solid #E87522;
+  background: #F8FAFC;
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+}
+
+.history-row span {
+  display: block;
+  margin-top: 0.25rem;
+  color: #6B7280;
+  font-size: 0.9rem;
+}
+
 @media (max-width: 720px) {
   .app-header {
     flex-direction: column;

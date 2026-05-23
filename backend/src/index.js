@@ -13,6 +13,7 @@ const importsRoutes = require('./routes/imports');
 const atendimentosRoutes = require('./routes/atendimentos');
 const acoesRoutes = require('./routes/acoes');
 const pesquisaClimaRoutes = require('./routes/pesquisa-clima');
+const skapRoutes = require('./routes/skap');
 const errorHandler = require('./errorHandler');
 
 const app = express();
@@ -56,6 +57,7 @@ app.use('/api/import', importsRoutes);
 app.use('/api/atendimentos', atendimentosRoutes);
 app.use('/api/acoes', acoesRoutes);
 app.use('/api/pesquisa-clima', pesquisaClimaRoutes);
+app.use('/api/skap', skapRoutes);
 
 // Serve static files from frontend dist
 const frontendDist = path.resolve(__dirname, "../../frontend/dist");
