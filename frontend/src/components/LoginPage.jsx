@@ -1,21 +1,37 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { login } from '../api.js';
-import { setToken, decodeToken } from '../auth.js';
+import { setToken, setUserData } from '../auth.js';
 
 export default function LoginPage({ onLogin }) {
   const [matricula, setMatricula] = useState('');
   const [senha, setSenha] = useState('');
   const [error, setError] = useState('');
+  const location = useLocation();
   const navigate = useNavigate();
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setError('');
+
     try {
       const data = await login(matricula, senha);
+
+      if (data.requiresPasswordChange) {
+        sessionStorage.setItem('firstAccess', JSON.stringify({
+          matricula,
+          senhaAtual: senha,
+          nome_completo: data.nome_completo,
+          perfil: data.perfil
+        }));
+        onLogin(null);
+        navigate('/primeiro-acesso');
+        return;
+      }
+
       setToken(data.token);
-      const user = decodeToken(data.token);
-      onLogin(user);
+      setUserData(data.usuario);
+      onLogin(data.usuario);
       navigate('/');
     } catch (err) {
       setError(err.error || 'Falha no login');
@@ -31,6 +47,7 @@ export default function LoginPage({ onLogin }) {
           <p>Faca login com sua matricula e senha.</p>
         </div>
       </div>
+      {location.state?.message && <div className="form-success">{location.state.message}</div>}
       <form onSubmit={handleSubmit}>
         <label>
           Matricula
@@ -46,4 +63,3 @@ export default function LoginPage({ onLogin }) {
     </div>
   );
 }
-

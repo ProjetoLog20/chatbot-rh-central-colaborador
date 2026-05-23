@@ -108,7 +108,7 @@ router.get('/modelos/:tipo', authenticateToken, authorizeRoles('admin'), (req, r
           tipo_colaborador: 'Interno',
           status: 'Ativo',
           data_admissao: '2026-05-22',
-          senha: 'senha123',
+          senha: '',
           perfil: 'colaborador'
         }]
       },
@@ -119,7 +119,7 @@ router.get('/modelos/:tipo', authenticateToken, authorizeRoles('admin'), (req, r
           { campo: 'matricula', orientacao: 'Obrigatorio. Usado para criar ou atualizar o colaborador.' },
           { campo: 'nome_completo', orientacao: 'Obrigatorio.' },
           { campo: 'perfil', orientacao: 'Use colaborador, motorista ou admin.' },
-          { campo: 'senha', orientacao: 'Opcional. Se ficar vazio, o sistema usa senha123 para novos registros.' }
+          { campo: 'senha', orientacao: 'Opcional. Se ficar vazio, o sistema usa a senha temporária log20 para novos registros.' }
         ]
       }
     ]);
@@ -197,7 +197,8 @@ router.post('/colaboradores', authenticateToken, authorizeRoles('admin'), upload
   for (const [index, row] of rows.entries()) {
     const matricula = normalizeValue(row, ['matricula', 'MATRICULA', 'Matricula']);
     const nomeCompleto = normalizeValue(row, ['nome_completo', 'NOME', 'Nome']);
-    const senha = normalizeValue(row, ['senha', 'Senha']) || 'senha123';
+    const senhaFormatted = normalizeValue(row, ['senha', 'Senha']);
+    const senha = senhaFormatted ? senhaFormatted : 'log20';
     const perfil = normalizeValue(row, ['perfil', 'Perfil']) || 'colaborador';
 
     if (!matricula || !nomeCompleto) {
@@ -207,8 +208,8 @@ router.post('/colaboradores', authenticateToken, authorizeRoles('admin'), upload
 
     try {
       await runDb(
-        `INSERT INTO colaboradores (matricula, nome_completo, cpf, telefone_whatsapp, email, cargo, setor, unidade, tipo_colaborador, status, data_admissao, senha_hash, perfil)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO colaboradores (matricula, nome_completo, cpf, telefone_whatsapp, email, cargo, setor, unidade, tipo_colaborador, status, data_admissao, senha_hash, perfil, primeiro_acesso, senha_temporaria, data_ultima_troca_senha)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, true, true, null)
          ON CONFLICT(matricula) DO UPDATE SET
            nome_completo = excluded.nome_completo,
            cpf = excluded.cpf,

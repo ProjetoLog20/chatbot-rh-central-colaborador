@@ -44,8 +44,26 @@ function connectSqlite() {
       status TEXT,
       data_admissao TEXT,
       senha_hash TEXT NOT NULL,
-      perfil TEXT NOT NULL
+      perfil TEXT NOT NULL,
+      nome_preferido TEXT,
+      primeiro_acesso INTEGER DEFAULT 1,
+      senha_temporaria INTEGER DEFAULT 1,
+      data_ultima_troca_senha TEXT
     )`);
+
+    const ensureColumn = (name, definition) => {
+      sqliteDb.all('PRAGMA table_info(colaboradores)', [], (err, columns) => {
+        if (err) return;
+        if (!columns.some((column) => column.name === name)) {
+          sqliteDb.run(`ALTER TABLE colaboradores ADD COLUMN ${name} ${definition}`);
+        }
+      });
+    };
+
+    ensureColumn('nome_preferido', 'TEXT');
+    ensureColumn('primeiro_acesso', 'INTEGER DEFAULT 1');
+    ensureColumn('senha_temporaria', 'INTEGER DEFAULT 1');
+    ensureColumn('data_ultima_troca_senha', 'TEXT');
 
     sqliteDb.run(`CREATE TABLE IF NOT EXISTS prontuario_motoristas (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

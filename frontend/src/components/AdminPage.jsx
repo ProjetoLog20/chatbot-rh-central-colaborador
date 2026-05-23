@@ -11,7 +11,8 @@ import {
   getAdminAcoes,
   createAcao,
   updateAcao,
-  deleteAcao
+  deleteAcao,
+  resetCollaboratorPassword
 } from '../api.js';
 
 const importOptions = [
@@ -145,6 +146,16 @@ export default function AdminPage() {
     }
   }
 
+  async function handleResetPassword(item) {
+    try {
+      await resetCollaboratorPassword(item.id);
+      setMessage(`Senha de ${item.nome_completo} resetada para log20.`);
+      refresh();
+    } catch (err) {
+      setMessage(err.error || 'Erro ao resetar senha');
+    }
+  }
+
   return (
     <div className="page-card admin-card">
       <div className="admin-heading">
@@ -170,11 +181,18 @@ export default function AdminPage() {
             <div className="table-scroll">
               <table>
                 <thead>
-                  <tr><th>Matricula</th><th>Nome</th><th>Perfil</th><th>Status</th></tr>
+                  <tr><th>Matricula</th><th>Nome</th><th>Perfil</th><th>Status</th><th>Primeiro acesso</th><th>Acoes</th></tr>
                 </thead>
                 <tbody>
                   {colaboradores.map((item) => (
-                    <tr key={item.id}><td>{item.matricula}</td><td>{item.nome_completo}</td><td>{item.perfil}</td><td>{item.status}</td></tr>
+                    <tr key={item.id}>
+                      <td>{item.matricula}</td>
+                      <td>{item.nome_preferido || item.nome_completo}</td>
+                      <td>{item.perfil}</td>
+                      <td>{item.status}</td>
+                      <td>{item.primeiro_acesso || item.senha_temporaria ? 'Pendente' : 'Concluido'}</td>
+                      <td><button onClick={() => handleResetPassword(item)}>Resetar senha</button></td>
+                    </tr>
                   ))}
                 </tbody>
               </table>

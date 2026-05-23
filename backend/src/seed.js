@@ -4,14 +4,14 @@ const bcrypt = require('bcrypt');
 const db = require('./db');
 const dayjs = require('dayjs');
 
-const senhaAdmin = bcrypt.hashSync('admin123', 10);
-const senhaMotorista = bcrypt.hashSync('motorista123', 10);
-const senhaColaborador = bcrypt.hashSync('colaborador123', 10);
+const senhaAdmin = bcrypt.hashSync('log20', 10);
+const senhaMotorista = bcrypt.hashSync('log20', 10);
+const senhaColaborador = bcrypt.hashSync('log20', 10);
 
 const colaboradores = [
-  { matricula: '1000', nome_completo: 'Administrador RH', cpf: '11111111111', telefone_whatsapp: '11999990000', email: 'admin@empresa.com', cargo: 'Admin RH', setor: 'Recursos Humanos', unidade: 'Sede', tipo_colaborador: 'Interno', status: 'Ativo', data_admissao: '2020-01-10', senha_hash: senhaAdmin, perfil: 'admin' },
-  { matricula: '2000', nome_completo: 'João Motorista', cpf: '22222222222', telefone_whatsapp: '11988880000', email: 'joao.motorista@empresa.com', cargo: 'Motorista', setor: 'Logística', unidade: 'Filial A', tipo_colaborador: 'Externo', status: 'Ativo', data_admissao: '2019-05-20', senha_hash: senhaMotorista, perfil: 'motorista' },
-  { matricula: '3000', nome_completo: 'Maria Colaboradora', cpf: '33333333333', telefone_whatsapp: '11977770000', email: 'maria.colab@empresa.com', cargo: 'Analista', setor: 'Financeiro', unidade: 'Sede', tipo_colaborador: 'Interno', status: 'Ativo', data_admissao: '2021-07-15', senha_hash: senhaColaborador, perfil: 'colaborador' }
+  { matricula: '1000', nome_completo: 'Administrador RH', cpf: '11111111111', telefone_whatsapp: '11999990000', email: 'admin@empresa.com', cargo: 'Admin RH', setor: 'Recursos Humanos', unidade: 'Sede', tipo_colaborador: 'Interno', status: 'Ativo', data_admissao: '2020-01-10', senha_hash: senhaAdmin, perfil: 'admin', primeiro_acesso: true, senha_temporaria: true },
+  { matricula: '2000', nome_completo: 'João Motorista', cpf: '22222222222', telefone_whatsapp: '11988880000', email: 'joao.motorista@empresa.com', cargo: 'Motorista', setor: 'Logística', unidade: 'Filial A', tipo_colaborador: 'Externo', status: 'Ativo', data_admissao: '2019-05-20', senha_hash: senhaMotorista, perfil: 'motorista', primeiro_acesso: true },
+  { matricula: '3000', nome_completo: 'Maria Colaboradora', cpf: '33333333333', telefone_whatsapp: '11977770000', email: 'maria.colab@empresa.com', cargo: 'Analista', setor: 'Financeiro', unidade: 'Sede', tipo_colaborador: 'Interno', status: 'Ativo', data_admissao: '2021-07-15', senha_hash: senhaColaborador, perfil: 'colaborador', primeiro_acesso: true, senha_temporaria: true }
 ];
 
 const prontuarios = [
@@ -42,6 +42,18 @@ const perguntasClima = [
 ];
 
 async function loadSeed() {
+  const firstAccessColumnType = process.env.DATABASE_URL ? 'BOOLEAN DEFAULT true' : 'INTEGER DEFAULT 1';
+  const timestampColumnType = process.env.DATABASE_URL ? 'TIMESTAMP' : 'TEXT';
+
+  for (const sql of [
+    'ALTER TABLE colaboradores ADD COLUMN nome_preferido TEXT',
+    `ALTER TABLE colaboradores ADD COLUMN primeiro_acesso ${firstAccessColumnType}`,
+    `ALTER TABLE colaboradores ADD COLUMN senha_temporaria ${firstAccessColumnType}`,
+    `ALTER TABLE colaboradores ADD COLUMN data_ultima_troca_senha ${timestampColumnType}`
+  ]) {
+    await db.run(sql).catch(() => null);
+  }
+
   await db.run('DELETE FROM respostas_clima');
   await db.run('DELETE FROM perguntas_clima');
   await db.run('DELETE FROM pesquisas_clima');
@@ -53,8 +65,8 @@ async function loadSeed() {
 
   for (const col of colaboradores) {
     await db.run(
-      `INSERT INTO colaboradores (matricula, nome_completo, cpf, telefone_whatsapp, email, cargo, setor, unidade, tipo_colaborador, status, data_admissao, senha_hash, perfil)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO colaboradores (matricula, nome_completo, cpf, telefone_whatsapp, email, cargo, setor, unidade, tipo_colaborador, status, data_admissao, senha_hash, perfil, primeiro_acesso, senha_temporaria)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         col.matricula,
         col.nome_completo,
@@ -68,7 +80,9 @@ async function loadSeed() {
         col.status,
         col.data_admissao,
         col.senha_hash,
-        col.perfil
+        col.perfil,
+        col.primeiro_acesso,
+        col.senha_temporaria ?? true
       ]
     );
   }

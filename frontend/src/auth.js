@@ -2,8 +2,14 @@ export function setToken(token) {
   localStorage.setItem('token', token);
 }
 
+export function setUserData(user) {
+  localStorage.setItem('user', JSON.stringify(user));
+}
+
 export function clearToken() {
   localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  sessionStorage.removeItem('firstAccess');
 }
 
 export function getToken() {
@@ -22,5 +28,13 @@ export function decodeToken(token) {
 }
 
 export function getUser() {
-  return decodeToken(getToken());
+  const tokenUser = decodeToken(getToken());
+  const storedUser = localStorage.getItem('user');
+  if (!storedUser) return tokenUser;
+
+  try {
+    return { ...tokenUser, ...JSON.parse(storedUser) };
+  } catch {
+    return tokenUser;
+  }
 }

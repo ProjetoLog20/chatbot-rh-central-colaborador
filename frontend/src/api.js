@@ -24,6 +24,13 @@ export async function login(matricula, senha) {
   });
 }
 
+export async function primeiroAcesso(payload) {
+  return request('/auth/primeiro-acesso', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
 export async function getProfile() {
   return request('/colaboradores/me');
 }
@@ -34,6 +41,13 @@ export async function getProntuarioMe() {
 
 export async function getCollaborators() {
   return request('/colaboradores');
+}
+
+export async function resetCollaboratorPassword(id) {
+  return request(`/colaboradores/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ resetarSenha: true })
+  });
 }
 
 export async function getProntuarios() {

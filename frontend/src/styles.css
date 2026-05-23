@@ -219,6 +219,113 @@ button:hover:not(:disabled) {
   border-radius: 14px;
 }
 
+.form-success {
+  color: #166534;
+  padding: 0.75rem 1rem;
+  background: #DCFCE7;
+  border-radius: 14px;
+  margin-bottom: 1rem;
+}
+
+.first-access-screen {
+  min-height: calc(100vh - 150px);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.first-access-card {
+  width: min(100%, 520px);
+  background: #FFFFFF;
+  border: 1px solid #DCE5EC;
+  border-radius: 8px;
+  box-shadow: 0 24px 60px rgba(31, 41, 51, 0.12);
+  padding: clamp(1.4rem, 4vw, 2.4rem);
+}
+
+.first-access-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  color: #003B68;
+  font-weight: 800;
+}
+
+.first-access-brand img {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 14px 28px rgba(0, 59, 104, 0.18);
+}
+
+.first-access-copy {
+  margin: 1.6rem 0 1.4rem;
+}
+
+.first-access-copy h1 {
+  margin: 0;
+  color: #003B68;
+  font-size: 1.9rem;
+}
+
+.first-access-copy p {
+  margin: 0.65rem 0 0;
+  color: #4B5563;
+  line-height: 1.55;
+}
+
+.first-access-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.first-access-form label {
+  display: grid;
+  gap: 0.5rem;
+  color: #1F2933;
+  font-weight: 700;
+}
+
+.first-access-form input {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #C9D7E2;
+  background: #F8FAFC;
+  color: #1F2933;
+}
+
+.password-tips {
+  display: grid;
+  gap: 0.35rem;
+  color: #005A8C;
+  font-size: 0.9rem;
+  background: #E9F2FB;
+  border-left: 4px solid #E87522;
+  border-radius: 8px;
+  padding: 0.8rem 0.9rem;
+}
+
+.first-access-form button {
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+  background: #003B68;
+  color: #FFFFFF;
+  padding: 1rem;
+  font-weight: 800;
+}
+
+.first-access-form button:hover:not(:disabled) {
+  background: #005A8C;
+}
+
+.first-access-form button:disabled {
+  opacity: 0.68;
+  cursor: not-allowed;
+}
+
 .dashboard-header {
   margin-bottom: 1.5rem;
 }

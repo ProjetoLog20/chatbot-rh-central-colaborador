@@ -27,3 +27,16 @@ Re-optimizing dependencies because lockfile has changed
 [2m21:29:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
 [2m21:30:00[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Dashboard.jsx[22m
 [2m21:30:02[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Dashboard.jsx[22m
+[2m09:47:33[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/LoginPage.jsx[22m
+[2m09:47:33[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m09:47:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/LoginPage.jsx[22m
+[2m09:47:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m09:47:42[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m09:48:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m10:02:04[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/components/LoginPage.jsx[22m
+[2m10:02:09[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Dashboard.jsx, /src/components/LoginPage.jsx, /src/components/DriverPage.jsx, /src/components/ChatAssistant.jsx, /src/components/ProfilePage.jsx, /src/components/AdminPage.jsx[22m
+[2m10:02:12[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/LoginPage.jsx[22m
+[2m10:02:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/LoginPage.jsx[22m
+[2m10:02:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m10:03:22[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles.css[22m
+[2m10:03:33[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/AdminPage.jsx[22m

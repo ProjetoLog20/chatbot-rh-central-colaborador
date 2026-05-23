@@ -77,17 +77,33 @@ Em producão, o backend serve o frontend gerado em `frontend/dist` e mantém as
 4. Defina `JWT_SECRET`, `FRONTEND_URL` e `NODE_ENV=production`.
 5. Rode `npm --prefix backend run migrate` antes de iniciar o backend.
 
+## Fluxo de Primeiro Acesso
+
+Quando um novo colaborador é cadastrado (manualmente ou por import Excel/CSV) sem informar senha, o sistema utiliza a **senha padrão temporária: log20**.
+
+No primeiro login:
+1. O colaborador faz login com sua matrícula e a senha temporária.
+2. O sistema o redireciona para a página de mudança obrigatória de senha.
+3. A nova senha não pode ser igual a "log20" por razões de segurança.
+4. Após a mudança bem-sucedida, ele é redirecionado para a página inicial.
+
+### Administrador: Resetar Senha de Colaborador
+
+Se um administrador resetar a senha de um colaborador sem informar uma nova senha, o sistema retorna a senha para a temporária "log20" e marca como primeiro acesso novamente.
+
 ## Usuarios de teste
 
 - Admin
   - Matricula: `1000`
-  - Senha: `admin123`
+  - Senha: `log20` (primeira vez)
 - Motorista
   - Matricula: `2000`
-  - Senha: `motorista123`
+  - Senha: `log20` (primeira vez)
 - Colaborador
   - Matricula: `3000`
-  - Senha: `colaborador123`
+  - Senha: `log20` (primeira vez)
+
+No primeiro login, cada usuário será obrigado a mudar a senha temporária "log20" para uma nova senha pessoal.
 
 ## Comandos uteis
 
