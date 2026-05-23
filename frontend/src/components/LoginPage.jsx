@@ -2,17 +2,21 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { login } from '../api.js';
 import { setToken, setUserData } from '../auth.js';
+import LoginTransition from './LoginTransition.jsx';
 
 export default function LoginPage({ onLogin }) {
   const [matricula, setMatricula] = useState('');
   const [senha, setSenha] = useState('');
   const [error, setError] = useState('');
+  const [showTransition, setShowTransition] = useState(false);
+  const [loading, setLoading] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
     try {
       const data = await login(matricula, senha);
@@ -32,10 +36,18 @@ export default function LoginPage({ onLogin }) {
       setToken(data.token);
       setUserData(data.usuario);
       onLogin(data.usuario);
-      navigate('/');
+      setShowTransition(true);
+      window.setTimeout(() => {
+        navigate('/');
+      }, 1800);
     } catch (err) {
       setError(err.error || 'Falha no login');
+      setLoading(false);
     }
+  }
+
+  if (showTransition) {
+    return <LoginTransition />;
   }
 
   return (
@@ -58,7 +70,7 @@ export default function LoginPage({ onLogin }) {
           <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} required />
         </label>
         {error && <div className="form-error">{error}</div>}
-        <button type="submit">Entrar</button>
+        <button type="submit" disabled={loading}>{loading ? 'Entrando...' : 'Entrar'}</button>
       </form>
     </div>
   );
