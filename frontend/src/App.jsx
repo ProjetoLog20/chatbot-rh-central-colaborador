@@ -36,7 +36,10 @@ function App() {
     return element;
   }
 
+  const token = getToken();
+  const isPublicRoute = ['/login', '/primeiro-acesso'].includes(location.pathname);
   const isFirstAccessRoute = location.pathname === '/primeiro-acesso';
+  const shouldShowChatAssistant = Boolean(user && token && !isPublicRoute);
 
   return (
     <div className="app-shell">
@@ -73,7 +76,7 @@ function App() {
         </Routes>
       </main>
 
-      {!isFirstAccessRoute ? <ChatAssistant /> : null}
+      {shouldShowChatAssistant ? <ChatAssistant /> : null}
     </div>
   );
 }

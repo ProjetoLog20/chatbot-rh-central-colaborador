@@ -1251,8 +1251,7 @@ tr:not(:last-child) td {
   .chat-assistant {
     right: 1rem;
     bottom: 1rem;
-    left: 1rem;
-    align-items: stretch;
+    align-items: flex-end;
   }
 
   .mascot-launcher {
@@ -1268,7 +1267,7 @@ tr:not(:last-child) td {
   }
 
   .chat-window {
-    width: 100%;
+    width: min(440px, calc(100vw - 32px));
   }
 }
 
