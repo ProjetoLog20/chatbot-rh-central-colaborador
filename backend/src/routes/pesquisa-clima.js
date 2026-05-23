@@ -83,7 +83,38 @@ router.post('/responder', authenticateToken, async (req, res) => {
   }
 });
 
-router.get('/', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+router.get('/admin', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const [allResult, activeResult] = await Promise.all([
+      db.query(
+        `SELECT id, titulo, descricao, status, anonima, data_inicio, data_fim, created_at 
+         FROM pesquisas_clima 
+         ORDER BY created_at DESC`,
+        []
+      ),
+      db.query(
+        `SELECT id, titulo, descricao, status, anonima, data_inicio, data_fim 
+         FROM pesquisas_clima 
+         WHERE status = 'ativa' 
+         AND (data_inicio IS NULL OR data_inicio <= NOW())
+         AND (data_fim IS NULL OR data_fim >= NOW())
+         ORDER BY data_inicio DESC
+         LIMIT 1`,
+        []
+      ),
+    ]);
+
+    res.json({
+      pesquisas: allResult.rows || [],
+      pesquisaAtiva: activeResult.rows?.[0] || null,
+    });
+  } catch (error) {
+    console.error('ERRO AO BUSCAR ADMIN PESQUISAS:', error);
+    res.status(500).json({ error: 'Erro ao buscar pesquisas admin' });
+  }
+});
+
+router.get('/admin/lista', authenticateToken, authorizeRoles('admin'), async (req, res) => {
   try {
     const result = await db.query(
       `SELECT id, titulo, descricao, status, anonima, data_inicio, data_fim, created_at 
@@ -99,21 +130,72 @@ router.get('/', authenticateToken, authorizeRoles('admin'), async (req, res) => 
   }
 });
 
+router.patch('/:id/ativar', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.query(
+      `UPDATE pesquisas_clima SET status = 'ativa' WHERE id = $1`,
+      [id]
+    );
+    res.json({ mensagem: 'Pesquisa ativada com sucesso' });
+  } catch (error) {
+    console.error('ERRO AO ATIVAR PESQUISA:', error);
+    res.status(500).json({ error: 'Erro ao ativar pesquisa' });
+  }
+});
+
+router.get('/:id/perguntas', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await db.query(
+      `SELECT id, pergunta, tipo, ordem, obrigatoria, opcoes, ativa 
+       FROM perguntas_clima 
+       WHERE pesquisa_id = $1
+       ORDER BY ordem ASC`,
+      [id]
+    );
+
+    res.json(result.rows || []);
+  } catch (error) {
+    console.error('ERRO AO BUSCAR PERGUNTAS:', error);
+    res.status(500).json({ error: 'Erro ao buscar perguntas' });
+  }
+});
+
 router.post('/', authenticateToken, authorizeRoles('admin'), async (req, res) => {
   try {
-    const { titulo, descricao, anonima, data_inicio, data_fim } = req.body;
+    const { titulo, descricao, anonima, data_inicio, data_fim, status, defaultQuestions } = req.body;
     if (!titulo) {
       return res.status(400).json({ error: 'Título é obrigatório' });
     }
 
+    const pesquisaStatus = status === 'ativa' ? 'ativa' : 'rascunho';
     const result = await db.query(
       `INSERT INTO pesquisas_clima (titulo, descricao, status, anonima, data_inicio, data_fim, criado_por) 
-       VALUES ($1, $2, 'rascunho', $3, $4, $5, $6)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id`,
-      [titulo, descricao || null, anonima || false, data_inicio || null, data_fim || null, req.user.id]
+      [titulo, descricao || null, pesquisaStatus, anonima || false, data_inicio || null, data_fim || null, req.user.id]
     );
 
-    res.json({ id: result.rows[0].id, mensagem: 'Pesquisa criada com sucesso' });
+    const pesquisaId = result.rows[0].id;
+    if (defaultQuestions) {
+      const defaultPerguntas = [
+        { pergunta: 'Como você avalia o seu ambiente de trabalho?', tipo: 'nota', ordem: 1, obrigatoria: true },
+        { pergunta: 'Você se sente valorizado pelo seu gestor?', tipo: 'sim_nao', ordem: 2, obrigatoria: true },
+        { pergunta: 'Qual é sua principal sugestão de melhoria?', tipo: 'texto', ordem: 3, obrigatoria: false },
+        { pergunta: 'Como você avalia a comunicação interna?', tipo: 'nota', ordem: 4, obrigatoria: true },
+      ];
+
+      for (const pergunta of defaultPerguntas) {
+        await db.query(
+          `INSERT INTO perguntas_clima (pesquisa_id, pergunta, tipo, ordem, obrigatoria, ativa) 
+           VALUES ($1, $2, $3, $4, $5, true)`,
+          [pesquisaId, pergunta.pergunta, pergunta.tipo, pergunta.ordem, pergunta.obrigatoria]
+        );
+      }
+    }
+
+    res.json({ id: pesquisaId, mensagem: 'Pesquisa criada com sucesso' });
   } catch (error) {
     console.error('ERRO AO CRIAR PESQUISA:', error);
     res.status(500).json({ error: 'Erro ao criar pesquisa' });
