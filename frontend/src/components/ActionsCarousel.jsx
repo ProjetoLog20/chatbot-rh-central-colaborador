@@ -4,6 +4,21 @@ function labelForCategory(category) {
   return category === 'cafe_com_gerente' ? 'Cafe com o Gerente' : 'CIPA';
 }
 
+function ActionImage({ item }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed || !item.imagem_url) {
+    return (
+      <div className="actions-image-fallback">
+        <strong>{item.titulo}</strong>
+        <span>Imagem indisponivel</span>
+      </div>
+    );
+  }
+
+  return <img src={item.imagem_url} alt={item.titulo} onError={() => setFailed(true)} />;
+}
+
 export default function ActionsCarousel({ items = [] }) {
   const [selectedCategory, setSelectedCategory] = useState('todas');
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -54,7 +69,7 @@ export default function ActionsCarousel({ items = [] }) {
         <div className="actions-carousel">
           <button className="carousel-arrow" onClick={goPrev} aria-label="Acao anterior">‹</button>
           <article className="actions-slide">
-            <img src={currentItem.imagem_url} alt={currentItem.titulo} />
+            <ActionImage item={currentItem} key={currentItem.id} />
             <div className="actions-slide-content">
               <span>{labelForCategory(currentItem.categoria)}</span>
               <h3>{currentItem.titulo}</h3>
@@ -73,4 +88,3 @@ export default function ActionsCarousel({ items = [] }) {
     </section>
   );
 }
-

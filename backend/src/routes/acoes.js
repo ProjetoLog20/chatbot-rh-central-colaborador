@@ -13,19 +13,8 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-const storage = multer.diskStorage({
-  destination(req, file, callback) {
-    callback(null, uploadDir);
-  },
-  filename(req, file, callback) {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const safeName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-    callback(null, safeName);
-  }
-});
-
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter(req, file, callback) {
     const ext = path.extname(file.originalname).toLowerCase();
@@ -77,6 +66,10 @@ function normalizeCategory(categoria) {
   return 'cipa';
 }
 
+function imageToDataUrl(file) {
+  return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+}
+
 router.get('/publicas', authenticateToken, async (req, res) => {
   try {
     const rows = await allDb(
@@ -112,13 +105,12 @@ router.post(
   async (req, res) => {
     const { titulo, descricao, categoria, data_evento, ativo } = req.body;
     if (!titulo || !descricao) {
-      if (req.file) fs.unlink(req.file.path, () => {});
       return res.status(400).json({ error: 'Titulo e descricao sao obrigatorios' });
     }
     if (!req.file) return res.status(400).json({ error: 'Imagem e obrigatoria' });
 
     const now = new Date().toISOString();
-    const imagemUrl = `/uploads/acoes/${req.file.filename}`;
+    const imagemUrl = imageToDataUrl(req.file);
 
     try {
       const result = await runDb(
@@ -137,7 +129,6 @@ router.post(
       );
       res.json({ id: result.id, imagem_url: imagemUrl });
     } catch (err) {
-      fs.unlink(req.file.path, () => {});
       res.status(500).json({ error: 'Erro ao salvar acao' });
     }
   }

@@ -15,6 +15,20 @@ import {
   resetCollaboratorPassword
 } from '../api.js';
 
+function AdminActionImage({ item }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed || !item.imagem_url) {
+    return (
+      <div className="actions-admin-image-fallback">
+        <span>Imagem indisponivel</span>
+      </div>
+    );
+  }
+
+  return <img src={item.imagem_url} alt={item.titulo} onError={() => setFailed(true)} />;
+}
+
 const importOptions = [
   {
     type: 'colaboradores',
@@ -331,7 +345,7 @@ export default function AdminPage() {
           <div className="actions-admin-list">
             {acoes.map((item) => (
               <article className="actions-admin-item" key={item.id}>
-                <img src={item.imagem_url} alt={item.titulo} />
+                <AdminActionImage item={item} />
                 <div>
                   <span>{item.categoria === 'cafe_com_gerente' ? 'Cafe com o Gerente' : 'CIPA'}</span>
                   <h3>{item.titulo}</h3>
