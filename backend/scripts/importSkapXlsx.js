@@ -72,10 +72,10 @@ function normalizeLevel(value) {
   const normalized = normalizeText(value).replace(/\s+/g, ' ');
 
   if (['bronze', 'inicial', 'atendimento basico'].includes(normalized)) return 'bronze';
-  if (['verde', 'evolucao', 'atendimento proativo'].includes(normalized)) return 'verde';
+  if (['prata', 'verde', 'evolucao', 'atendimento proativo'].includes(normalized)) return 'prata';
   if (['ouro', 'avancado', 'empoderamento'].includes(normalized)) return 'ouro';
   if (normalized.includes('atendimento basico')) return 'bronze';
-  if (normalized.includes('atendimento proativo') || normalized.includes('evolucao')) return 'verde';
+  if (normalized.includes('atendimento proativo') || normalized.includes('evolucao')) return 'prata';
   if (normalized.includes('empoderamento') || normalized.includes('avancado')) return 'ouro';
 
   return normalized || 'bronze';
@@ -277,7 +277,7 @@ async function importRow(row, lineNumber, report) {
     report.history += 1;
   }
 
-  if (['bronze', 'verde', 'ouro'].includes(nivelSkap)) {
+  if (['bronze', 'prata', 'ouro'].includes(nivelSkap)) {
     report.levels[nivelSkap] += 1;
   }
 }
@@ -303,7 +303,7 @@ async function main() {
     history: 0,
     errors: [],
     notFound: [],
-    levels: { bronze: 0, verde: 0, ouro: 0 }
+    levels: { bronze: 0, prata: 0, ouro: 0 }
   };
 
   for (const [index, row] of rows.entries()) {
@@ -328,7 +328,7 @@ async function main() {
   logger.log(`Historicos criados: ${report.history}`);
   logger.log(`Erros: ${report.errors.length}`);
   logger.log(`Matriculas nao encontradas: ${[...new Set(report.notFound)].join(', ') || 'nenhuma'}`);
-  logger.log(`Niveis identificados: bronze=${report.levels.bronze}, verde=${report.levels.verde}, ouro=${report.levels.ouro}`);
+  logger.log(`Niveis identificados: bronze=${report.levels.bronze}, prata=${report.levels.prata}, ouro=${report.levels.ouro}`);
 
   if (report.errors.length) {
     logger.json('Detalhes dos erros', report.errors);

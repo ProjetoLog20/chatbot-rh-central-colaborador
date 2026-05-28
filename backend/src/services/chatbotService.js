@@ -49,8 +49,8 @@ async function getUserProfile(user) {
   if (!profile) return user;
 
   const prontuario = await get(
-    `SELECT pontuacao_atual, faixa_atual, orientacoes
-     FROM prontuario_motoristas
+    `SELECT pontuacao_ponderada, faixa, cor_faixa, status_prontuario
+     FROM prontuarios_motoristas
      WHERE colaborador_id = ?`,
     [profile.id]
   );
@@ -123,8 +123,8 @@ function getContextualAnswer(question, user) {
     const prontuario = user.prontuario;
     return {
       resposta: [
-        `Seu prontuario consta com pontuacao atual ${prontuario.pontuacao_atual ?? 'nao informada'} e faixa ${prontuario.faixa_atual || 'nao informada'}.`,
-        `Orientacao resumida do RH: ${prontuario.orientacoes || 'nao informada'}.`
+        `Seu prontuario consta com pontuacao ponderada ${prontuario.pontuacao_ponderada ?? 'nao informada'} e faixa ${prontuario.faixa || 'nao informada'}.`,
+        `Classificacao da faixa: ${prontuario.cor_faixa || 'sem_faixa'}. Status: ${prontuario.status_prontuario || 'nao informado'}.`
       ].join(' '),
       origem: 'contexto_usuario',
       categoria: 'Prontuario'
@@ -143,9 +143,6 @@ function buildKnowledgeText(rows) {
 
 function buildUserContext(user) {
   if (!user) return 'Usuario autenticado, sem dados adicionais disponiveis.';
-  const resumoOrientacao = user.prontuario?.orientacoes
-    ? String(user.prontuario.orientacoes).slice(0, 180)
-    : 'nao informada';
   const lines = [
     `Nome: ${user.nome_completo || 'nao informado'}`,
     `Perfil: ${user.perfil || 'nao informado'}`,
@@ -153,14 +150,14 @@ function buildUserContext(user) {
     `Cargo: ${user.cargo || 'nao informado'}`,
     `Setor: ${user.setor || 'nao informado'}`,
     `Unidade: ${user.unidade || 'nao informada'}`,
-    `Status: ${user.status || 'nao informado'}`
+      `Status: ${user.status || 'nao informado'}`
   ];
 
   if (user.prontuario) {
     lines.push(
-      `Prontuario motorista - pontuacao atual: ${user.prontuario.pontuacao_atual ?? 'nao informada'}`,
-      `Prontuario motorista - faixa atual: ${user.prontuario.faixa_atual || 'nao informada'}`,
-      `Prontuario motorista - orientacao resumida: ${resumoOrientacao}`
+      `Prontuario motorista - pontuacao ponderada: ${user.prontuario.pontuacao_ponderada ?? 'nao informada'}`,
+      `Prontuario motorista - faixa: ${user.prontuario.faixa || 'nao informada'}`,
+      `Prontuario motorista - cor da faixa: ${user.prontuario.cor_faixa || 'sem_faixa'}`
     );
   }
 

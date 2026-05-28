@@ -69,7 +69,7 @@ function App() {
           <Route path="/login" element={<LoginPage onLogin={(user) => setUser(user)} />} />
           <Route path="/" element={requireAuth(<Dashboard user={user} />)} />
           <Route path="/profile" element={requireAuth(<ProfilePage />)} />
-          <Route path="/motorista" element={requireAuth(<DriverPage />, ['motorista', 'admin'])} />
+          <Route path="/motorista" element={requireAuth(<DriverPage user={user} />)} />
           <Route path="/pesquisa-clima" element={requireAuth(<PesquisaClimaPage />)} />
           <Route path="/skap" element={requireAuth(<SkapPage user={user} />)} />
           <Route path="/admin" element={requireAuth(<AdminPage />, ['admin'])} />

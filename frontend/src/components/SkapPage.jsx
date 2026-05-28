@@ -22,8 +22,18 @@ const criteria = [
   ['autonomia', 'Autonomia']
 ];
 
-const levelOptions = ['', 'bronze', 'verde', 'ouro'];
+const levelOptions = ['', 'ouro', 'prata', 'bronze'];
 const criterionOptions = ['pendente', 'em_evolucao', 'concluido'];
+
+function formatLevel(value) {
+  const labels = {
+    ouro: 'Ouro',
+    prata: 'Prata',
+    verde: 'Prata',
+    bronze: 'Bronze'
+  };
+  return labels[value] || value || 'Sem nivel';
+}
 
 function formatPercent(value) {
   if (value === null || value === undefined || value === '') return '0%';
@@ -45,7 +55,7 @@ function SkapDetail({ detail, editable, onChange, onSave, saving }) {
           <h2>{detail.nome_completo}</h2>
           <p>{detail.matricula} • {detail.cargo || 'Cargo nao informado'} • {detail.setor || 'Setor nao informado'}</p>
         </div>
-        <div className={`skap-level ${detail.nivel_skap || 'pendente'}`}>{detail.nivel_skap || 'Sem nivel'}</div>
+        <div className={`skap-level ${detail.nivel_skap === 'verde' ? 'prata' : detail.nivel_skap || 'pendente'}`}>{formatLevel(detail.nivel_skap)}</div>
       </div>
 
       <div className="skap-summary-grid">
@@ -71,10 +81,10 @@ function SkapDetail({ detail, editable, onChange, onSave, saving }) {
         <div className="skap-edit-grid">
           <label>
             Nivel atual
-            <select value={detail.nivel_skap || 'bronze'} onChange={(e) => onChange({ ...detail, nivel_skap: e.target.value })}>
-              <option value="bronze">bronze</option>
-              <option value="verde">verde</option>
-              <option value="ouro">ouro</option>
+            <select value={detail.nivel_skap === 'verde' ? 'prata' : detail.nivel_skap || 'bronze'} onChange={(e) => onChange({ ...detail, nivel_skap: e.target.value })}>
+              <option value="ouro">Ouro</option>
+              <option value="prata">Prata</option>
+              <option value="bronze">Bronze</option>
             </select>
           </label>
           <label>
@@ -115,7 +125,7 @@ function SkapDetail({ detail, editable, onChange, onSave, saving }) {
         {detail.historico?.length ? (
           detail.historico.map((item) => (
             <div className="history-row" key={item.id}>
-              <strong>{item.nivel_anterior || 'inicio'} → {item.nivel_novo}</strong>
+              <strong>{item.nivel_anterior ? formatLevel(item.nivel_anterior) : 'inicio'} → {formatLevel(item.nivel_novo)}</strong>
               <span>{item.motivo} • {item.criado_em}</span>
             </div>
           ))
@@ -191,7 +201,11 @@ export default function SkapPage({ user }) {
     const csv = [
       header.join(';'),
       ...rows.map((row) => header.map((key) => {
-        const value = key === 'data_avaliacao' ? formatDate(row[key]) : row[key];
+        const value = key === 'data_avaliacao'
+          ? formatDate(row[key])
+          : key === 'nivel_skap'
+            ? formatLevel(row[key])
+            : row[key];
         return `"${String(value ?? '').replace(/"/g, '""')}"`;
       }).join(';'))
     ].join('\n');
@@ -245,7 +259,7 @@ export default function SkapPage({ user }) {
         <label>
           Nivel SKAP
           <select value={filters.nivel} onChange={(e) => setFilters({ ...filters, nivel: e.target.value })}>
-            {levelOptions.map((option) => <option key={option} value={option}>{option || 'Todos'}</option>)}
+            {levelOptions.map((option) => <option key={option} value={option}>{option ? formatLevel(option) : 'Todos'}</option>)}
           </select>
         </label>
         {['setor', 'cargo', 'unidade', 'tipo_colaborador'].map((key) => (
@@ -279,7 +293,7 @@ export default function SkapPage({ user }) {
                 <td>{item.nome_completo}</td>
                 <td>{item.cargo}</td>
                 <td>{item.setor}</td>
-                <td>{item.nivel_skap || '-'}</td>
+                <td>{item.nivel_skap ? formatLevel(item.nivel_skap) : '-'}</td>
                 <td>{formatPercent(item.progresso_percentual)}</td>
                 <td><button onClick={() => openDetail(item.id)}>Ver detalhes</button></td>
               </tr>

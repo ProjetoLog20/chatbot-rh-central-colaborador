@@ -69,10 +69,10 @@ function criterionScore(value) {
 function normalizeLevel(value) {
   const normalized = normalizeText(value).replace(/\s+/g, ' ');
   if (['bronze', 'inicial', 'atendimento basico'].includes(normalized)) return 'bronze';
-  if (['verde', 'evolucao', 'atendimento proativo'].includes(normalized)) return 'verde';
+  if (['prata', 'verde', 'evolucao', 'atendimento proativo'].includes(normalized)) return 'prata';
   if (['ouro', 'avancado', 'empoderamento'].includes(normalized)) return 'ouro';
   if (normalized.includes('atendimento basico')) return 'bronze';
-  if (normalized.includes('atendimento proativo') || normalized.includes('evolucao')) return 'verde';
+  if (normalized.includes('atendimento proativo') || normalized.includes('evolucao')) return 'prata';
   if (normalized.includes('empoderamento') || normalized.includes('avancado')) return 'ouro';
   return normalized || 'bronze';
 }
@@ -255,8 +255,14 @@ router.get('/admin', authenticateToken, authorizeRoles('admin'), async (req, res
     params.push(`%${String(busca).toLowerCase()}%`, `%${String(busca).toLowerCase()}%`);
   }
   if (nivel) {
-    filters.push('s.nivel_skap = ?');
-    params.push(normalizeLevel(nivel));
+    const normalizedLevel = normalizeLevel(nivel);
+    if (normalizedLevel === 'prata') {
+      filters.push('s.nivel_skap IN (?, ?)');
+      params.push('prata', 'verde');
+    } else {
+      filters.push('s.nivel_skap = ?');
+      params.push(normalizedLevel);
+    }
   }
   for (const [column, value] of Object.entries({ setor, cargo, unidade, tipo_colaborador })) {
     if (value) {

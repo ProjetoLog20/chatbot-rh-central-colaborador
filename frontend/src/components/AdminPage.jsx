@@ -25,8 +25,8 @@ const importOptions = [
   {
     type: 'prontuario_motoristas',
     title: 'Prontuario dos motoristas',
-    description: 'Atualize pontuacao, faixa, pontos de atencao e orientacoes do motorista.',
-    path: '/import/prontuario_motoristas'
+    description: 'Importe a planilha analitica limpa com CPF, pontuacao, faixa e ocorrencias.',
+    path: '/prontuario/importar'
   },
   {
     type: 'respostas_chatbot',
@@ -74,7 +74,8 @@ export default function AdminPage() {
     if (!files.length) return;
     try {
       const result = await importFile(path, files[0]);
-      setMessage(`Importacao concluida: ${result.imported} registro(s).`);
+      const total = result.imported ?? ((result.created || 0) + (result.updated || 0));
+      setMessage(`Importacao concluida: ${total} registro(s).`);
       setImportErrors(result.errors || []);
       refresh();
     } catch (err) {
@@ -204,11 +205,11 @@ export default function AdminPage() {
             <div className="table-scroll">
               <table>
                 <thead>
-                  <tr><th>Motorista</th><th>Pontuacao</th><th>Faixa</th><th>Ultima atualizacao</th></tr>
+                  <tr><th>Motorista</th><th>Pontuacao</th><th>Faixa</th><th>Cor</th><th>Ultima importacao</th></tr>
                 </thead>
                 <tbody>
                   {prontuarios.map((item) => (
-                    <tr key={item.id}><td>{item.nome_completo}</td><td>{item.pontuacao_atual}</td><td>{item.faixa_atual}</td><td>{item.data_atualizacao}</td></tr>
+                    <tr key={item.id}><td>{item.nome_condutor || item.nome_completo}</td><td>{item.pontuacao_ponderada}</td><td>{item.faixa}</td><td>{item.cor_faixa}</td><td>{item.data_importacao}</td></tr>
                   ))}
                 </tbody>
               </table>
@@ -230,7 +231,7 @@ export default function AdminPage() {
                   <button type="button" onClick={() => handleDownloadTemplate(option.type)}>1. Baixar modelo Excel</button>
                   <label>
                     2. Enviar Excel preenchido
-                    <input type="file" accept=".csv,.xlsx" onChange={(e) => handleImport(option.path, e.target.files)} />
+                    <input type="file" accept={option.type === 'prontuario_motoristas' ? '.xls,.xlsx' : '.csv,.xlsx'} onChange={(e) => handleImport(option.path, e.target.files)} />
                   </label>
                 </div>
               </div>

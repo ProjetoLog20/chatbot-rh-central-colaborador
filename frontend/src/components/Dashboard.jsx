@@ -53,7 +53,7 @@ const generalCards = [
     id: 'prontuario',
     icon: '🚛',
     title: 'Prontuário do Motorista',
-    description: 'Consulte sua pontuação, faixa atual e orientações de evolução.',
+    description: 'Consulte sua pontuação, faixa atual e ocorrências registradas.',
     action: 'Ver prontuário',
     color: '#E87522',
     route: '/motorista'
@@ -84,6 +84,16 @@ const adminCard = {
 function getFirstName(user) {
   const name = user?.nome_preferido || user?.nome_completo || 'colaborador';
   return String(name).trim().split(/\s+/)[0] || 'colaborador';
+}
+
+function formatLevel(value) {
+  const labels = {
+    ouro: 'Ouro',
+    prata: 'Prata',
+    verde: 'Prata',
+    bronze: 'Bronze'
+  };
+  return labels[value] || value;
 }
 
 function DashboardCard({ card, index }) {
@@ -149,11 +159,10 @@ export default function Dashboard({ user }) {
       .then(setSkap)
       .catch(() => setSkap(null));
 
-    if (isMotorista) {
-      getProntuarioMe()
-        .then(setProntuario)
-        .catch(() => setProntuario(null));
-    }
+    getProntuarioMe()
+      .then(setProntuario)
+      .catch(() => setProntuario(null));
+
   }, [user, isAdmin, isMotorista]);
 
   const cards = useMemo(() => {
@@ -161,7 +170,7 @@ export default function Dashboard({ user }) {
       if (card.id === 'skap') {
         return {
           ...card,
-          badge: isAdmin ? 'Painel geral' : (skap?.nivel_skap ? `Nível ${skap.nivel_skap}` : 'Meu acompanhamento'),
+          badge: isAdmin ? 'Painel geral' : (skap?.nivel_skap ? `Nível ${formatLevel(skap.nivel_skap)}` : 'Meu acompanhamento'),
           featured: isMotorista
         };
       }
@@ -170,7 +179,7 @@ export default function Dashboard({ user }) {
         if (isMotorista) {
           return {
             ...card,
-            badge: prontuario?.faixa_atual ? `Faixa ${prontuario.faixa_atual}` : 'Motorista',
+            badge: prontuario?.faixa ? `Faixa ${prontuario.faixa}` : 'Motorista',
             featured: true
           };
         }
@@ -184,9 +193,8 @@ export default function Dashboard({ user }) {
 
         return {
           ...card,
-          action: 'Acesso limitado',
-          badge: 'Somente motoristas',
-          disabled: true
+          action: 'Ver prontuário',
+          badge: prontuario?.faixa ? `Faixa ${prontuario.faixa}` : 'Meu prontuário'
         };
       }
 

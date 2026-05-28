@@ -1493,9 +1493,9 @@ tr:not(:last-child) td {
   color: #92400E;
 }
 
-.skap-level.verde {
-  background: #DCFCE7;
-  color: #166534;
+.skap-level.prata {
+  background: #E5E7EB;
+  color: #374151;
 }
 
 .skap-level.ouro {
@@ -1577,6 +1577,152 @@ tr:not(:last-child) td {
   margin-top: 0.25rem;
   color: #6B7280;
   font-size: 0.9rem;
+}
+
+.driver-page {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.driver-detail,
+.driver-admin {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.driver-summary,
+.driver-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.75rem;
+}
+
+.driver-summary > div,
+.driver-stats > div,
+.driver-mini-grid > div {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 0.9rem;
+}
+
+.driver-summary span,
+.driver-stats span,
+.driver-mini-grid span {
+  display: block;
+  color: #6B7280;
+  font-size: 0.84rem;
+}
+
+.driver-summary strong,
+.driver-stats strong,
+.driver-mini-grid strong {
+  display: block;
+  margin-top: 0.35rem;
+  color: #003B68;
+}
+
+.driver-badge {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  font-weight: 900;
+}
+
+.driver-badge.verde {
+  background: #DCFCE7;
+  color: #166534;
+}
+
+.driver-badge.amarelo {
+  background: #FEF3C7;
+  color: #92400E;
+}
+
+.driver-badge.vermelho {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.driver-badge.sem_faixa {
+  background: #E5E7EB;
+  color: #374151;
+}
+
+.driver-section {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.driver-section h2 {
+  margin: 0;
+  color: #003B68;
+  font-size: 1.05rem;
+}
+
+.driver-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 0.75rem;
+}
+
+.driver-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.driver-actions button,
+.driver-actions label {
+  border: none;
+  border-radius: 8px;
+  background: #003B68;
+  color: #fff;
+  padding: 0.8rem 1rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.driver-actions label {
+  background: #E87522;
+}
+
+.driver-actions input {
+  display: none;
+}
+
+.driver-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1rem;
+  background: #F4F7F9;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.driver-filters label {
+  display: grid;
+  gap: 0.5rem;
+  font-weight: 700;
+}
+
+.driver-filters input,
+.driver-filters select {
+  width: 100%;
+  border: 1px solid #C9D7E2;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0.75rem 0.85rem;
+}
+
+.empty-state {
+  background: #F8FAFC;
+  border: 1px dashed #C9D7E2;
+  border-radius: 8px;
+  color: #4B5563;
+  padding: 1rem;
 }
 
 @media (max-width: 720px) {

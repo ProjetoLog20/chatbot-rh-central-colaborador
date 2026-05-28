@@ -126,31 +126,22 @@ router.get('/modelos/:tipo', authenticateToken, authorizeRoles('admin'), (req, r
   }
 
   if (tipo === 'prontuario_motoristas') {
-    return sendWorkbook(res, 'modelo_prontuario_motoristas.xlsx', [
-      {
-        name: 'Prontuarios',
-        columns: [14, 16, 14, 34, 34, 34, 20],
-        rows: [{
-          matricula: '2000',
-          pontuacao_atual: 82,
-          faixa_atual: 'Verde',
-          pontos_de_atencao: 'Use cinto de seguranca, respeite velocidades',
-          orientacoes: 'Revisar checklist diario',
-          observacoes: 'Boa atencao nos retornos',
-          data_atualizacao: '2026-05-22 10:00:00'
-        }]
-      },
-      {
-        name: 'Instrucoes',
-        columns: [28, 80],
-        rows: [
-          { campo: 'matricula', orientacao: 'Obrigatorio. Deve existir na base de colaboradores.' },
-          { campo: 'pontuacao_atual', orientacao: 'Numero inteiro.' },
-          { campo: 'faixa_atual', orientacao: 'Exemplos: Verde, Amarela, Vermelha.' },
-          { campo: 'data_atualizacao', orientacao: 'Opcional. Se ficar vazio, o sistema usa a data atual.' }
-        ]
-      }
-    ]);
+    const workbook = xlsx.utils.book_new();
+    const rows = [
+      ['Legenda', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+      ['De 0,000 ate 10,009 pontos', '', 'De 10,010 ate 20,009 pontos', 'De 20,010 ate 30,009 pontos', '', 'De 30,010 ate 40,009 pontos', '', 'Acima de 40,010 pontos', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+      ['Colaborador', '', '', '', '', '', '', '', 'Situacao', '', '', '', '', 'CNH', '', 'Documentos', '', '', '', 'Ocorrencias', ''],
+      ['Situacao Empregado', 'Empregado', '', '', 'CPF', '', 'Cargo', '', 'Status', 'Motivo', '', '', 'Data Bloqueio', 'Pontuacao', 'Vencimento', 'RS', 'EC', 'IT', 'ET', 'Pontuacao Ponderada', 'Faixa'],
+      ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+      ['ATIVO', 'NOME DO CONDUTOR', '', '', '000.000.000-00', '', 'Motorista Caminhao Distribuicao', '', 'LIBERADO', '', '', '', '', 0, '2033-03-16', 'N / A', 'N / A', 'OK', 'OK', 5, 'Verde']
+    ];
+    const worksheet = xlsx.utils.aoa_to_sheet(rows);
+    worksheet['!cols'] = [18, 34, 18, 18, 16, 12, 34, 12, 16, 22, 12, 12, 16, 12, 16, 12, 12, 12, 12, 18, 14].map((wch) => ({ wch }));
+    xlsx.utils.book_append_sheet(workbook, worksheet, 'Sheet');
+    const buffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Disposition', 'attachment; filename="modelo_prontuario_motoristas.xlsx"');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    return res.send(buffer);
   }
 
   if (tipo === 'respostas_chatbot') {

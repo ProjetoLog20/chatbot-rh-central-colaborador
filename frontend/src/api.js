@@ -36,7 +36,7 @@ export async function getProfile() {
 }
 
 export async function getProntuarioMe() {
-  return request('/prontuario_motoristas/me');
+  return request('/prontuario/meu');
 }
 
 export async function getCollaborators() {
@@ -51,7 +51,60 @@ export async function resetCollaboratorPassword(id) {
 }
 
 export async function getProntuarios() {
-  return request('/prontuario_motoristas');
+  const result = await request('/prontuario/admin');
+  return result.rows || result;
+}
+
+export async function getAdminProntuarios(filters = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) params.set(key, value);
+  });
+  const query = params.toString();
+  return request(`/prontuario/admin${query ? `?${query}` : ''}`);
+}
+
+export async function getAdminProntuarioDetail(colaboradorId) {
+  return request(`/prontuario/admin/${colaboradorId}`);
+}
+
+export async function importProntuarioFile(file) {
+  const token = localStorage.getItem('token');
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE}/prontuario/importar`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw body || { error: 'Erro na importacao de prontuario' };
+  return body;
+}
+
+export async function exportAdminProntuarios(filters = {}) {
+  const token = localStorage.getItem('token');
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) params.set(key, value);
+  });
+  const query = params.toString();
+  const res = await fetch(`${API_BASE}/prontuario/admin/exportar${query ? `?${query}` : ''}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw body || { error: 'Erro ao exportar prontuarios' };
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'relatorio_prontuarios_motoristas.csv';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 export async function getMeuSkap() {

@@ -50,6 +50,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/colaboradores', colaboradoresRoutes);
+app.use('/api/prontuario', prontuarioRoutes);
 app.use('/api/prontuario_motoristas', prontuarioRoutes);
 app.use('/api/chatbot', chatRoutes);
 app.use('/api/respostas_chatbot', respostasRoutes);
