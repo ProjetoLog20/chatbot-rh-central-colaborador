@@ -1339,6 +1339,12 @@ tr:not(:last-child) td {
   font-weight: 700;
 }
 
+.action-edit-form {
+  margin-top: 1rem;
+  border-top: 1px solid #DCE5EC;
+  padding-top: 1rem;
+}
+
 .import-actions {
   display: grid;
   gap: 1rem;

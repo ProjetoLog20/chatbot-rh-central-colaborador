@@ -59,7 +59,16 @@ export default function AdminPage() {
   const [message, setMessage] = useState('');
   const [importErrors, setImportErrors] = useState(null);
   const [respostaText, setRespostaText] = useState({ pergunta: '', resposta: '', categoria: '', ativo: true });
+  const [editingAcaoId, setEditingAcaoId] = useState(null);
   const [acaoForm, setAcaoForm] = useState({
+    categoria: 'cipa',
+    titulo: '',
+    descricao: '',
+    data_evento: '',
+    imagem: null,
+    ativo: true
+  });
+  const [acaoEditForm, setAcaoEditForm] = useState({
     categoria: 'cipa',
     titulo: '',
     descricao: '',
@@ -155,6 +164,45 @@ export default function AdminPage() {
   async function handleToggleAcao(item) {
     try {
       await updateAcao(item.id, { ...item, ativo: item.ativo ? 0 : 1 });
+      refresh();
+    } catch (err) {
+      setMessage(err.error || 'Erro ao atualizar acao');
+    }
+  }
+
+  function startEditAcao(item) {
+    setEditingAcaoId(item.id);
+    setAcaoEditForm({
+      categoria: item.categoria || 'cipa',
+      titulo: item.titulo || '',
+      descricao: item.descricao || '',
+      data_evento: item.data_evento || '',
+      imagem: null,
+      ativo: Boolean(item.ativo)
+    });
+    setMessage('');
+  }
+
+  function cancelEditAcao() {
+    setEditingAcaoId(null);
+    setAcaoEditForm({ categoria: 'cipa', titulo: '', descricao: '', data_evento: '', imagem: null, ativo: true });
+  }
+
+  async function handleUpdateAcao(e) {
+    e.preventDefault();
+    if (!editingAcaoId) return;
+
+    try {
+      await updateAcao(editingAcaoId, {
+        categoria: acaoEditForm.categoria,
+        titulo: acaoEditForm.titulo,
+        descricao: acaoEditForm.descricao,
+        data_evento: acaoEditForm.data_evento,
+        ativo: acaoEditForm.ativo ? 1 : 0,
+        imagem: acaoEditForm.imagem
+      });
+      setMessage('Acao atualizada com sucesso.');
+      cancelEditAcao();
       refresh();
     } catch (err) {
       setMessage(err.error || 'Erro ao atualizar acao');
@@ -352,9 +400,47 @@ export default function AdminPage() {
                   <p>{item.descricao}</p>
                   <small>{item.ativo ? 'Publicado' : 'Oculto'} {item.data_evento ? `- ${item.data_evento}` : ''}</small>
                   <div className="row-actions">
+                    <button onClick={() => startEditAcao(item)}>Editar</button>
                     <button onClick={() => handleToggleAcao(item)}>{item.ativo ? 'Ocultar' : 'Publicar'}</button>
                     <button onClick={() => deleteAcao(item.id).then(refresh)}>Excluir</button>
                   </div>
+                  {editingAcaoId === item.id ? (
+                    <form className="admin-form action-edit-form" onSubmit={handleUpdateAcao}>
+                      <div className="form-grid">
+                        <label>
+                          Tipo de publicacao
+                          <select value={acaoEditForm.categoria} onChange={(e) => setAcaoEditForm({ ...acaoEditForm, categoria: e.target.value })}>
+                            <option value="cipa">CIPA</option>
+                            <option value="cafe_com_gerente">Cafe com o Gerente</option>
+                          </select>
+                        </label>
+                        <label>
+                          Titulo
+                          <input value={acaoEditForm.titulo} onChange={(e) => setAcaoEditForm({ ...acaoEditForm, titulo: e.target.value })} required />
+                        </label>
+                        <label>
+                          Data da acao
+                          <input type="date" value={acaoEditForm.data_evento} onChange={(e) => setAcaoEditForm({ ...acaoEditForm, data_evento: e.target.value })} />
+                        </label>
+                        <label>
+                          Trocar imagem
+                          <input type="file" accept=".jpg,.jpeg,.png,.webp" onChange={(e) => setAcaoEditForm({ ...acaoEditForm, imagem: e.target.files[0] || null })} />
+                        </label>
+                        <label className="wide-field">
+                          Descricao
+                          <textarea value={acaoEditForm.descricao} onChange={(e) => setAcaoEditForm({ ...acaoEditForm, descricao: e.target.value })} rows="4" required />
+                        </label>
+                      </div>
+                      <label className="inline-check">
+                        <input type="checkbox" checked={acaoEditForm.ativo} onChange={(e) => setAcaoEditForm({ ...acaoEditForm, ativo: e.target.checked })} />
+                        Publicar
+                      </label>
+                      <div className="row-actions">
+                        <button type="submit">Salvar alteracoes</button>
+                        <button type="button" onClick={cancelEditAcao}>Cancelar</button>
+                      </div>
+                    </form>
+                  ) : null}
                 </div>
               </article>
             ))}

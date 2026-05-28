@@ -175,6 +175,23 @@ export async function createAcao(payload) {
 }
 
 export async function updateAcao(id, payload) {
+  if (payload?.imagem) {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) formData.append(key, value);
+    });
+
+    const res = await fetch(`${API_BASE}/acoes/${id}`, {
+      method: 'PUT',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData
+    });
+    const body = await res.json().catch(() => null);
+    if (!res.ok) throw body || { error: 'Erro ao atualizar acao' };
+    return body;
+  }
+
   return request(`/acoes/${id}`, {
     method: 'PUT',
     body: JSON.stringify(payload)

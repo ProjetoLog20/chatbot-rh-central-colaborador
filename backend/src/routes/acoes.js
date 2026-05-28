@@ -70,6 +70,13 @@ function imageToDataUrl(file) {
   return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
 }
 
+function normalizeActive(value, fallback = 1) {
+  if (value === undefined || value === null || value === '') return fallback;
+  if (value === true || value === 1 || value === '1') return 1;
+  if (String(value).toLowerCase() === 'true') return 1;
+  return 0;
+}
+
 router.get('/publicas', authenticateToken, async (req, res) => {
   try {
     const rows = await allDb(
@@ -134,34 +141,44 @@ router.post(
   }
 );
 
-router.put('/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
-  const id = Number(req.params.id);
-  const { titulo, descricao, categoria, data_evento, ativo } = req.body;
+router.put(
+  '/:id',
+  authenticateToken,
+  authorizeRoles('admin'),
+  upload.single('imagem'),
+  handleUploadError,
+  async (req, res) => {
+    const id = Number(req.params.id);
+    const { titulo, descricao, categoria, data_evento, ativo } = req.body;
 
-  try {
-    const current = await getDb('SELECT * FROM acoes_comunicacao WHERE id = ?', [id]);
-    if (!current) return res.status(404).json({ error: 'Acao nao encontrada' });
+    try {
+      const current = await getDb('SELECT * FROM acoes_comunicacao WHERE id = ?', [id]);
+      if (!current) return res.status(404).json({ error: 'Acao nao encontrada' });
 
-    await runDb(
-      `UPDATE acoes_comunicacao
-       SET categoria = ?, titulo = ?, descricao = ?, ativo = ?, data_evento = ?, atualizado_em = ?
-       WHERE id = ?`,
-      [
-        normalizeCategory(categoria || current.categoria),
-        titulo || current.titulo,
-        descricao || current.descricao,
-        ativo === undefined ? current.ativo : ativo ? 1 : 0,
-        data_evento === undefined ? current.data_evento : data_evento || null,
-        new Date().toISOString(),
-        id
-      ]
-    );
+      const imagemUrl = req.file ? imageToDataUrl(req.file) : current.imagem_url;
 
-    res.json({ changed: 1 });
-  } catch (err) {
-    res.status(500).json({ error: 'Erro ao atualizar acao' });
+      await runDb(
+        `UPDATE acoes_comunicacao
+         SET categoria = ?, titulo = ?, descricao = ?, imagem_url = ?, ativo = ?, data_evento = ?, atualizado_em = ?
+         WHERE id = ?`,
+        [
+          normalizeCategory(categoria || current.categoria),
+          titulo ? titulo.trim() : current.titulo,
+          descricao ? descricao.trim() : current.descricao,
+          imagemUrl,
+          normalizeActive(ativo, current.ativo),
+          data_evento === undefined ? current.data_evento : data_evento || null,
+          new Date().toISOString(),
+          id
+        ]
+      );
+
+      res.json({ changed: 1, imagem_url: imagemUrl });
+    } catch (err) {
+      res.status(500).json({ error: 'Erro ao atualizar acao' });
+    }
   }
-});
+);
 
 router.delete('/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
   const id = Number(req.params.id);
