@@ -59,6 +59,8 @@ export default function AdminPage() {
   const [message, setMessage] = useState('');
   const [importErrors, setImportErrors] = useState(null);
   const [respostaText, setRespostaText] = useState({ pergunta: '', resposta: '', categoria: '', ativo: true });
+  const [editingRespostaId, setEditingRespostaId] = useState(null);
+  const [respostaEditText, setRespostaEditText] = useState({ pergunta: '', resposta: '', categoria: '', ativo: true });
   const [editingAcaoId, setEditingAcaoId] = useState(null);
   const [acaoForm, setAcaoForm] = useState({
     categoria: 'cipa',
@@ -133,6 +135,36 @@ export default function AdminPage() {
       refresh();
     } catch (err) {
       console.error(err);
+    }
+  }
+
+  function startEditResposta(item) {
+    setEditingRespostaId(item.id);
+    setRespostaEditText({
+      pergunta: item.pergunta || '',
+      resposta: item.resposta || '',
+      categoria: item.categoria || '',
+      ativo: Boolean(item.ativo)
+    });
+    setMessage('');
+  }
+
+  function cancelEditResposta() {
+    setEditingRespostaId(null);
+    setRespostaEditText({ pergunta: '', resposta: '', categoria: '', ativo: true });
+  }
+
+  async function handleUpdateResposta(e) {
+    e.preventDefault();
+    if (!editingRespostaId) return;
+
+    try {
+      await updateResposta(editingRespostaId, respostaEditText);
+      setMessage('Resposta atualizada.');
+      cancelEditResposta();
+      refresh();
+    } catch (err) {
+      setMessage(err.error || 'Erro ao atualizar resposta');
     }
   }
 
@@ -324,6 +356,7 @@ export default function AdminPage() {
                     <td>{item.resposta}</td>
                     <td>{item.ativo ? 'Sim' : 'Nao'}</td>
                     <td>
+                      <button onClick={() => startEditResposta(item)}>Editar</button>
                       <button onClick={() => handleToggleResposta(item)}>{item.ativo ? 'Desativar' : 'Ativar'}</button>
                       <button onClick={() => deleteResposta(item.id).then(refresh)}>Excluir</button>
                     </td>
@@ -332,6 +365,32 @@ export default function AdminPage() {
               </tbody>
             </table>
           </div>
+          {editingRespostaId ? (
+            <form className="admin-form action-edit-form" onSubmit={handleUpdateResposta}>
+              <div className="form-grid">
+                <label>
+                  Categoria
+                  <input value={respostaEditText.categoria} onChange={(e) => setRespostaEditText({ ...respostaEditText, categoria: e.target.value })} />
+                </label>
+                <label>
+                  Pergunta
+                  <input value={respostaEditText.pergunta} onChange={(e) => setRespostaEditText({ ...respostaEditText, pergunta: e.target.value })} required />
+                </label>
+                <label className="wide-field">
+                  Resposta
+                  <textarea value={respostaEditText.resposta} onChange={(e) => setRespostaEditText({ ...respostaEditText, resposta: e.target.value })} rows="4" required />
+                </label>
+              </div>
+              <label className="inline-check">
+                <input type="checkbox" checked={respostaEditText.ativo} onChange={(e) => setRespostaEditText({ ...respostaEditText, ativo: e.target.checked })} />
+                Ativa
+              </label>
+              <div className="row-actions">
+                <button type="submit">Salvar alteracoes</button>
+                <button type="button" onClick={cancelEditResposta}>Cancelar</button>
+              </div>
+            </form>
+          ) : null}
           <form className="admin-form" onSubmit={handleCreateResposta}>
             <div className="form-grid">
               <label>
