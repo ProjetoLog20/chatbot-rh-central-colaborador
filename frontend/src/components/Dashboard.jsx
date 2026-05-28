@@ -35,10 +35,10 @@ const generalCards = [
     id: 'tres-rs',
     icon: '♻️',
     title: '3 Rs',
-    description: 'Registre e acompanhe ações de reduzir, reutilizar e reciclar.',
-    action: 'Acessar',
+    description: 'Conheça responsabilidades, recursos e reconhecimentos da metodologia 3Rs.',
+    action: 'Acessar 3Rs',
     color: '#005A8C',
-    route: '/profile'
+    route: '/3rs'
   },
   {
     id: 'produtividade',
