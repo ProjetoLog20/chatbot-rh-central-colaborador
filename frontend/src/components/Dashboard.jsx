@@ -56,7 +56,7 @@ const generalCards = [
     description: 'Consulte sua pontuação, faixa atual e ocorrências registradas.',
     action: 'Ver prontuário',
     color: '#E87522',
-    route: '/motorista'
+    route: '/prontuario'
   },
   {
     id: 'ouvidoria',
@@ -80,6 +80,10 @@ const adminCard = {
   badge: 'Admin',
   featured: true
 };
+
+function normalizePerfil(perfil) {
+  return String(perfil || '').trim().toLowerCase();
+}
 
 function getFirstName(user) {
   const name = user?.nome_preferido || user?.nome_completo || 'colaborador';
@@ -143,8 +147,9 @@ export default function Dashboard({ user }) {
   const [acoes, setAcoes] = useState([]);
   const [skap, setSkap] = useState(null);
   const [prontuario, setProntuario] = useState(null);
-  const isAdmin = user?.perfil === 'admin';
-  const isMotorista = user?.perfil === 'motorista';
+  const perfil = normalizePerfil(user?.perfil);
+  const isAdmin = perfil === 'admin';
+  const isMotorista = perfil === 'motorista';
 
   useEffect(() => {
     getPublicAcoes()

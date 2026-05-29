@@ -14,6 +14,10 @@ import FirstAccessPage from './components/FirstAccessPage.jsx';
 import SkapPage from './components/SkapPage.jsx';
 import ThreeRsPage from './components/ThreeRsPage.jsx';
 
+function normalizePerfil(perfil) {
+  return String(perfil || '').trim().toLowerCase();
+}
+
 function App() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -34,7 +38,7 @@ function App() {
   function requireAuth(element, roles = []) {
     if (!user) return <Navigate to="/login" replace />;
     if (user.primeiro_acesso || user.senha_temporaria) return <Navigate to="/primeiro-acesso" replace />;
-    if (roles.length && !roles.includes(user.perfil)) return <Navigate to="/" replace />;
+    if (roles.length && !roles.includes(normalizePerfil(user.perfil))) return <Navigate to="/" replace />;
     return element;
   }
 
@@ -57,7 +61,7 @@ function App() {
           {user && !isFirstAccessRoute ? (
             <nav className="center-nav" aria-label="Centrais">
               <Link to="/">Central do Colaborador</Link>
-              {user.perfil === 'admin' ? <Link to="/admin">Central do Administrador</Link> : null}
+              {normalizePerfil(user.perfil) === 'admin' ? <Link to="/admin">Central do Administrador</Link> : null}
             </nav>
           ) : null}
           {user && !isFirstAccessRoute ? <span>{user.nome_preferido || user.nome_completo} ({user.perfil})</span> : null}
@@ -71,6 +75,7 @@ function App() {
           <Route path="/" element={requireAuth(<Dashboard user={user} />)} />
           <Route path="/profile" element={requireAuth(<ProfilePage />)} />
           <Route path="/motorista" element={requireAuth(<DriverPage user={user} />)} />
+          <Route path="/prontuario" element={requireAuth(<DriverPage user={user} />)} />
           <Route path="/pesquisa-clima" element={requireAuth(<PesquisaClimaPage />)} />
           <Route path="/3rs" element={requireAuth(<ThreeRsPage />)} />
           <Route path="/skap" element={requireAuth(<SkapPage user={user} />)} />

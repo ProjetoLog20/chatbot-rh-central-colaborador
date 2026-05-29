@@ -31,11 +31,13 @@ const uploadSingleFile = [upload.single('file'), uploadError];
 const selectProntuario = `
   SELECT
     p.*,
+    c.id AS colaborador_id,
     c.nome_completo,
     c.nome_preferido,
     c.setor,
     c.unidade,
     COALESCE(p.matricula, c.matricula) AS matricula,
+    COALESCE(p.cpf, c.cpf) AS cpf,
     COALESCE(p.cargo, c.cargo) AS cargo
   FROM prontuarios_motoristas p
   JOIN colaboradores c ON c.id = p.colaborador_id
@@ -92,26 +94,27 @@ function buildAdminFilters(query) {
     const text = String(busca).trim().toLowerCase();
     const doc = digits(text);
     if (doc) {
-      filters.push('(LOWER(c.nome_completo) LIKE ? OR LOWER(COALESCE(p.matricula, c.matricula)) LIKE ? OR p.cpf LIKE ?)');
-      params.push(`%${text}%`, `%${text}%`, `%${doc}%`);
+      filters.push('(LOWER(c.nome_completo) LIKE ? OR LOWER(COALESCE(p.matricula, c.matricula, \'\')) LIKE ? OR COALESCE(p.cpf, c.cpf, \'\') LIKE ? OR COALESCE(p.cpf, c.cpf, \'\') LIKE ?)');
+      params.push(`%${text}%`, `%${text}%`, `%${doc}%`, `%${text}%`);
     } else {
-      filters.push('(LOWER(c.nome_completo) LIKE ? OR LOWER(COALESCE(p.matricula, c.matricula)) LIKE ?)');
+      filters.push('(LOWER(c.nome_completo) LIKE ? OR LOWER(COALESCE(p.matricula, c.matricula, \'\')) LIKE ?)');
       params.push(`%${text}%`, `%${text}%`);
     }
   }
 
-  for (const [column, value] of Object.entries({
-    faixa,
-    cor_faixa,
-    status_prontuario: status,
-    cargo,
-    operacao,
-    atividade
-  })) {
-    if (value) {
-      filters.push(`LOWER(COALESCE(p.${column}, '')) LIKE ?`);
-      params.push(`%${String(value).toLowerCase()}%`);
-    }
+  const filterExpressions = {
+    faixa: 'p.faixa',
+    cor_faixa: 'p.cor_faixa',
+    status_prontuario: 'p.status_prontuario',
+    cargo: 'COALESCE(p.cargo, c.cargo)',
+    operacao: 'p.operacao',
+    atividade: 'p.atividade'
+  };
+
+  for (const [column, value] of Object.entries({ faixa, cor_faixa, status_prontuario: status, cargo, operacao, atividade })) {
+    if (!value) continue;
+    filters.push(`LOWER(COALESCE(${filterExpressions[column]}, '')) LIKE ?`);
+    params.push(`%${String(value).toLowerCase()}%`);
   }
 
   return {

@@ -21,9 +21,14 @@ function authenticateToken(req, res, next) {
   });
 }
 
+function normalizePerfil(perfil) {
+  return String(perfil || '').trim().toLowerCase();
+}
+
 function authorizeRoles(...roles) {
+  const allowedRoles = roles.map(normalizePerfil);
   return (req, res, next) => {
-    if (!req.user || !roles.includes(req.user.perfil)) {
+    if (!req.user || !allowedRoles.includes(normalizePerfil(req.user.perfil))) {
       return res.status(403).json({ error: 'Acesso negado' });
     }
     next();
@@ -35,4 +40,3 @@ module.exports = {
   authorizeRoles,
   getJwtSecret
 };
-

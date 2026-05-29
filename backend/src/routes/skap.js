@@ -112,6 +112,7 @@ function baseSkapSelect(whereClause = '') {
   return `
     SELECT
       c.id,
+      c.id AS colaborador_id,
       c.matricula,
       c.nome_completo,
       c.cargo,

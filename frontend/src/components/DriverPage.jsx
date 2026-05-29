@@ -61,6 +61,10 @@ function formatDate(value) {
   return String(value).slice(0, 10);
 }
 
+function isAdminUser(user) {
+  return String(user?.perfil || '').trim().toLowerCase() === 'admin';
+}
+
 function FaixaBadge({ color }) {
   const normalized = color || 'sem_faixa';
   return <span className={`driver-badge ${normalized}`}>{colorLabels[normalized] || colorLabels.sem_faixa}</span>;
@@ -144,6 +148,7 @@ function AdminProntuarioPanel() {
   const [summary, setSummary] = useState({ total: 0, colors: {}, faixas: {} });
   const [detail, setDetail] = useState(null);
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(true);
 
   const filterOptions = useMemo(() => {
     const uniq = (key) => [...new Set(rows.map((item) => item[key]).filter(Boolean))].sort();
@@ -161,12 +166,17 @@ function AdminProntuarioPanel() {
   }, [filters]);
 
   async function refresh() {
+    setLoading(true);
+    setMessage('');
+    console.warn('[Prontuario] perfil admin detectado; chamando /api/prontuario/admin');
     try {
       const result = await getAdminProntuarios(filters);
       setRows(result.rows || []);
       setSummary(result.summary || { total: 0, colors: {}, faixas: {} });
     } catch (err) {
       setMessage(err.error || 'Erro ao carregar prontuarios');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -202,7 +212,7 @@ function AdminProntuarioPanel() {
       <div className="driver-actions">
         <button onClick={handleExport}>Exportar relatorio</button>
         <label>
-          Importar planilha
+          Importar Prontuário
           <input type="file" accept=".xls,.xlsx" onChange={(e) => handleImport(e.target.files)} />
         </label>
       </div>
@@ -219,7 +229,7 @@ function AdminProntuarioPanel() {
 
       <section className="driver-filters">
         <label>
-          Buscar nome, matricula ou CPF
+          Buscar por nome, matrícula ou CPF
           <input value={filters.busca} onChange={(e) => setFilters({ ...filters, busca: e.target.value })} />
         </label>
         <label>
@@ -243,7 +253,12 @@ function AdminProntuarioPanel() {
         ))}
       </section>
 
-      <div className="table-scroll">
+      {loading ? <p>Carregando prontuários...</p> : null}
+      {!loading && !rows.length ? (
+        <div className="empty-state">Nenhum prontuário encontrado. Importe a planilha de prontuário para visualizar os dados.</div>
+      ) : null}
+
+      {!loading && rows.length > 0 ? <div className="table-scroll">
         <table>
           <thead>
             <tr>
@@ -272,7 +287,7 @@ function AdminProntuarioPanel() {
             ))}
           </tbody>
         </table>
-      </div>
+      </div> : null}
 
       <ProntuarioDetail prontuario={detail} />
     </div>
@@ -283,7 +298,7 @@ export default function DriverPage({ user }) {
   const [prontuario, setProntuario] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const isAdmin = user?.perfil === 'admin';
+  const isAdmin = isAdminUser(user);
 
   useEffect(() => {
     if (isAdmin) {
@@ -302,7 +317,7 @@ export default function DriverPage({ user }) {
       <div className="page-card driver-page">
         <div className="admin-heading">
           <div>
-            <h1>Prontuario do Motorista</h1>
+            <h1>Gestão de Prontuários</h1>
             <p>Consulte, filtre, importe e exporte os prontuarios vinculados aos colaboradores.</p>
           </div>
         </div>

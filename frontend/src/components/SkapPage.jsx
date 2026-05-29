@@ -45,6 +45,10 @@ function formatDate(value) {
   return String(value).slice(0, 10);
 }
 
+function isAdminUser(user) {
+  return String(user?.perfil || '').trim().toLowerCase() === 'admin';
+}
+
 function SkapDetail({ detail, editable, onChange, onSave, saving }) {
   if (!detail) return null;
 
@@ -142,8 +146,9 @@ export default function SkapPage({ user }) {
   const [rows, setRows] = useState([]);
   const [detail, setDetail] = useState(null);
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const isAdmin = user?.perfil === 'admin';
+  const isAdmin = isAdminUser(user);
 
   const filterOptions = useMemo(() => {
     const uniq = (key) => [...new Set(rows.map((item) => item[key]).filter(Boolean))].sort();
@@ -154,12 +159,24 @@ export default function SkapPage({ user }) {
       tipo_colaborador: uniq('tipo_colaborador')
     };
   }, [rows]);
+  const hasSkapEvaluations = useMemo(() => rows.some((item) => item.avaliacao_id || item.nivel_skap), [rows]);
 
   useEffect(() => {
+    setLoading(true);
+    setMessage('');
+
     if (isAdmin) {
-      getAdminSkap(filters).then(setRows).catch((err) => setMessage(err.error || 'Erro ao carregar SKAP'));
+      console.warn('[SKAP] perfil admin detectado; chamando /api/skap/admin');
+      getAdminSkap(filters)
+        .then((data) => setRows(Array.isArray(data) ? data : []))
+        .catch((err) => setMessage(err.error || 'Erro ao carregar SKAP'))
+        .finally(() => setLoading(false));
     } else {
-      getMeuSkap().then(setDetail).catch((err) => setMessage(err.error || 'Seu SKAP ainda nao foi encontrado.'));
+      console.warn('[SKAP] perfil nao-admin; chamando /api/skap/meu');
+      getMeuSkap()
+        .then(setDetail)
+        .catch((err) => setMessage(err.error || 'Seu SKAP ainda nao foi encontrado.'))
+        .finally(() => setLoading(false));
     }
   }, [isAdmin, filters]);
 
@@ -227,8 +244,8 @@ export default function SkapPage({ user }) {
             <p>Acompanhe seu nivel atual, progresso e criterios avaliados.</p>
           </div>
         </div>
-        {message && <div className="import-message">{message}</div>}
-        <SkapDetail detail={detail} editable={false} />
+      {message && <div className="import-message">{message}</div>}
+      {loading ? <p>Carregando SKAP...</p> : <SkapDetail detail={detail} editable={false} />}
       </div>
     );
   }
@@ -237,7 +254,7 @@ export default function SkapPage({ user }) {
     <div className="page-card skap-page">
       <div className="admin-heading">
         <div>
-          <h1>Gestao SKAP</h1>
+          <h1>Gestão SKAP</h1>
           <p>Consulte e acompanhe a evolucao dos colaboradores.</p>
         </div>
         <div className="skap-actions">
@@ -253,7 +270,7 @@ export default function SkapPage({ user }) {
 
       <section className="skap-filters">
         <label>
-          Buscar por nome ou matricula
+          Buscar por nome ou matrícula
           <input value={filters.busca} onChange={(e) => setFilters({ ...filters, busca: e.target.value })} />
         </label>
         <label>
@@ -273,7 +290,15 @@ export default function SkapPage({ user }) {
         ))}
       </section>
 
-      <div className="table-scroll">
+      {loading ? <p>Carregando SKAP...</p> : null}
+      {!loading && !rows.length ? (
+        <div className="empty-state">Nenhuma avaliação SKAP encontrada. Importe uma planilha SKAP ou cadastre uma avaliação.</div>
+      ) : null}
+      {!loading && rows.length > 0 && !hasSkapEvaluations ? (
+        <div className="empty-state">Nenhuma avaliação SKAP encontrada. Importe uma planilha SKAP ou cadastre uma avaliação.</div>
+      ) : null}
+
+      {!loading && rows.length > 0 ? <div className="table-scroll">
         <table>
           <thead>
             <tr>
@@ -300,7 +325,7 @@ export default function SkapPage({ user }) {
             ))}
           </tbody>
         </table>
-      </div>
+      </div> : null}
 
       <SkapDetail detail={detail} editable onChange={setDetail} onSave={saveDetail} saving={saving} />
     </div>
