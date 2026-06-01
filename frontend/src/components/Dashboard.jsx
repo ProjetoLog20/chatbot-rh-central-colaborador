@@ -85,6 +85,16 @@ function normalizePerfil(perfil) {
   return String(perfil || '').trim().toLowerCase();
 }
 
+function isDistributionProfile(user) {
+  const text = [
+    user?.perfil,
+    user?.cargo,
+    user?.tipo_colaborador
+  ].map((value) => String(value || '').trim().toLowerCase()).join(' ');
+
+  return text.includes('motorista') || text.includes('ajudante');
+}
+
 function getFirstName(user) {
   const name = user?.nome_preferido || user?.nome_completo || 'colaborador';
   return String(name).trim().split(/\s+/)[0] || 'colaborador';
@@ -170,7 +180,7 @@ export default function Dashboard({ user }) {
   const [maintenanceModule, setMaintenanceModule] = useState(null);
   const perfil = normalizePerfil(user?.perfil);
   const isAdmin = perfil === 'admin';
-  const isMotorista = perfil === 'motorista';
+  const isDistribution = isDistributionProfile(user);
 
   useEffect(() => {
     getPublicAcoes()
@@ -192,7 +202,7 @@ export default function Dashboard({ user }) {
     getProntuarioMe()
       .then(setProntuario)
       .catch(() => setProntuario(null));
-  }, [user, isAdmin, isMotorista]);
+  }, [user, isAdmin, isDistribution]);
 
   const cards = useMemo(() => {
     const moduleByKey = new Map(modulos.map((modulo) => [modulo.chave, modulo]));
@@ -215,15 +225,15 @@ export default function Dashboard({ user }) {
         return {
           ...baseCard,
           badge: isAdmin ? 'Painel geral' : (skap?.nivel_skap ? `Nível ${formatLevel(skap.nivel_skap)}` : 'Meu acompanhamento'),
-          featured: isMotorista
+          featured: isDistribution
         };
       }
 
       if (card.id === 'prontuario_motorista') {
-        if (isMotorista) {
+        if (isDistribution) {
           return {
             ...baseCard,
-            badge: prontuario?.faixa ? `Faixa ${prontuario.faixa}` : 'Motorista',
+            badge: prontuario?.faixa ? `Faixa ${prontuario.faixa}` : 'Distribuição',
             featured: true
           };
         }
@@ -246,7 +256,7 @@ export default function Dashboard({ user }) {
     });
 
     return isAdmin ? [adminCard, ...shapedCards] : shapedCards;
-  }, [isAdmin, isMotorista, modulos, prontuario, skap]);
+  }, [isAdmin, isDistribution, modulos, prontuario, skap]);
 
   return (
     <div className="dashboard-page">

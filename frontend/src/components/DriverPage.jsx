@@ -332,7 +332,7 @@ export default function DriverPage({ user }) {
     <div className="page-card driver-page">
       <div className="admin-heading">
         <div>
-          <h1>Prontuario do Motorista</h1>
+          <h1>Prontuario de Distribuicao</h1>
           <p>Acompanhe sua faixa, pontuacao e ocorrencias registradas.</p>
         </div>
       </div>

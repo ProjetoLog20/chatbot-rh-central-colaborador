@@ -118,7 +118,7 @@ function ModuleConfigItem({ modulo, onSave }) {
           </label>
           <label className="inline-check">
             <input type="checkbox" checked={form.visivel_para_motorista} onChange={(event) => setBoolean('visivel_para_motorista', event.target.checked)} />
-            Motorista
+            Motorista/Ajudante
           </label>
           <label className="inline-check">
             <input type="checkbox" checked={form.visivel_para_colaborador} onChange={(event) => setBoolean('visivel_para_colaborador', event.target.checked)} />
@@ -176,15 +176,31 @@ export default function AdminPage() {
   }, []);
 
   async function refresh() {
-    try {
-      const [col, pr, resp, acoesData, modulosData] = await Promise.all([getCollaborators(), getProntuarios(), getRespostas(), getAdminAcoes(), getAdminModulos()]);
-      setColaboradores(col);
-      setProntuarios(pr);
-      setRespostas(resp);
-      setAcoes(acoesData);
-      setModulos(modulosData);
-    } catch (err) {
-      console.error(err);
+    const [col, pr, resp, acoesData, modulosData] = await Promise.allSettled([
+      getCollaborators(),
+      getProntuarios(),
+      getRespostas(),
+      getAdminAcoes(),
+      getAdminModulos()
+    ]);
+
+    if (col.status === 'fulfilled') setColaboradores(col.value);
+    if (pr.status === 'fulfilled') setProntuarios(pr.value);
+    if (resp.status === 'fulfilled') setRespostas(resp.value);
+    if (acoesData.status === 'fulfilled') setAcoes(acoesData.value);
+    if (modulosData.status === 'fulfilled') setModulos(modulosData.value);
+
+    const failed = [
+      col.status === 'rejected' ? 'colaboradores' : null,
+      pr.status === 'rejected' ? 'prontuarios' : null,
+      resp.status === 'rejected' ? 'chatbot' : null,
+      acoesData.status === 'rejected' ? 'acoes' : null,
+      modulosData.status === 'rejected' ? 'modulos' : null
+    ].filter(Boolean);
+
+    if (failed.length) {
+      console.error('Falha ao carregar areas administrativas:', failed, { col, pr, resp, acoesData, modulosData });
+      setMessage(`Nao foi possivel carregar: ${failed.join(', ')}.`);
     }
   }
 
