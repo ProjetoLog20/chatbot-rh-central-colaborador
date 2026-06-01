@@ -80,7 +80,7 @@ function App() {
           <Route path="/prontuario" element={requireAuth(<DriverPage user={user} />)} />
           <Route path="/pesquisa-clima" element={requireAuth(<PesquisaClimaPage />)} />
           <Route path="/3rs" element={requireAuth(<ThreeRsPage />)} />
-          <Route path="/campeao-seguranca" element={requireAuth(<CampeaoSegurancaPage />)} />
+          <Route path="/campeao-seguranca" element={requireAuth(<CampeaoSegurancaPage user={user} />)} />
           <Route path="/skap" element={requireAuth(<SkapPage user={user} />)} />
           <Route path="/produtividade" element={requireAuth(<ProdutividadePage user={user} />)} />
           <Route path="/admin" element={requireAuth(<AdminPage />, ['admin'])} />

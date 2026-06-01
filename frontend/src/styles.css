@@ -1441,6 +1441,10 @@ tr:not(:last-child) td {
   color: #fff;
   padding: clamp(1.3rem, 4vw, 2.4rem);
   box-shadow: 0 24px 60px rgba(0, 59, 104, 0.18);
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
 }
 
 .champion-hero span {
@@ -1456,6 +1460,51 @@ tr:not(:last-child) td {
 .champion-hero p {
   max-width: 680px;
   color: #E9F2FB;
+}
+
+.champion-admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.champion-admin-actions a {
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 8px;
+  color: #fff;
+  padding: 0.72rem 0.9rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.champion-section {
+  display: grid;
+  gap: 1rem;
+}
+
+.champion-section-heading span,
+.champion-info-band span {
+  color: #E87522;
+  font-weight: 900;
+}
+
+.champion-section-heading h2,
+.champion-section-heading p,
+.champion-info-band h2,
+.champion-info-band p {
+  margin: 0.25rem 0 0;
+}
+
+.champion-section-heading h2,
+.champion-info-band h2 {
+  color: #1F2933;
+}
+
+.champion-section-heading p,
+.champion-info-band p {
+  max-width: 840px;
+  color: #6B7280;
+  line-height: 1.55;
 }
 
 .champion-grid,
@@ -1597,6 +1646,122 @@ tr:not(:last-child) td {
   border-radius: 8px;
   background: #F8FAFC;
   border: 1px solid #DCE5EC;
+}
+
+.champion-info-band {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 340px);
+  gap: 1rem;
+  align-items: center;
+  border-radius: 8px;
+  background: #FFFFFF;
+  border: 1px solid #DCE5EC;
+  padding: clamp(1.1rem, 3vw, 1.6rem);
+  box-shadow: 0 12px 30px rgba(31, 41, 51, 0.06);
+}
+
+.champion-info-band strong {
+  border-left: 5px solid #E87522;
+  border-radius: 8px;
+  background: #FFF4E8;
+  color: #003B68;
+  padding: 1rem;
+  font-size: 1.15rem;
+}
+
+.champion-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.champion-info-card {
+  border: 1px solid #DCE5EC;
+  border-radius: 8px;
+  background: #FFFFFF;
+  padding: 1rem;
+  min-height: 155px;
+  display: grid;
+  align-content: start;
+  gap: 0.55rem;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.champion-info-card:hover,
+.champion-info-card:focus {
+  transform: translateY(-3px);
+  border-color: #E87522;
+  box-shadow: 0 16px 34px rgba(0, 59, 104, 0.12);
+  outline: none;
+}
+
+.champion-info-card > span {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #E9F2FB;
+  color: #003B68;
+  font-weight: 900;
+}
+
+.champion-info-card h3,
+.champion-info-card p {
+  margin: 0;
+}
+
+.champion-info-card h3 {
+  color: #1F2933;
+}
+
+.champion-info-card p {
+  color: #6B7280;
+  line-height: 1.45;
+}
+
+.assignments .champion-info-card > span {
+  background: #FFF4E8;
+  color: #E87522;
+}
+
+.champion-trophy-card {
+  border-radius: 8px;
+  background: #003B68;
+  color: #fff;
+  padding: 1rem;
+  min-height: 155px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 0.35rem;
+}
+
+.champion-trophy-card span {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #E87522;
+  font-size: 1.7rem;
+}
+
+.champion-policy-callout {
+  border-radius: 8px;
+  background: #FFFFFF;
+  border: 1px solid #FFD2B5;
+  border-left: 8px solid #E87522;
+  padding: clamp(1.2rem, 4vw, 1.8rem);
+  box-shadow: 0 14px 34px rgba(31, 41, 51, 0.08);
+}
+
+.champion-policy-callout p {
+  margin: 0;
+  color: #1F2933;
+  font-size: clamp(1.15rem, 2.2vw, 1.55rem);
+  font-weight: 900;
+  line-height: 1.35;
 }
 
 .actions-admin-image-fallback {
@@ -2583,6 +2748,21 @@ tr:not(:last-child) td {
 
   .chat-window {
     width: min(440px, calc(100vw - 32px));
+  }
+
+  .champion-hero {
+    display: grid;
+  }
+
+  .champion-info-band,
+  .champion-card {
+    grid-template-columns: 1fr;
+  }
+
+  .champion-photo-wrap,
+  .champion-photo-wrap img,
+  .champion-avatar-fallback {
+    min-height: 260px;
   }
 
   .three-rs-hero {
