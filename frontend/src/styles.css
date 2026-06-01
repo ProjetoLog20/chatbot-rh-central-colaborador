@@ -1428,6 +1428,177 @@ tr:not(:last-child) td {
   margin: 0;
 }
 
+.champion-page {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.champion-hero {
+  border-radius: 8px;
+  background: linear-gradient(135deg, #003B68 0%, #005A8C 78%, #E87522 150%);
+  color: #fff;
+  padding: clamp(1.3rem, 4vw, 2.4rem);
+  box-shadow: 0 24px 60px rgba(0, 59, 104, 0.18);
+}
+
+.champion-hero span {
+  font-weight: 900;
+  color: #FFD9BD;
+}
+
+.champion-hero h1,
+.champion-hero p {
+  margin: 0.35rem 0 0;
+}
+
+.champion-hero p {
+  max-width: 680px;
+  color: #E9F2FB;
+}
+
+.champion-grid,
+.champion-admin-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.champion-card {
+  display: grid;
+  grid-template-columns: 190px 1fr;
+  gap: 1.2rem;
+  align-items: stretch;
+  border: 1px solid #DCE5EC;
+  border-radius: 8px;
+  background: #FFFFFF;
+  padding: 1rem;
+  box-shadow: 0 12px 30px rgba(31, 41, 51, 0.07);
+}
+
+.champion-photo-wrap {
+  position: relative;
+  min-height: 210px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #E9F2FB;
+}
+
+.champion-photo-wrap img,
+.champion-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  min-height: 210px;
+  object-fit: cover;
+  display: grid;
+  place-items: center;
+}
+
+.champion-avatar-fallback {
+  background: #003B68;
+  color: #fff;
+  font-size: 3rem;
+  font-weight: 900;
+}
+
+.champion-medal {
+  position: absolute;
+  right: 0.75rem;
+  top: 0.75rem;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #E87522;
+  color: #fff;
+  font-weight: 900;
+  box-shadow: 0 10px 24px rgba(232, 117, 34, 0.28);
+}
+
+.champion-copy {
+  display: grid;
+  gap: 0.55rem;
+  align-content: start;
+}
+
+.champion-month {
+  width: fit-content;
+  border-radius: 999px;
+  background: #E9F2FB;
+  color: #003B68;
+  padding: 0.35rem 0.65rem;
+  font-weight: 900;
+}
+
+.champion-copy h2,
+.champion-copy p {
+  margin: 0;
+}
+
+.champion-role,
+.champion-note {
+  color: #6B7280;
+}
+
+.champion-reason {
+  color: #1F2933;
+  line-height: 1.55;
+  font-weight: 700;
+}
+
+.champion-checklist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.champion-checklist span {
+  border-radius: 999px;
+  padding: 0.38rem 0.65rem;
+  font-weight: 800;
+  font-size: 0.82rem;
+}
+
+.champion-checklist .done {
+  background: #DCFCE7;
+  color: #166534;
+}
+
+.champion-checklist .pending {
+  background: #E5E7EB;
+  color: #374151;
+}
+
+.champion-admin-form,
+.champion-admin-list {
+  margin-top: 1rem;
+}
+
+.champion-photo-preview {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.champion-photo-preview img {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #DCE5EC;
+}
+
+.champion-admin-item {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background: #F8FAFC;
+  border: 1px solid #DCE5EC;
+}
+
 .actions-admin-image-fallback {
   width: 180px;
   height: 120px;
@@ -2059,6 +2230,11 @@ tr:not(:last-child) td {
 .prod-badge.danger {
   background: #FEE2E2;
   color: #991B1B;
+}
+
+.prod-badge.warning {
+  background: #FFF4E8;
+  color: #9A4A13;
 }
 
 .prod-badge.muted {

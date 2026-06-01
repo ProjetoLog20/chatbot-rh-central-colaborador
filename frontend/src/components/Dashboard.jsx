@@ -29,7 +29,7 @@ const generalCards = [
     description: 'Reconheça atitudes seguras e acompanhe destaques da operação.',
     action: 'Acessar',
     color: '#E87522',
-    route: '/profile'
+    route: '/campeao-seguranca'
   },
   {
     id: 'tres_rs',

@@ -14,6 +14,7 @@ import FirstAccessPage from './components/FirstAccessPage.jsx';
 import SkapPage from './components/SkapPage.jsx';
 import ThreeRsPage from './components/ThreeRsPage.jsx';
 import ProdutividadePage from './components/ProdutividadePage.jsx';
+import CampeaoSegurancaPage from './components/CampeaoSegurancaPage.jsx';
 
 function normalizePerfil(perfil) {
   return String(perfil || '').trim().toLowerCase();
@@ -79,6 +80,7 @@ function App() {
           <Route path="/prontuario" element={requireAuth(<DriverPage user={user} />)} />
           <Route path="/pesquisa-clima" element={requireAuth(<PesquisaClimaPage />)} />
           <Route path="/3rs" element={requireAuth(<ThreeRsPage />)} />
+          <Route path="/campeao-seguranca" element={requireAuth(<CampeaoSegurancaPage />)} />
           <Route path="/skap" element={requireAuth(<SkapPage user={user} />)} />
           <Route path="/produtividade" element={requireAuth(<ProdutividadePage user={user} />)} />
           <Route path="/admin" element={requireAuth(<AdminPage />, ['admin'])} />

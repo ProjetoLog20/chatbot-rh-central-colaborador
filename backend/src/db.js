@@ -193,6 +193,9 @@ function connectSqlite() {
       ignorados INTEGER DEFAULT 0,
       erros INTEGER DEFAULT 0,
       valor_total_nova_rv REAL DEFAULT 0,
+      valor_total_rv_antiga REAL DEFAULT 0,
+      valor_total_rv_nova REAL DEFAULT 0,
+      valor_total_diferenca REAL DEFAULT 0,
       detalhes_json TEXT,
       criado_por INTEGER,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -206,10 +209,16 @@ function connectSqlite() {
       matricula TEXT NOT NULL,
       nome_completo TEXT,
       cpf TEXT,
+      codigo_rv TEXT,
+      nome_rv TEXT,
       competencia TEXT NOT NULL,
       periodo_inicio TEXT,
       periodo_fim TEXT,
       funcao_rv TEXT NOT NULL,
+      cargo TEXT,
+      setor TEXT,
+      tipo_colaborador TEXT,
+      perfil TEXT,
       caixas REAL,
       entregas REAL,
       percentual_devolucao REAL,
@@ -217,12 +226,27 @@ function connectSqlite() {
       bateu_devolucao INTEGER,
       recargas REAL,
       mapas REAL,
+      ftr2_c_jorn REAL DEFAULT 0,
+      ftr2_s_jorn REAL DEFAULT 0,
+      ftr1_c_jorn REAL DEFAULT 0,
+      ftr1_s_jorn REAL DEFAULT 0,
+      ftr0_c_jorn REAL DEFAULT 0,
+      ftr0_s_jorn REAL DEFAULT 0,
+      valor_recarga REAL DEFAULT 0,
       bonus REAL,
       antiga_rv REAL,
       nova_rv REAL,
+      rv_antiga REAL DEFAULT 0,
+      rv_nova REAL DEFAULT 0,
       diferenca_rv REAL,
       valor_total_previsto REAL,
+      extra REAL DEFAULT 0,
       status_produtividade TEXT,
+      status_auditoria TEXT DEFAULT 'ok',
+      metodo_cruzamento TEXT,
+      confianca_cruzamento REAL,
+      observacao_cruzamento TEXT,
+      mensagem_rh TEXT,
       dados_originais_json TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -305,6 +329,29 @@ function connectSqlite() {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )`);
 
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS campeoes_seguranca (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      colaborador_id INTEGER,
+      competencia TEXT NOT NULL,
+      nome_colaborador TEXT NOT NULL,
+      matricula TEXT,
+      cargo TEXT,
+      setor TEXT,
+      foto_url TEXT,
+      motivo_reconhecimento TEXT NOT NULL,
+      log_on_100 INTEGER DEFAULT 0,
+      participacao_matinais INTEGER DEFAULT 0,
+      sem_acidentes INTEGER DEFAULT 0,
+      sem_fluxo_punitivo INTEGER DEFAULT 0,
+      observacao TEXT,
+      status TEXT DEFAULT 'rascunho',
+      criado_por INTEGER,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE SET NULL,
+      FOREIGN KEY (criado_por) REFERENCES colaboradores(id) ON DELETE SET NULL
+    )`);
+
     const moduloDefaults = [
       ['pesquisa_clima', 'Pesquisa de Clima', 'Pesquisas de satisfacao da empresa.', 1, 0, null, 10],
       ['skap', 'SKAP', 'Evolucao, nivel atual e habilidades avaliadas.', 1, 0, null, 20],
@@ -328,12 +375,66 @@ function connectSqlite() {
     sqliteDb.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_prontuario_motoristas_colaborador ON prontuario_motoristas(colaborador_id)');
     sqliteDb.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_prontuarios_motoristas_colaborador ON prontuarios_motoristas(colaborador_id)');
     sqliteDb.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_skap_avaliacoes_colaborador ON skap_avaliacoes(colaborador_id)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_campeoes_seguranca_status ON campeoes_seguranca(status)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_campeoes_seguranca_competencia ON campeoes_seguranca(competencia)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_campeoes_seguranca_colaborador ON campeoes_seguranca(colaborador_id)');
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_skap_avaliacoes_nivel ON skap_avaliacoes(nivel_skap)');
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_skap_historico_colaborador ON skap_historico(colaborador_id)');
     sqliteDb.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_produtividade_colab_comp_funcao ON produtividade_colaboradores(colaborador_id, competencia, funcao_rv)');
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_produtividade_matricula ON produtividade_colaboradores(matricula)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_produtividade_cpf ON produtividade_colaboradores(cpf)');
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_produtividade_competencia ON produtividade_colaboradores(competencia)');
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_produtividade_funcao_rv ON produtividade_colaboradores(funcao_rv)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_produtividade_status ON produtividade_colaboradores(status_produtividade)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_produtividade_bateu_devolucao ON produtividade_colaboradores(bateu_devolucao)');
+
+    const ensureProdutividadeImportColumn = (name, definition) => {
+      sqliteDb.all('PRAGMA table_info(produtividade_importacoes)', [], (err, columns) => {
+        if (err) return;
+        if (!columns.some((column) => column.name === name)) {
+          sqliteDb.run(`ALTER TABLE produtividade_importacoes ADD COLUMN ${name} ${definition}`);
+        }
+      });
+    };
+
+    const ensureProdutividadeColumn = (name, definition) => {
+      sqliteDb.all('PRAGMA table_info(produtividade_colaboradores)', [], (err, columns) => {
+        if (err) return;
+        if (!columns.some((column) => column.name === name)) {
+          sqliteDb.run(`ALTER TABLE produtividade_colaboradores ADD COLUMN ${name} ${definition}`);
+        }
+      });
+    };
+
+    [
+      ['valor_total_rv_antiga', 'REAL DEFAULT 0'],
+      ['valor_total_rv_nova', 'REAL DEFAULT 0'],
+      ['valor_total_diferenca', 'REAL DEFAULT 0']
+    ].forEach(([name, definition]) => ensureProdutividadeImportColumn(name, definition));
+
+    [
+      ['codigo_rv', 'TEXT'],
+      ['nome_rv', 'TEXT'],
+      ['cargo', 'TEXT'],
+      ['setor', 'TEXT'],
+      ['tipo_colaborador', 'TEXT'],
+      ['perfil', 'TEXT'],
+      ['ftr2_c_jorn', 'REAL DEFAULT 0'],
+      ['ftr2_s_jorn', 'REAL DEFAULT 0'],
+      ['ftr1_c_jorn', 'REAL DEFAULT 0'],
+      ['ftr1_s_jorn', 'REAL DEFAULT 0'],
+      ['ftr0_c_jorn', 'REAL DEFAULT 0'],
+      ['ftr0_s_jorn', 'REAL DEFAULT 0'],
+      ['valor_recarga', 'REAL DEFAULT 0'],
+      ['rv_antiga', 'REAL DEFAULT 0'],
+      ['rv_nova', 'REAL DEFAULT 0'],
+      ['extra', 'REAL DEFAULT 0'],
+      ['status_auditoria', "TEXT DEFAULT 'ok'"],
+      ['metodo_cruzamento', 'TEXT'],
+      ['confianca_cruzamento', 'REAL'],
+      ['observacao_cruzamento', 'TEXT'],
+      ['mensagem_rh', 'TEXT']
+    ].forEach(([name, definition]) => ensureProdutividadeColumn(name, definition));
   });
 
   return sqliteDb;

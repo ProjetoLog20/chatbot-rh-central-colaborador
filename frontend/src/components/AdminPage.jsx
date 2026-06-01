@@ -16,6 +16,7 @@ import {
   getAdminModulos,
   updateAdminModulo
 } from '../api.js';
+import AdminCampeoesSeguranca from './AdminCampeoesSeguranca.jsx';
 
 function AdminActionImage({ item }) {
   const [failed, setFailed] = useState(false);
@@ -383,6 +384,7 @@ export default function AdminPage() {
         <button className={activeTab === 'excel' ? 'active' : ''} onClick={() => setActiveTab('excel')}>Exportar para a pagina via Excel</button>
         <button className={activeTab === 'dados' ? 'active' : ''} onClick={() => setActiveTab('dados')}>Dados publicados</button>
         <button className={activeTab === 'acoes' ? 'active' : ''} onClick={() => setActiveTab('acoes')}>Acoes e Eventos</button>
+        <button className={activeTab === 'campeoes' ? 'active' : ''} onClick={() => setActiveTab('campeoes')}>Campeao Segurança</button>
         <button className={activeTab === 'modulos' ? 'active' : ''} onClick={() => setActiveTab('modulos')}>Configuração de Módulos</button>
         <button className={activeTab === 'chatbot' ? 'active' : ''} onClick={() => setActiveTab('chatbot')}>Chatbot</button>
       </div>
@@ -542,6 +544,8 @@ export default function AdminPage() {
           </div>
         </section>
       ) : null}
+
+      {activeTab === 'campeoes' ? <AdminCampeoesSeguranca /> : null}
 
       {activeTab === 'acoes' ? (
         <section className="admin-section">

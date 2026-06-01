@@ -241,6 +241,50 @@ export async function getAdminAcoes() {
   return request('/acoes');
 }
 
+export async function getCampeoesSegurancaPublicos() {
+  return request('/campeoes-seguranca/publicos');
+}
+
+export async function getAdminCampeoesSeguranca() {
+  return request('/campeoes-seguranca/admin');
+}
+
+function appendCampeaoFormData(payload) {
+  const formData = new FormData();
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) formData.append(key, value);
+  });
+  return formData;
+}
+
+export async function createCampeaoSeguranca(payload) {
+  const token = localStorage.getItem('token');
+  const res = await fetch(`${API_BASE}/campeoes-seguranca/admin`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: appendCampeaoFormData(payload)
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw body || { error: 'Erro ao cadastrar campeao' };
+  return body;
+}
+
+export async function updateCampeaoSeguranca(id, payload) {
+  const token = localStorage.getItem('token');
+  const res = await fetch(`${API_BASE}/campeoes-seguranca/admin/${id}`, {
+    method: 'PUT',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: appendCampeaoFormData(payload)
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw body || { error: 'Erro ao atualizar campeao' };
+  return body;
+}
+
+export async function deleteCampeaoSeguranca(id) {
+  return request(`/campeoes-seguranca/admin/${id}`, { method: 'DELETE' });
+}
+
 export async function createAcao(payload) {
   const token = localStorage.getItem('token');
   const formData = new FormData();
