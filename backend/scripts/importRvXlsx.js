@@ -7,15 +7,38 @@ const db = require('../src/db');
 
 const DEFAULT_FILE = path.join(__dirname, '../data/rv_log20_importacao_pronta.xlsx');
 const SHEET_NAME = 'IMPORTACAO_RV';
-
-const columns = [
-  'matricula',
-  'nome_completo',
-  'cpf',
+const LOW_CONFIDENCE_LIMIT = 0.7;
+const requiredColumns = [
   'competencia',
   'periodo_inicio',
   'periodo_fim',
+  'matricula',
+  'nome_completo',
+  'cpf',
+  'codigo_rv',
+  'nome_rv',
   'funcao_rv',
+  'rv_antiga',
+  'rv_nova',
+  'diferenca_rv'
+];
+
+const productivityColumns = [
+  'importacao_id',
+  'colaborador_id',
+  'competencia',
+  'periodo_inicio',
+  'periodo_fim',
+  'matricula',
+  'nome_completo',
+  'cpf',
+  'codigo_rv',
+  'nome_rv',
+  'funcao_rv',
+  'cargo',
+  'setor',
+  'tipo_colaborador',
+  'perfil',
   'caixas',
   'entregas',
   'percentual_devolucao',
@@ -23,12 +46,28 @@ const columns = [
   'bateu_devolucao',
   'recargas',
   'mapas',
+  'ftr2_c_jorn',
+  'ftr2_s_jorn',
+  'ftr1_c_jorn',
+  'ftr1_s_jorn',
+  'ftr0_c_jorn',
+  'ftr0_s_jorn',
+  'valor_recarga',
   'bonus',
   'antiga_rv',
   'nova_rv',
+  'rv_antiga',
+  'rv_nova',
   'diferenca_rv',
   'valor_total_previsto',
-  'status_produtividade'
+  'extra',
+  'status_produtividade',
+  'status_auditoria',
+  'metodo_cruzamento',
+  'confianca_cruzamento',
+  'observacao_cruzamento',
+  'mensagem_rh',
+  'dados_originais_json'
 ];
 
 function stripAccents(value) {
@@ -46,32 +85,24 @@ function normalizeRow(row) {
   return Object.fromEntries(Object.entries(row).map(([key, value]) => [normalizeKey(key), value]));
 }
 
-function cell(row, key) {
-  return row[normalizeKey(key)];
-}
-
-function firstCell(row, keys) {
-  for (const key of keys) {
-    const value = cell(row, key);
-    if (value !== undefined && value !== null && trim(value) !== '') return value;
-  }
-  return '';
-}
-
 function trim(value) {
   return String(value ?? '').trim();
 }
 
+function cell(row, key) {
+  return row[normalizeKey(key)];
+}
+
 function parseNumber(value) {
-  if (value === null || value === undefined || value === '') return null;
-  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (value === null || value === undefined || value === '') return 0;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
 
   let text = trim(value)
     .replace(/\s/g, '')
     .replace(/R\$/gi, '')
     .replace(/%/g, '');
 
-  if (!text) return null;
+  if (!text) return 0;
 
   const hasComma = text.includes(',');
   const hasDot = text.includes('.');
@@ -86,7 +117,14 @@ function parseNumber(value) {
   }
 
   const number = Number(text);
-  return Number.isFinite(number) ? number : null;
+  return Number.isFinite(number) ? number : 0;
+}
+
+function parsePercent(value) {
+  const number = parseNumber(value);
+  const raw = trim(value);
+  if (!raw.includes('%') && number > 0 && number < 1) return Number((number * 100).toFixed(4));
+  return number;
 }
 
 function parseDate(value) {
@@ -97,21 +135,50 @@ function parseDate(value) {
   if (!text) return null;
   if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10);
 
-  const brDate = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const brDate = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+\d{1,2}:\d{2})?/);
   if (brDate) {
-    const [, day, month, year] = brDate;
+    const [, day, month, rawYear] = brDate;
+    const year = rawYear.length === 2 ? `20${rawYear}` : rawYear;
     return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   }
 
   const excelSerial = Number(text);
   if (Number.isFinite(excelSerial) && excelSerial > 0) {
     const parsed = xlsx.SSF.parse_date_code(excelSerial);
-    if (parsed) {
-      return `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`;
-    }
+    if (parsed) return `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`;
   }
 
   return null;
+}
+
+function officialPeriodForCompetencia(competencia) {
+  const match = String(competencia || '').trim().match(/^(\d{1,2})\/(\d{4})$/);
+  if (!match) return { inicio: null, fim: null };
+
+  const month = Number(match[1]);
+  const year = Number(match[2]);
+  const startMonth = month === 1 ? 12 : month - 1;
+  const startYear = month === 1 ? year - 1 : year;
+
+  return {
+    inicio: `${startYear}-${String(startMonth).padStart(2, '0')}-21`,
+    fim: `${year}-${String(month).padStart(2, '0')}-20`
+  };
+}
+
+function validateOfficialPeriod(row) {
+  const competencia = trim(cell(row, 'competencia'));
+  const periodoInicio = parseDate(cell(row, 'periodo_inicio'));
+  const periodoFim = parseDate(cell(row, 'periodo_fim'));
+  const esperado = officialPeriodForCompetencia(competencia);
+
+  return {
+    valid: Boolean(esperado.inicio && esperado.fim && periodoInicio === esperado.inicio && periodoFim === esperado.fim),
+    competencia,
+    periodoInicio,
+    periodoFim,
+    esperado
+  };
 }
 
 function parseBoolean(value) {
@@ -119,7 +186,7 @@ function parseBoolean(value) {
   const normalized = stripAccents(value).trim().toLowerCase();
   if (['true', '1', 'sim', 's', 'ok', 'bateu', 'dentro_da_meta', 'dentro da meta'].includes(normalized)) return true;
   if (['false', '0', 'nao', 'n', 'nao_bateu', 'fora_da_meta', 'fora da meta'].includes(normalized)) return false;
-  return null;
+  return false;
 }
 
 function nowForFileName() {
@@ -129,7 +196,6 @@ function nowForFileName() {
 function createLogger() {
   const logsDir = path.join(__dirname, '../logs');
   fs.mkdirSync(logsDir, { recursive: true });
-
   const logPath = path.join(logsDir, `importacao_rv_${nowForFileName()}.txt`);
   const lines = [];
 
@@ -152,51 +218,73 @@ function createLogger() {
 }
 
 async function assertTables() {
-  const rows = await db.all(
-    `SELECT table_name
-     FROM information_schema.tables
-     WHERE table_schema = 'public'
-       AND table_name IN ('produtividade_importacoes', 'produtividade_colaboradores')`
-  );
-  const found = new Set(rows.map((row) => row.table_name));
-
-  if (!found.has('produtividade_importacoes') || !found.has('produtividade_colaboradores')) {
-    throw new Error('Tabelas de produtividade nao encontradas. Rode: npm run migrate');
-  }
+  await db.get('SELECT 1 FROM colaboradores LIMIT 1');
+  await db.get('SELECT 1 FROM produtividade_importacoes LIMIT 1');
+  await db.get('SELECT 1 FROM produtividade_colaboradores LIMIT 1');
 }
 
 function readRowsFromWorkbook(workbook) {
   const sheet = workbook.Sheets[SHEET_NAME];
-  if (!sheet) {
-    throw new Error(`Aba ${SHEET_NAME} nao encontrada na planilha.`);
+  if (!sheet) throw new Error(`Aba ${SHEET_NAME} nao encontrada na planilha.`);
+  const rows = xlsx.utils.sheet_to_json(sheet, { defval: '', raw: false }).map(normalizeRow);
+  const headers = new Set(Object.keys(rows[0] || {}));
+  const missing = requiredColumns.filter((column) => !headers.has(column));
+  if (missing.length) {
+    throw new Error(`Colunas obrigatorias ausentes na aba ${SHEET_NAME}: ${missing.join(', ')}`);
   }
-  return xlsx.utils.sheet_to_json(sheet, { defval: '', raw: false }).map(normalizeRow);
+  return rows;
 }
 
 function buildPayload(row, colaborador, importacaoId) {
+  const rvAntiga = parseNumber(cell(row, 'rv_antiga'));
+  const rvNova = parseNumber(cell(row, 'rv_nova'));
+  const confianca = parseNumber(cell(row, 'confianca_cruzamento'));
+  const statusAuditoria = confianca > 0 && confianca < LOW_CONFIDENCE_LIMIT ? 'revisar_cruzamento' : 'ok';
+
   return {
     importacao_id: importacaoId,
     colaborador_id: colaborador.id,
-    matricula: trim(cell(row, 'matricula')),
-    nome_completo: trim(cell(row, 'nome_completo')) || colaborador.nome_completo,
-    cpf: trim(cell(row, 'cpf')) || colaborador.cpf,
     competencia: trim(cell(row, 'competencia')),
     periodo_inicio: parseDate(cell(row, 'periodo_inicio')),
     periodo_fim: parseDate(cell(row, 'periodo_fim')),
+    matricula: trim(cell(row, 'matricula')),
+    nome_completo: trim(cell(row, 'nome_completo')) || colaborador.nome_completo,
+    cpf: trim(cell(row, 'cpf')) || colaborador.cpf,
+    codigo_rv: trim(cell(row, 'codigo_rv')),
+    nome_rv: trim(cell(row, 'nome_rv')),
     funcao_rv: trim(cell(row, 'funcao_rv')),
+    cargo: trim(cell(row, 'cargo')),
+    setor: trim(cell(row, 'setor')),
+    tipo_colaborador: trim(cell(row, 'tipo_colaborador')),
+    perfil: trim(cell(row, 'perfil')),
     caixas: parseNumber(cell(row, 'caixas')),
     entregas: parseNumber(cell(row, 'entregas')),
-    percentual_devolucao: parseNumber(cell(row, 'percentual_devolucao')),
-    meta_devolucao: parseNumber(cell(row, 'meta_devolucao')),
+    percentual_devolucao: parsePercent(cell(row, 'percentual_devolucao')),
+    meta_devolucao: parsePercent(cell(row, 'meta_devolucao')),
     bateu_devolucao: parseBoolean(cell(row, 'bateu_devolucao')),
     recargas: parseNumber(cell(row, 'recargas')),
     mapas: parseNumber(cell(row, 'mapas')),
+    ftr2_c_jorn: parseNumber(cell(row, 'ftr2_c_jorn')),
+    ftr2_s_jorn: parseNumber(cell(row, 'ftr2_s_jorn')),
+    ftr1_c_jorn: parseNumber(cell(row, 'ftr1_c_jorn')),
+    ftr1_s_jorn: parseNumber(cell(row, 'ftr1_s_jorn')),
+    ftr0_c_jorn: parseNumber(cell(row, 'ftr0_c_jorn')),
+    ftr0_s_jorn: parseNumber(cell(row, 'ftr0_s_jorn')),
+    valor_recarga: parseNumber(cell(row, 'valor_recarga')),
     bonus: parseNumber(cell(row, 'bonus')),
-    antiga_rv: parseNumber(firstCell(row, ['antiga_rv', 'rv_antiga'])),
-    nova_rv: parseNumber(firstCell(row, ['nova_rv', 'rv_nova'])),
+    antiga_rv: rvAntiga,
+    nova_rv: rvNova,
+    rv_antiga: rvAntiga,
+    rv_nova: rvNova,
     diferenca_rv: parseNumber(cell(row, 'diferenca_rv')),
-    valor_total_previsto: parseNumber(firstCell(row, ['valor_total_previsto', 'nova_rv', 'rv_nova'])),
+    valor_total_previsto: rvNova,
+    extra: parseNumber(cell(row, 'extra')),
     status_produtividade: trim(cell(row, 'status_produtividade')),
+    status_auditoria: statusAuditoria,
+    metodo_cruzamento: trim(cell(row, 'metodo_cruzamento')),
+    confianca_cruzamento: confianca || null,
+    observacao_cruzamento: trim(cell(row, 'observacao_cruzamento')),
+    mensagem_rh: trim(cell(row, 'mensagem_rh')),
     dados_originais_json: JSON.stringify(row)
   };
 }
@@ -229,6 +317,9 @@ async function updateImportRecord(importacaoId, report) {
          ignorados = ?,
          erros = ?,
          valor_total_nova_rv = ?,
+         valor_total_rv_antiga = ?,
+         valor_total_rv_nova = ?,
+         valor_total_diferenca = ?,
          detalhes_json = ?
      WHERE id = ?`,
     [
@@ -236,11 +327,16 @@ async function updateImportRecord(importacaoId, report) {
       report.updated,
       report.ignored,
       report.errors.length,
-      report.totalNovaRv,
+      report.totalRvNova,
+      report.totalRvAntiga,
+      report.totalRvNova,
+      report.totalDiferenca,
       JSON.stringify({
-        total_antiga_rv: report.totalAntigaRv,
-        diferenca_total: report.totalDiferenca,
-        erros: report.errors
+        erros: report.errors,
+        sem_matricula: report.semMatricula,
+        matriculas_nao_encontradas: report.notFound,
+        baixa_confianca: report.lowConfidence,
+        alertas_periodo: report.periodAlerts
       }),
       importacaoId
     ]
@@ -255,55 +351,26 @@ async function upsertProductivity(payload) {
     [payload.colaborador_id, payload.competencia, payload.funcao_rv]
   );
 
-  const values = columns.map((column) => payload[column]);
-  const commonValues = [
-    payload.importacao_id,
-    payload.colaborador_id,
-    ...values,
-    payload.dados_originais_json
-  ];
-
   if (existing) {
+    const assignments = productivityColumns
+      .filter((column) => !['colaborador_id'].includes(column))
+      .map((column) => `${column} = ?`)
+      .concat(['updated_at = CURRENT_TIMESTAMP']);
+    const values = productivityColumns
+      .filter((column) => !['colaborador_id'].includes(column))
+      .map((column) => payload[column]);
+
     await db.run(
-      `UPDATE produtividade_colaboradores
-       SET importacao_id = ?,
-           matricula = ?,
-           nome_completo = ?,
-           cpf = ?,
-           competencia = ?,
-           periodo_inicio = ?,
-           periodo_fim = ?,
-           funcao_rv = ?,
-           caixas = ?,
-           entregas = ?,
-           percentual_devolucao = ?,
-           meta_devolucao = ?,
-           bateu_devolucao = ?,
-           recargas = ?,
-           mapas = ?,
-           bonus = ?,
-           antiga_rv = ?,
-           nova_rv = ?,
-           diferenca_rv = ?,
-           valor_total_previsto = ?,
-           status_produtividade = ?,
-           dados_originais_json = ?,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = ?`,
-      [payload.importacao_id, ...values, payload.dados_originais_json, existing.id]
+      `UPDATE produtividade_colaboradores SET ${assignments.join(', ')} WHERE id = ?`,
+      [...values, existing.id]
     );
     return 'updated';
   }
 
   await db.run(
-    `INSERT INTO produtividade_colaboradores (
-      importacao_id, colaborador_id, matricula, nome_completo, cpf, competencia,
-      periodo_inicio, periodo_fim, funcao_rv, caixas, entregas, percentual_devolucao,
-      meta_devolucao, bateu_devolucao, recargas, mapas, bonus, antiga_rv, nova_rv,
-      diferenca_rv, valor_total_previsto, status_produtividade, dados_originais_json
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    commonValues
+    `INSERT INTO produtividade_colaboradores (${productivityColumns.join(', ')})
+     VALUES (${productivityColumns.map(() => '?').join(', ')})`,
+    productivityColumns.map((column) => payload[column])
   );
   return 'created';
 }
@@ -317,8 +384,12 @@ async function importRows(rows, { arquivo, criadoPor = null } = {}) {
     updated: 0,
     ignored: 0,
     errors: [],
-    totalNovaRv: 0,
-    totalAntigaRv: 0,
+    semMatricula: [],
+    notFound: [],
+    lowConfidence: [],
+    periodAlerts: [],
+    totalRvAntiga: 0,
+    totalRvNova: 0,
     totalDiferenca: 0
   };
 
@@ -327,10 +398,20 @@ async function importRows(rows, { arquivo, criadoPor = null } = {}) {
     const matricula = trim(cell(row, 'matricula'));
     const competencia = trim(cell(row, 'competencia'));
     const funcaoRv = trim(cell(row, 'funcao_rv'));
+    const periodCheck = validateOfficialPeriod(row);
+    if (!periodCheck.valid) {
+      report.periodAlerts.push({ linha: lineNumber, matricula, ...periodCheck });
+    }
 
-    if (!matricula || !competencia || !funcaoRv) {
+    if (!matricula) {
       report.ignored += 1;
-      report.errors.push({ linha: lineNumber, matricula, error: 'Matricula, competencia ou funcao_rv vazia' });
+      report.semMatricula.push({ linha: lineNumber, nome: trim(cell(row, 'nome_completo')) });
+      continue;
+    }
+
+    if (!competencia || !funcaoRv) {
+      report.ignored += 1;
+      report.errors.push({ linha: lineNumber, matricula, error: 'Competencia ou funcao_rv vazia' });
       continue;
     }
 
@@ -342,7 +423,7 @@ async function importRows(rows, { arquivo, criadoPor = null } = {}) {
 
       if (!colaborador) {
         report.ignored += 1;
-        report.errors.push({ linha: lineNumber, matricula, error: 'Matricula nao encontrada' });
+        report.notFound.push({ linha: lineNumber, matricula, nome: trim(cell(row, 'nome_completo')) });
         continue;
       }
 
@@ -350,9 +431,12 @@ async function importRows(rows, { arquivo, criadoPor = null } = {}) {
       const result = await upsertProductivity(payload);
       if (result === 'created') report.created += 1;
       if (result === 'updated') report.updated += 1;
+      if (payload.status_auditoria === 'revisar_cruzamento') {
+        report.lowConfidence.push({ linha: lineNumber, matricula, confianca: payload.confianca_cruzamento });
+      }
 
-      report.totalNovaRv += payload.nova_rv || 0;
-      report.totalAntigaRv += payload.antiga_rv || 0;
+      report.totalRvNova += payload.rv_nova || 0;
+      report.totalRvAntiga += payload.rv_antiga || 0;
       report.totalDiferenca += payload.diferenca_rv || 0;
     } catch (error) {
       report.ignored += 1;
@@ -360,14 +444,15 @@ async function importRows(rows, { arquivo, criadoPor = null } = {}) {
     }
   }
 
-  report.totalNovaRv = Number(report.totalNovaRv.toFixed(2));
-  report.totalAntigaRv = Number(report.totalAntigaRv.toFixed(2));
+  report.totalRvNova = Number(report.totalRvNova.toFixed(2));
+  report.totalRvAntiga = Number(report.totalRvAntiga.toFixed(2));
   report.totalDiferenca = Number(report.totalDiferenca.toFixed(2));
   await updateImportRecord(importacaoId, report);
   return report;
 }
 
 async function importWorkbook({ filePath, buffer, originalName, criadoPor } = {}) {
+  await assertTables();
   const workbook = buffer
     ? xlsx.read(buffer, { type: 'buffer' })
     : xlsx.readFile(path.resolve(filePath || DEFAULT_FILE));
@@ -377,12 +462,6 @@ async function importWorkbook({ filePath, buffer, originalName, criadoPor } = {}
 }
 
 async function main() {
-  if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL nao configurada. Defina a variavel no backend/.env.');
-  }
-
-  await assertTables();
-
   const logger = createLogger();
   const inputPath = path.resolve(process.argv[2] || DEFAULT_FILE);
   const report = await importWorkbook({ filePath: inputPath });
@@ -395,13 +474,19 @@ async function main() {
   logger.log(`Atualizados: ${report.updated}`);
   logger.log(`Ignorados: ${report.ignored}`);
   logger.log(`Erros: ${report.errors.length}`);
-  logger.log(`Valor total nova RV: ${report.totalNovaRv.toFixed(2)}`);
-  logger.log(`Valor total antiga RV: ${report.totalAntigaRv.toFixed(2)}`);
+  logger.log(`Valor total RV antiga: ${report.totalRvAntiga.toFixed(2)}`);
+  logger.log(`Valor total RV nova: ${report.totalRvNova.toFixed(2)}`);
   logger.log(`Diferenca total: ${report.totalDiferenca.toFixed(2)}`);
+  logger.log(`Registros com baixa confianca: ${report.lowConfidence.length}`);
+  logger.log(`Registros sem matricula: ${report.semMatricula.length}`);
+  logger.log(`Matriculas nao encontradas: ${report.notFound.length}`);
+  logger.log(`Alertas de periodo 21 a 20: ${report.periodAlerts.length}`);
 
-  if (report.errors.length) {
-    logger.json('Detalhes dos erros', report.errors);
-  }
+  if (report.periodAlerts.length) logger.json('Alertas de periodo', report.periodAlerts);
+  if (report.lowConfidence.length) logger.json('Baixa confianca', report.lowConfidence);
+  if (report.semMatricula.length) logger.json('Sem matricula', report.semMatricula);
+  if (report.notFound.length) logger.json('Matriculas nao encontradas', report.notFound);
+  if (report.errors.length) logger.json('Detalhes dos erros', report.errors);
 
   logger.save();
 }
@@ -418,6 +503,9 @@ if (require.main === module) {
 module.exports = {
   importWorkbook,
   parseNumber,
+  parsePercent,
   parseDate,
-  parseBoolean
+  parseBoolean,
+  officialPeriodForCompetencia,
+  validateOfficialPeriod
 };

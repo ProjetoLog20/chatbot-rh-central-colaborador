@@ -45,10 +45,14 @@ const listColumns = [
   'matricula',
   'nome_completo',
   'cpf',
+  'codigo_rv',
+  'nome_rv',
   'competencia',
   'periodo_inicio',
   'periodo_fim',
   'funcao_rv',
+  'cargo',
+  'setor',
   'caixas',
   'entregas',
   'percentual_devolucao',
@@ -56,12 +60,19 @@ const listColumns = [
   'bateu_devolucao',
   'recargas',
   'mapas',
+  'valor_recarga',
   'bonus',
   'antiga_rv',
   'nova_rv',
+  'rv_antiga',
+  'rv_nova',
   'diferenca_rv',
   'valor_total_previsto',
-  'status_produtividade'
+  'status_produtividade',
+  'status_auditoria',
+  'metodo_cruzamento',
+  'confianca_cruzamento',
+  'mensagem_rh'
 ];
 
 function digits(value) {
@@ -82,7 +93,7 @@ function numberValue(value) {
 }
 
 function buildAdminFilters(query) {
-  const { busca, competencia, funcao_rv, status_produtividade, bateu_devolucao } = query;
+  const { busca, competencia, funcao_rv, status_produtividade, bateu_devolucao, status_auditoria } = query;
   const filters = [];
   const params = [];
 
@@ -90,15 +101,15 @@ function buildAdminFilters(query) {
     const text = String(busca).trim().toLowerCase();
     const doc = digits(text);
     if (doc) {
-      filters.push('(LOWER(p.nome_completo) LIKE ? OR LOWER(p.matricula) LIKE ? OR p.cpf LIKE ? OR p.cpf LIKE ?)');
-      params.push(`%${text}%`, `%${text}%`, `%${doc}%`, `%${text}%`);
+      filters.push('(LOWER(p.nome_completo) LIKE ? OR LOWER(p.matricula) LIKE ? OR p.cpf LIKE ? OR p.cpf LIKE ? OR LOWER(COALESCE(p.nome_rv, \'\')) LIKE ? OR LOWER(COALESCE(p.codigo_rv, \'\')) LIKE ?)');
+      params.push(`%${text}%`, `%${text}%`, `%${doc}%`, `%${text}%`, `%${text}%`, `%${text}%`);
     } else {
-      filters.push('(LOWER(p.nome_completo) LIKE ? OR LOWER(p.matricula) LIKE ?)');
-      params.push(`%${text}%`, `%${text}%`);
+      filters.push('(LOWER(p.nome_completo) LIKE ? OR LOWER(p.matricula) LIKE ? OR LOWER(COALESCE(p.nome_rv, \'\')) LIKE ? OR LOWER(COALESCE(p.codigo_rv, \'\')) LIKE ?)');
+      params.push(`%${text}%`, `%${text}%`, `%${text}%`, `%${text}%`);
     }
   }
 
-  for (const [column, value] of Object.entries({ competencia, funcao_rv, status_produtividade })) {
+  for (const [column, value] of Object.entries({ competencia, funcao_rv, status_produtividade, status_auditoria })) {
     if (!value) continue;
     filters.push(`LOWER(COALESCE(p.${column}, '')) LIKE ?`);
     params.push(`%${String(value).toLowerCase()}%`);
@@ -129,6 +140,8 @@ function summarize(rows) {
     if (row.bateu_devolucao === false || row.bateu_devolucao === 0) result.total_nao_bateu_devolucao += 1;
     result.total_recargas += numberValue(row.recargas);
     result.total_mapas += numberValue(row.mapas);
+    if (String(row.status_auditoria || '').toLowerCase() === 'revisar_cruzamento') result.total_baixa_confianca += 1;
+    if (row.competencia) result.competencias.add(row.competencia);
     return result;
   }, {
     colaboradores: new Set(),
@@ -140,20 +153,28 @@ function summarize(rows) {
     total_bateu_devolucao: 0,
     total_nao_bateu_devolucao: 0,
     total_recargas: 0,
-    total_mapas: 0
+    total_mapas: 0,
+    total_baixa_confianca: 0,
+    competencias: new Set()
   });
 
   return {
     total_colaboradores: summary.colaboradores.size,
+    total_colaboradores_com_rv: summary.colaboradores.size,
     total_motoristas: summary.motoristas.size,
     total_ajudantes: summary.ajudantes.size,
     valor_total_nova_rv: Number(summary.valor_total_nova_rv.toFixed(2)),
+    valor_total_rv_nova: Number(summary.valor_total_nova_rv.toFixed(2)),
     valor_total_antiga_rv: Number(summary.valor_total_antiga_rv.toFixed(2)),
+    valor_total_rv_antiga: Number(summary.valor_total_antiga_rv.toFixed(2)),
     diferenca_total: Number(summary.diferenca_total.toFixed(2)),
+    valor_total_diferenca: Number(summary.diferenca_total.toFixed(2)),
     total_bateu_devolucao: summary.total_bateu_devolucao,
     total_nao_bateu_devolucao: summary.total_nao_bateu_devolucao,
     total_recargas: Number(summary.total_recargas.toFixed(2)),
-    total_mapas: Number(summary.total_mapas.toFixed(2))
+    total_mapas: Number(summary.total_mapas.toFixed(2)),
+    total_baixa_confianca: summary.total_baixa_confianca,
+    competencias_disponiveis: [...summary.competencias].sort().reverse()
   };
 }
 
@@ -178,7 +199,7 @@ router.get('/meu', authenticateToken, async (req, res) => {
     const rows = await db.all(
       `${selectProdutividade}
        WHERE p.colaborador_id = ?
-       ORDER BY p.competencia DESC, p.created_at DESC`,
+       ORDER BY p.competencia DESC, p.funcao_rv, p.created_at DESC`,
       [req.user.id]
     );
     return res.json(rows);

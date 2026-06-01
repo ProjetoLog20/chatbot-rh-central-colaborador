@@ -29,12 +29,17 @@ const detailFields = [
   ['bateu_devolucao', 'Status da devolucao', 'devolucao'],
   ['recargas', 'Recargas', 'number'],
   ['mapas', 'Mapas', 'number'],
+  ['valor_recarga', 'Valor recarga', 'money'],
   ['bonus', 'Bonus', 'money'],
   ['antiga_rv', 'Antiga RV', 'money'],
   ['nova_rv', 'Nova RV', 'money'],
   ['diferenca_rv', 'Diferenca RV', 'money'],
   ['valor_total_previsto', 'Valor total previsto', 'money'],
-  ['status_produtividade', 'Status produtividade']
+  ['status_produtividade', 'Status produtividade'],
+  ['status_auditoria', 'Auditoria', 'auditoria'],
+  ['metodo_cruzamento', 'Metodo cruzamento'],
+  ['confianca_cruzamento', 'Confianca cruzamento', 'percent'],
+  ['mensagem_rh', 'Mensagem RH']
 ];
 
 const emptySummary = {
@@ -47,7 +52,8 @@ const emptySummary = {
   total_bateu_devolucao: 0,
   total_nao_bateu_devolucao: 0,
   total_recargas: 0,
-  total_mapas: 0
+  total_mapas: 0,
+  total_baixa_confianca: 0
 };
 
 function isAdminUser(user) {
@@ -96,6 +102,15 @@ function StatusBadge({ type, value }) {
     );
   }
 
+  if (type === 'auditoria') {
+    const revisar = String(value || '').toLowerCase() === 'revisar_cruzamento';
+    return (
+      <span className={`prod-badge ${revisar ? 'warning' : 'success'}`}>
+        {revisar ? 'Revisar vinculo' : 'OK'}
+      </span>
+    );
+  }
+
   const normalized = String(value || '').trim().toLowerCase();
   const className = normalized ? 'success' : 'muted';
   return <span className={`prod-badge ${className}`}>{value || 'Sem dados'}</span>;
@@ -140,6 +155,8 @@ function ProdutividadeDetail({ registro }) {
             <span>{label}</span>
             {type === 'devolucao' ? (
               <StatusBadge type="devolucao" value={registro[key]} />
+            ) : type === 'auditoria' ? (
+              <StatusBadge type="auditoria" value={registro[key]} />
             ) : key === 'status_produtividade' ? (
               <StatusBadge type="status" value={registro[key]} />
             ) : (
@@ -177,6 +194,14 @@ function ColaboradorProdutividade() {
   }, []);
 
   const selected = rows.find((row) => String(row.id) === selectedId) || rows[0];
+  const consolidated = rows.reduce((acc, row) => {
+    acc.valor_total_previsto += asNumber(row.valor_total_previsto);
+    acc.entregas += asNumber(row.entregas);
+    acc.caixas += asNumber(row.caixas);
+    acc.recargas += asNumber(row.recargas);
+    acc.bonus += asNumber(row.bonus);
+    return acc;
+  }, { valor_total_previsto: 0, entregas: 0, caixas: 0, recargas: 0, bonus: 0 });
 
   if (maintenance) {
     return <ProdutividadeMaintenance message={maintenance.mensagem_manutencao} />;
@@ -199,14 +224,23 @@ function ColaboradorProdutividade() {
       {!loading && rows.length ? (
         <>
           {rows.length > 1 ? (
-            <label className="prod-selector">
-              Competencia
-              <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
-                {rows.map((row) => (
-                  <option key={row.id} value={row.id}>{row.competencia} - {row.funcao_rv}</option>
-                ))}
-              </select>
-            </label>
+            <>
+              <section className="prod-summary-grid">
+                <div><span>Total previsto</span><strong>{formatMoney(consolidated.valor_total_previsto)}</strong></div>
+                <div><span>Entregas</span><strong>{formatNumber(consolidated.entregas)}</strong></div>
+                <div><span>Caixas</span><strong>{formatNumber(consolidated.caixas)}</strong></div>
+                <div><span>Recargas</span><strong>{formatNumber(consolidated.recargas)}</strong></div>
+                <div><span>Bonus</span><strong>{formatMoney(consolidated.bonus)}</strong></div>
+              </section>
+              <label className="prod-selector">
+                Competencia / funcao
+                <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
+                  {rows.map((row) => (
+                    <option key={row.id} value={row.id}>{row.competencia} - {row.funcao_rv}</option>
+                  ))}
+                </select>
+              </label>
+            </>
           ) : null}
           <ProdutividadeDetail registro={selected} />
         </>
@@ -221,7 +255,8 @@ function AdminProdutividade() {
     competencia: '',
     funcao_rv: '',
     status_produtividade: '',
-    bateu_devolucao: ''
+    bateu_devolucao: '',
+    status_auditoria: ''
   });
   const [rows, setRows] = useState([]);
   const [summary, setSummary] = useState(emptySummary);
@@ -234,7 +269,8 @@ function AdminProdutividade() {
     return {
       competencia: uniq('competencia'),
       funcao_rv: uniq('funcao_rv'),
-      status_produtividade: uniq('status_produtividade')
+      status_produtividade: uniq('status_produtividade'),
+      status_auditoria: uniq('status_auditoria')
     };
   }, [rows]);
 
@@ -297,7 +333,8 @@ function AdminProdutividade() {
     ['Dentro da meta', summary.total_bateu_devolucao, 'number'],
     ['Fora da meta', summary.total_nao_bateu_devolucao, 'number'],
     ['Recargas', summary.total_recargas, 'number'],
-    ['Mapas', summary.total_mapas, 'number']
+    ['Mapas', summary.total_mapas, 'number'],
+    ['Revisar vinculo', summary.total_baixa_confianca, 'number']
   ];
 
   return (
@@ -329,7 +366,7 @@ function AdminProdutividade() {
 
       <section className="prod-filters">
         <label>
-          Buscar por nome, matricula ou CPF
+          Buscar por nome, matricula, CPF, nome RV ou codigo RV
           <input value={filters.busca} onChange={(event) => setFilters({ ...filters, busca: event.target.value })} />
         </label>
         <label>
@@ -365,7 +402,18 @@ function AdminProdutividade() {
             <option value="false">Fora da meta</option>
           </select>
         </label>
+        <label>
+          Auditoria
+          <select value={filters.status_auditoria} onChange={(event) => setFilters({ ...filters, status_auditoria: event.target.value })}>
+            <option value="">Todas</option>
+            {options.status_auditoria.map((option) => <option key={option} value={option}>{option}</option>)}
+          </select>
+        </label>
       </section>
+
+      {summary.total_baixa_confianca ? (
+        <div className="prod-warning">Existem {summary.total_baixa_confianca} registro(s) com baixa confianca de cruzamento para revisao.</div>
+      ) : null}
 
       {loading ? <p>Carregando produtividade...</p> : null}
       {!loading && !rows.length ? <div className="empty-state">Nenhum dado de produtividade encontrado.</div> : null}
@@ -380,9 +428,17 @@ function AdminProdutividade() {
                 <th>CPF</th>
                 <th>Competencia</th>
                 <th>Funcao</th>
+                <th>Caixas</th>
                 <th>Entregas</th>
+                <th>Devolucao</th>
+                <th>Status devolucao</th>
+                <th>Recargas</th>
+                <th>Mapas</th>
+                <th>RV antiga</th>
                 <th>Nova RV</th>
+                <th>Diferenca</th>
                 <th>Status</th>
+                <th>Auditoria</th>
                 <th>Acoes</th>
               </tr>
             </thead>
@@ -394,9 +450,17 @@ function AdminProdutividade() {
                   <td>{row.cpf}</td>
                   <td>{row.competencia}</td>
                   <td>{row.funcao_rv}</td>
+                  <td>{formatNumber(row.caixas)}</td>
                   <td>{formatNumber(row.entregas)}</td>
+                  <td>{formatPercent(row.percentual_devolucao)}</td>
+                  <td><StatusBadge type="devolucao" value={row.bateu_devolucao} /></td>
+                  <td>{formatNumber(row.recargas)}</td>
+                  <td>{formatNumber(row.mapas)}</td>
+                  <td>{formatMoney(row.antiga_rv)}</td>
                   <td>{formatMoney(row.nova_rv)}</td>
+                  <td>{formatMoney(row.diferenca_rv)}</td>
                   <td><StatusBadge type="status" value={row.status_produtividade} /></td>
+                  <td><StatusBadge type="auditoria" value={row.status_auditoria} /></td>
                   <td><button onClick={() => openDetail(row.colaborador_id)}>Ver detalhes</button></td>
                 </tr>
               ))}
