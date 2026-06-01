@@ -248,8 +248,22 @@ function connectSqlite() {
       categoria TEXT,
       pergunta TEXT NOT NULL,
       resposta TEXT NOT NULL,
-      ativo INTEGER DEFAULT 1
+      ativo INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     )`);
+
+    const ensureRespostaColumn = (name, definition) => {
+      sqliteDb.all('PRAGMA table_info(respostas_chatbot)', [], (err, columns) => {
+        if (err) return;
+        if (!columns.some((column) => column.name === name)) {
+          sqliteDb.run(`ALTER TABLE respostas_chatbot ADD COLUMN ${name} ${definition}`);
+        }
+      });
+    };
+
+    ensureRespostaColumn('created_at', 'TEXT');
+    ensureRespostaColumn('updated_at', 'TEXT');
 
     sqliteDb.run(`CREATE TABLE IF NOT EXISTS atendimentos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

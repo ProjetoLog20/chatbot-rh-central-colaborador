@@ -214,6 +214,10 @@ export async function getRespostas() {
   return request('/respostas_chatbot');
 }
 
+export async function getChatbotSuggestions() {
+  return request('/respostas_chatbot/sugestoes');
+}
+
 export async function getPublicAcoes() {
   return request('/acoes/publicas');
 }

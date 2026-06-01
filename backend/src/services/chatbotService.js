@@ -31,9 +31,25 @@ function run(sql, params = []) {
 }
 
 async function getKnowledgeBase() {
+  await ensureRespostasColumns();
   return all(
-    'SELECT categoria, pergunta, resposta FROM respostas_chatbot WHERE ativo = 1 ORDER BY categoria, pergunta LIMIT 50'
+    'SELECT categoria, pergunta, resposta FROM respostas_chatbot WHERE ativo = 1 ORDER BY COALESCE(created_at, CURRENT_TIMESTAMP) DESC, id DESC LIMIT 50'
   );
+}
+
+async function ensureRespostasColumns() {
+  for (const sql of [
+    'ALTER TABLE respostas_chatbot ADD COLUMN created_at TIMESTAMP',
+    'ALTER TABLE respostas_chatbot ADD COLUMN updated_at TIMESTAMP'
+  ]) {
+    try {
+      await run(sql);
+    } catch (error) {
+      if (!/duplicate column|already exists/i.test(String(error?.message || error))) {
+        throw error;
+      }
+    }
+  }
 }
 
 async function getUserProfile(user) {

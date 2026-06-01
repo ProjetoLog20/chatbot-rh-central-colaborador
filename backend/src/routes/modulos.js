@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { authenticateToken, authorizeRoles } = require('../authMiddleware');
-const { listAllModules, listModulesForUser, shapeModule } = require('../moduleConfig');
+const { ensureModuleConfigTable, listAllModules, listModulesForUser, shapeModule } = require('../moduleConfig');
 
 const router = express.Router();
 
@@ -52,6 +52,7 @@ router.patch('/admin/modulos/:chave', authenticateToken, authorizeRoles('admin')
   }
 
   try {
+    await ensureModuleConfigTable();
     const existing = await db.get('SELECT id FROM configuracoes_modulos WHERE chave = ?', [req.params.chave]);
     if (!existing) return res.status(404).json({ error: 'Modulo nao encontrado' });
 

@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { askChatbot } from '../api.js';
+import { useEffect, useState } from 'react';
+import { askChatbot, getChatbotSuggestions } from '../api.js';
 
-const suggestions = [
+const defaultSuggestions = [
   'Ola, o que voce pode fazer?',
   'O que e SKAP?',
   'Como esta meu prontuario?'
@@ -17,8 +17,23 @@ export default function ChatAssistant() {
     }
   ]);
   const [loading, setLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState(defaultSuggestions);
   const [previousResponseId, setPreviousResponseId] = useState(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (!open) return;
+
+    getChatbotSuggestions()
+      .then((rows) => {
+        const questions = (Array.isArray(rows) ? rows : [])
+          .map((item) => item.pergunta)
+          .filter(Boolean);
+
+        setSuggestions(questions.length ? questions : defaultSuggestions);
+      })
+      .catch(() => setSuggestions(defaultSuggestions));
+  }, [open]);
 
   function playOpenSound() {
     const AudioContext = window.AudioContext || window.webkitAudioContext;

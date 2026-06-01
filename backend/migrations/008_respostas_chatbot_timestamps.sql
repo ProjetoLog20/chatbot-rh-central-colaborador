@@ -1,0 +1,9 @@
+ALTER TABLE respostas_chatbot
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE respostas_chatbot
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+UPDATE respostas_chatbot
+SET created_at = COALESCE(created_at, CURRENT_TIMESTAMP),
+    updated_at = COALESCE(updated_at, CURRENT_TIMESTAMP);

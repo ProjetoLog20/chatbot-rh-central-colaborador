@@ -250,10 +250,72 @@ function buildColumnMap(headerRow) {
   return map;
 }
 
+function buildExportColumnMap(rows, headerIndex) {
+  const first = rows[headerIndex] || [];
+  const second = rows[headerIndex + 1] || [];
+  const normalizedFirst = first.map(normalizeHeader);
+  const normalizedSecond = second.map(normalizeHeader);
+  const hasNewExportLayout = normalizedFirst.includes('condutor')
+    && normalizedFirst.includes('cargo')
+    && normalizedFirst.some((value) => value.includes('pontuacao ponderada'));
+
+  if (!hasNewExportLayout) return null;
+
+  return {
+    regiao_geo: normalizedFirst.indexOf('regiao'),
+    atividade: normalizedFirst.indexOf('atividade'),
+    operacao: normalizedFirst.indexOf('operacao'),
+    nome_condutor: normalizedFirst.indexOf('condutor'),
+    cargo: normalizedFirst.indexOf('cargo'),
+    status_prontuario: normalizedSecond.indexOf('status') !== -1
+      ? normalizedSecond.indexOf('status')
+      : normalizedFirst.indexOf('situacao'),
+    motivo: normalizedFirst.indexOf('justificativa'),
+    pontuacao_ponderada: normalizedFirst.findIndex((value) => value.includes('pontuacao ponderada')),
+    telemetria_frenagem_brusca: normalizedSecond.indexOf('frenagem brusca'),
+    acidentes_fai: normalizedSecond.indexOf('fai'),
+    acidentes_lti: normalizedSecond.indexOf('lti'),
+    acidentes_mti: normalizedSecond.indexOf('mti'),
+    acidentes_mdi: normalizedSecond.indexOf('mdi'),
+    multa_leve: normalizedSecond.indexOf('leve'),
+    multa_media: normalizedSecond.indexOf('media'),
+    multa_grave: normalizedSecond.indexOf('grave'),
+    multa_gravissima: normalizedSecond.indexOf('gravissima'),
+    colisoes: normalizedSecond.indexOf('colisoes'),
+    capotamentos: normalizedSecond.indexOf('capotamentos'),
+    tombamentos: normalizedSecond.indexOf('tombamentos'),
+    advertencias: normalizedSecond.indexOf('advertencias'),
+    suspensoes: normalizedSecond.indexOf('suspensoes'),
+    quantidade_sonolencia: normalizedSecond.indexOf('sono'),
+    fadiga_celular: normalizedSecond.indexOf('celular'),
+    fadiga_consumo_alimento: normalizedSecond.indexOf('consumo alimento'),
+    fadiga_fumando: normalizedSecond.indexOf('fumando'),
+    fadiga_oclusao: normalizedSecond.indexOf('oclusao'),
+    fadiga_sem_cinto: normalizedSecond.indexOf('sem cinto'),
+    pontuacao_cnh: normalizedSecond.indexOf('pontos'),
+    vencimento_cnh: normalizedSecond.indexOf('vencimento'),
+    nao_uso_cinto_ajudante: normalizedSecond.indexOf('cinto nao utilizacao'),
+    nao_uso_cinto_motorista: normalizedSecond.indexOf('cinto nao utilizacao'),
+    nao_uso_cone: normalizedSecond.indexOf('cones falta'),
+    nao_uso_epi: normalizedSecond.indexOf('luvas falta')
+  };
+}
+
+function cleanColumnMap(map) {
+  return Object.fromEntries(
+    Object.entries(map || {}).filter(([, index]) => Number.isInteger(index) && index >= 0)
+  );
+}
+
 function readCell(row, columnMap, field) {
   const index = columnMap[field];
   if (index === undefined) return '';
   return row[index];
+}
+
+function isDistributionProntuarioCargo(cargo) {
+  const normalized = normalizeHeader(cargo);
+  return normalized.includes('motorista') || normalized.includes('ajudante distribuicao');
 }
 
 function worksheetCell(worksheet, rowIndex, columnIndex) {
@@ -321,6 +383,27 @@ function buildPayload(rawRow, columnMap, worksheet, sheetRowIndex) {
   }
 
   return payload;
+}
+
+function applyNewExportDefaults(payload) {
+  const score = Number(payload.pontuacao_ponderada);
+  const needsFaixa = !payload.faixa || normalizeCorFaixa(payload.faixa) === 'sem_faixa';
+  if (needsFaixa && Number.isFinite(score)) {
+    if (score <= 10) {
+      payload.faixa = 'Verde';
+      payload.cor_faixa = 'verde';
+    } else if (score <= 20) {
+      payload.faixa = 'Amarela';
+      payload.cor_faixa = 'amarelo';
+    } else {
+      payload.faixa = 'Vermelha';
+      payload.cor_faixa = 'vermelho';
+    }
+  }
+
+  if (!payload.status_prontuario) {
+    payload.status_prontuario = Number.isFinite(score) && score > 20 ? 'Em atencao' : 'Liberado';
+  }
 }
 
 function nowForFileName() {
@@ -409,11 +492,13 @@ async function importWorkbook({ filePath, buffer, originalName, logger = createL
   const worksheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows = xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: '', raw: false });
   const headerIndex = findHeaderRow(rows);
-  const columnMap = buildColumnMap(rows[headerIndex] || []);
+  const newExportColumnMap = buildExportColumnMap(rows, headerIndex);
+  const columnMap = cleanColumnMap(newExportColumnMap || buildColumnMap(rows[headerIndex] || []));
   const dataImportacao = new Date().toISOString();
+  const firstDataRowIndex = headerIndex + (newExportColumnMap ? 2 : 1);
 
-  if (columnMap.nome_condutor === undefined || columnMap.cpf === undefined) {
-    throw new Error('Nao foi possivel identificar colunas de nome/condutor e CPF.');
+  if (columnMap.nome_condutor === undefined) {
+    throw new Error('Nao foi possivel identificar a coluna de nome/condutor.');
   }
 
   await assertTables();
@@ -438,11 +523,13 @@ async function importWorkbook({ filePath, buffer, originalName, logger = createL
     colors: { verde: 0, amarelo: 0, vermelho: 0, sem_faixa: 0 }
   };
 
-  for (let index = headerIndex + 1; index < rows.length; index += 1) {
+  for (let index = firstDataRowIndex; index < rows.length; index += 1) {
     const rawRow = rows[index];
     if (!rawRow.some((value) => trim(value) !== '')) continue;
     const payload = buildPayload(rawRow, columnMap, worksheet, index);
+    if (newExportColumnMap) applyNewExportDefaults(payload);
     if (!payload.nome_condutor && !payload.cpf) continue;
+    if (newExportColumnMap && !isDistributionProntuarioCargo(payload.cargo)) continue;
 
     report.totalRows += 1;
     try {
