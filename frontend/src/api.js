@@ -145,6 +145,71 @@ export async function importSkapFile(file) {
   return body;
 }
 
+export async function getMeuProdutividade() {
+  return request('/produtividade/meu');
+}
+
+export async function getAdminProdutividade(filters = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) params.set(key, value);
+  });
+  const query = params.toString();
+  return request(`/produtividade/admin${query ? `?${query}` : ''}`);
+}
+
+export async function getAdminProdutividadeResumo(filters = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) params.set(key, value);
+  });
+  const query = params.toString();
+  return request(`/produtividade/admin/resumo${query ? `?${query}` : ''}`);
+}
+
+export async function getAdminProdutividadeDetail(colaboradorId) {
+  return request(`/produtividade/admin/${colaboradorId}`);
+}
+
+export async function importProdutividadeFile(file) {
+  const token = localStorage.getItem('token');
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE}/produtividade/importar`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw body || { error: 'Erro na importacao de RV' };
+  return body;
+}
+
+export async function exportAdminProdutividade(filters = {}) {
+  const token = localStorage.getItem('token');
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) params.set(key, value);
+  });
+  const query = params.toString();
+  const res = await fetch(`${API_BASE}/produtividade/admin/exportar${query ? `?${query}` : ''}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw body || { error: 'Erro ao exportar produtividade' };
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'relatorio_produtividade_rv.csv';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+ 
 export async function getRespostas() {
   return request('/respostas_chatbot');
 }

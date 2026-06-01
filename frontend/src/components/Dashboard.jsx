@@ -44,10 +44,10 @@ const generalCards = [
     id: 'produtividade',
     icon: '⭐',
     title: 'Prêmio de Produtividade',
-    description: 'Veja reconhecimentos, metas e resultados de produtividade.',
+    description: 'Veja seus indicadores, metas batidas e valor previsto do prÃªmio.',
     action: 'Acessar',
     color: '#003B68',
-    route: '/profile'
+    route: '/produtividade'
   },
   {
     id: 'prontuario',

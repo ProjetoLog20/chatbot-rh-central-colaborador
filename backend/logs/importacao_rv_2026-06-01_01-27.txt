@@ -1,0 +1,18 @@
+Importacao RV concluida.
+Arquivo: C:\Users\ArT\Downloads\rv_log20_importacao_pronta.xlsx
+Importacao ID: 2
+Total de linhas lidas: 41
+Importados: 0
+Atualizados: 40
+Ignorados: 1
+Erros: 1
+Valor total nova RV: 29812.54
+Valor total antiga RV: 7420.82
+Diferenca total: 22391.72
+Detalhes dos erros: [
+  {
+    "linha": 27,
+    "matricula": "",
+    "error": "Matricula, competencia ou funcao_rv vazia"
+  }
+]

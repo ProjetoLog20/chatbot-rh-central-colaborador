@@ -181,6 +181,55 @@ function connectSqlite() {
       FOREIGN KEY (avaliacao_id) REFERENCES skap_avaliacoes(id) ON DELETE CASCADE
     )`);
 
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS produtividade_importacoes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      arquivo TEXT NOT NULL,
+      competencia TEXT,
+      periodo_inicio TEXT,
+      periodo_fim TEXT,
+      total_linhas INTEGER DEFAULT 0,
+      importados INTEGER DEFAULT 0,
+      atualizados INTEGER DEFAULT 0,
+      ignorados INTEGER DEFAULT 0,
+      erros INTEGER DEFAULT 0,
+      valor_total_nova_rv REAL DEFAULT 0,
+      detalhes_json TEXT,
+      criado_por INTEGER,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (criado_por) REFERENCES colaboradores(id) ON DELETE SET NULL
+    )`);
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS produtividade_colaboradores (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      importacao_id INTEGER,
+      colaborador_id INTEGER NOT NULL,
+      matricula TEXT NOT NULL,
+      nome_completo TEXT,
+      cpf TEXT,
+      competencia TEXT NOT NULL,
+      periodo_inicio TEXT,
+      periodo_fim TEXT,
+      funcao_rv TEXT NOT NULL,
+      caixas REAL,
+      entregas REAL,
+      percentual_devolucao REAL,
+      meta_devolucao REAL,
+      bateu_devolucao INTEGER,
+      recargas REAL,
+      mapas REAL,
+      bonus REAL,
+      antiga_rv REAL,
+      nova_rv REAL,
+      diferenca_rv REAL,
+      valor_total_previsto REAL,
+      status_produtividade TEXT,
+      dados_originais_json TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (importacao_id) REFERENCES produtividade_importacoes(id) ON DELETE SET NULL,
+      FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE CASCADE
+    )`);
+
     sqliteDb.run(`CREATE TABLE IF NOT EXISTS historico_pontuacao (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       colaborador_id INTEGER NOT NULL,
@@ -231,6 +280,10 @@ function connectSqlite() {
     sqliteDb.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_skap_avaliacoes_colaborador ON skap_avaliacoes(colaborador_id)');
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_skap_avaliacoes_nivel ON skap_avaliacoes(nivel_skap)');
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_skap_historico_colaborador ON skap_historico(colaborador_id)');
+    sqliteDb.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_produtividade_colab_comp_funcao ON produtividade_colaboradores(colaborador_id, competencia, funcao_rv)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_produtividade_matricula ON produtividade_colaboradores(matricula)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_produtividade_competencia ON produtividade_colaboradores(competencia)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_produtividade_funcao_rv ON produtividade_colaboradores(funcao_rv)');
   });
 
   return sqliteDb;
