@@ -56,7 +56,7 @@ async function getUserProfile(user) {
   if (!user?.id) return user || null;
 
   const profile = await get(
-    `SELECT id, matricula, nome_completo, telefone_whatsapp, cargo, setor, unidade, status, perfil
+    `SELECT id, matricula, nome_completo, nome_preferido, telefone_whatsapp, cargo, setor, unidade, status, perfil
      FROM colaboradores
      WHERE id = ?`,
     [user.id]
@@ -113,24 +113,47 @@ function hasAnyToken(question, tokens) {
   return tokens.some((token) => questionTokens.includes(token));
 }
 
+function isContestQuestion(question) {
+  return (
+    hasAnyToken(question, ['contestar', 'contestacao', 'discordo', 'conferencia', 'conferir', 'revisao', 'revisar', 'errado']) &&
+    hasAnyToken(question, ['premio', 'produtividade', 'prontuario', 'skap'])
+  );
+}
+
 function getContextualAnswer(question, user) {
   if (hasAnyToken(question, ['ola', 'ajuda', 'fazer', 'funciona', 'assistente'])) {
     return {
       resposta: [
-        'Eu posso ajudar com duvidas sobre comunicados do RH, SKAP, produtividade, ouvidoria e canais internos.',
+        'Eu sou o Yuri, assistente de RH da LOG20. Posso ajudar com Pesquisa de Clima, SKAP, Campeao de Seguranca, 3Rs, Premio de Produtividade, prontuario, ouvidoria, primeiro acesso e informacoes gerais da Central.',
         user?.perfil === 'motorista'
-          ? 'Tambem consigo orientar voce sobre o resumo do seu prontuario de motorista.'
-          : 'Se a sua duvida envolver dados pessoais ou algo que nao esteja na base, eu encaminho para o RH.'
+          ? 'Tambem consigo orientar voce sobre o resumo do seu prontuario.'
+          : 'Se a sua duvida envolver dados pessoais ou algo que nao esteja disponivel, procure o RH.'
       ].join(' '),
       origem: 'contexto_usuario',
       categoria: 'Ajuda'
     };
   }
 
+  if (hasAnyToken(question, ['pessoal', 'dados', 'cpf', 'telefone', 'email', 'salario', 'senha'])) {
+    return {
+      resposta: 'Essas informacoes ficam disponiveis somente para voce e para os administradores autorizados. Se precisar conferir ou corrigir algo, procure o RH.',
+      origem: 'contexto_usuario',
+      categoria: 'Dados pessoais'
+    };
+  }
+
+  if (isContestQuestion(question)) {
+    return {
+      resposta: 'Caso nao concorde ou nao entenda alguma informacao, procure o RH para conferencia.',
+      origem: 'contexto_usuario',
+      categoria: 'Conferencia RH'
+    };
+  }
+
   if (hasAnyToken(question, ['prontuario', 'pontuacao', 'motorista'])) {
     if (!user?.prontuario) {
       return {
-        resposta: 'Nao encontrei um prontuario de motorista vinculado ao seu usuario. Se voce acredita que deveria ter acesso, fale com o RH.',
+        resposta: 'Essa informacao ainda nao esta disponivel na sua central. Caso precise de apoio, procure o RH.',
         origem: 'contexto_usuario',
         categoria: 'Prontuario'
       };
@@ -140,7 +163,7 @@ function getContextualAnswer(question, user) {
     return {
       resposta: [
         `Seu prontuario consta com pontuacao ponderada ${prontuario.pontuacao_ponderada ?? 'nao informada'} e faixa ${prontuario.faixa || 'nao informada'}.`,
-        `Classificacao da faixa: ${prontuario.cor_faixa || 'sem_faixa'}. Status: ${prontuario.status_prontuario || 'nao informado'}.`
+        `Classificacao da faixa: ${prontuario.cor_faixa || 'sem_faixa'}. Status: ${prontuario.status_prontuario || 'nao informado'}. Caso nao concorde ou nao entenda alguma informacao, procure o RH para conferencia.`
       ].join(' '),
       origem: 'contexto_usuario',
       categoria: 'Prontuario'
@@ -161,6 +184,7 @@ function buildUserContext(user) {
   if (!user) return 'Usuario autenticado, sem dados adicionais disponiveis.';
   const lines = [
     `Nome: ${user.nome_completo || 'nao informado'}`,
+    `Nome preferido: ${user.nome_preferido || 'nao informado'}`,
     `Perfil: ${user.perfil || 'nao informado'}`,
     `Matricula: ${user.matricula || 'nao informada'}`,
     `Cargo: ${user.cargo || 'nao informado'}`,
@@ -195,14 +219,20 @@ async function askOpenAI({ question, knowledgeBase, user, previousResponseId }) 
   const payload = {
     model: process.env.OPENAI_MODEL || DEFAULT_MODEL,
     instructions: [
-      'Voce e um assistente virtual de RH da Central do Colaborador.',
-      'Seu nome e Assistente RH Log20. Soe humano, prestativo e calmo, sem exagerar.',
+      'Voce e Yuri, a cobrinha mascote da LOG20 Cascavel e assistente virtual de RH da Central do Colaborador.',
+      'Sua personalidade e humana, simpatica, educada, direta, acolhedora e profissional.',
+      'Use linguagem simples, tom de apoio ao colaborador e evite termos tecnicos.',
       'Responda em portugues do Brasil, com tom claro, acolhedor e objetivo.',
       'Priorize as respostas oficiais cadastradas pelo RH na base de conhecimento.',
+      'Ajude com Pesquisa de Clima, SKAP, Campeao de Seguranca, 3Rs, Premio de Produtividade, Prontuario do Motorista, Ouvidoria, primeiro acesso, senha temporaria e informacoes gerais da Central.',
       'Use o contexto do usuario apenas para personalizar orientacoes permitidas.',
-      'Se o usuario for motorista e perguntar sobre o prontuario, explique apenas os dados resumidos fornecidos no contexto.',
-      'Se a base nao tiver informacao suficiente, diga que vai encaminhar ao RH em vez de inventar politicas internas.',
-      'Nao exponha dados sensiveis. Para dados pessoais, oriente o colaborador a acessar a area autenticada ou falar com o RH.',
+      'Nao mostre dados de outro colaborador e respeite as regras de perfil do sistema.',
+      'Nao prometa alterar dados sozinho.',
+      'Se o usuario perguntar sobre dados pessoais, responda: "Essas informacoes ficam disponiveis somente para voce e para os administradores autorizados."',
+      'Se a informacao nao estiver disponivel, responda: "Essa informacao ainda nao esta disponivel na sua central. Caso precise de apoio, procure o RH."',
+      'Quando o assunto for contestacao de premio, prontuario ou SKAP, responda: "Caso nao concorde ou nao entenda alguma informacao, procure o RH para conferencia."',
+      'Se a base nao tiver informacao suficiente, oriente o colaborador a procurar o RH/Admin em vez de inventar politicas internas.',
+      'Nao exponha dados sensiveis.',
       'Use no maximo 2 paragrafos curtos.'
     ].join('\n'),
     input: [
@@ -345,7 +375,7 @@ async function answerQuestion({ question, user, previousResponseId }) {
   }
 
   const result = {
-    resposta: 'Nao consegui identificar sua solicitacao com seguranca. Vou encaminhar sua duvida para o RH.',
+    resposta: 'Essa informacao ainda nao esta disponivel na sua central. Caso precise de apoio, procure o RH.',
     origem: 'fallback'
   };
 

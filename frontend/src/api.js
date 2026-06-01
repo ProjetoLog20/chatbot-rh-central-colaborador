@@ -390,3 +390,10 @@ export async function askChatbot(question, previousResponseId) {
     body: JSON.stringify({ question, previousResponseId })
   });
 }
+
+export async function askYuri(message, history = []) {
+  return request('/yuri/chat', {
+    method: 'POST',
+    body: JSON.stringify({ message, history })
+  });
+}

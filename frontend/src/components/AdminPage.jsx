@@ -47,7 +47,7 @@ const importOptions = [
   },
   {
     type: 'respostas_chatbot',
-    title: 'Base do chatbot',
+    title: 'Base do Yuri',
     description: 'Alimente perguntas, respostas e categorias usadas pela IA em modo local.',
     path: '/import/respostas_chatbot'
   }
@@ -386,7 +386,7 @@ export default function AdminPage() {
         <button className={activeTab === 'acoes' ? 'active' : ''} onClick={() => setActiveTab('acoes')}>Acoes e Eventos</button>
         <button className={activeTab === 'campeoes' ? 'active' : ''} onClick={() => setActiveTab('campeoes')}>Campeao Segurança</button>
         <button className={activeTab === 'modulos' ? 'active' : ''} onClick={() => setActiveTab('modulos')}>Configuração de Módulos</button>
-        <button className={activeTab === 'chatbot' ? 'active' : ''} onClick={() => setActiveTab('chatbot')}>Chatbot</button>
+        <button className={activeTab === 'chatbot' ? 'active' : ''} onClick={() => setActiveTab('chatbot')}>Yuri</button>
       </div>
 
       {message && <div className="import-message">{message}</div>}
@@ -464,7 +464,7 @@ export default function AdminPage() {
 
       {activeTab === 'chatbot' ? (
         <section className="admin-section">
-          <h2>Respostas do Chatbot</h2>
+          <h2>Respostas do Yuri</h2>
           <div className="table-scroll">
             <table>
               <thead>

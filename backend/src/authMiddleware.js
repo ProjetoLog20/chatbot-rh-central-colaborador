@@ -15,7 +15,7 @@ function authenticateToken(req, res, next) {
   if (!token) return res.status(401).json({ error: 'Token nao fornecido' });
 
   jwt.verify(token, getJwtSecret(), (err, user) => {
-    if (err) return res.status(403).json({ error: 'Token invalido' });
+    if (err) return res.status(401).json({ error: 'Token invalido' });
     req.user = user;
     next();
   });

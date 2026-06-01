@@ -1,24 +1,36 @@
 import { useEffect, useState } from 'react';
-import { askChatbot, getChatbotSuggestions } from '../api.js';
+import { askYuri, getChatbotSuggestions } from '../api.js';
 
 const defaultSuggestions = [
-  'Ola, o que voce pode fazer?',
-  'O que e SKAP?',
-  'Como esta meu prontuario?'
+  'Ver meu SKAP',
+  'Ver meu prontuário',
+  'Como funciona o primeiro acesso?',
+  'Como funciona a Pesquisa de Clima?',
+  'O que são os 3Rs?',
+  'Como funciona o Campeão de Segurança?',
+  'Preciso falar com o RH'
 ];
 
-export default function ChatAssistant() {
+function getGreeting(user) {
+  const preferredName = String(user?.nome_preferido || '').trim();
+  if (preferredName) {
+    return `Olá, ${preferredName}! Eu sou o Yuri, assistente de RH da LOG20. Como posso te ajudar hoje?`;
+  }
+
+  return 'Olá! Eu sou o Yuri, assistente de RH da LOG20. Como posso te ajudar hoje?';
+}
+
+export default function ChatAssistant({ user }) {
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState('');
   const [messages, setMessages] = useState([
     {
       type: 'assistant',
-      text: 'Ola. Eu sou o Assistente RH Log20. Posso consultar a base do RH, orientar voce pelos canais internos e ajudar a encontrar o proximo passo.'
+      text: getGreeting(user)
     }
   ]);
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState(defaultSuggestions);
-  const [previousResponseId, setPreviousResponseId] = useState(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -82,21 +94,23 @@ export default function ChatAssistant() {
     setLoading(true);
 
     try {
-      const response = await askChatbot(userQuestion, previousResponseId);
-      if (response.responseId) setPreviousResponseId(response.responseId);
+      const history = messages.slice(-8).map((message) => ({
+        role: message.type === 'assistant' ? 'assistant' : 'user',
+        content: message.text
+      }));
+      const response = await askYuri(userQuestion, history);
 
       setMessages((prev) => [
         ...prev,
         {
           type: 'assistant',
-          text: response.resposta,
-          source: response.origem
+          text: response.reply || 'Não consegui responder agora. Tente novamente em instantes.'
         }
       ]);
     } catch (err) {
       setMessages((prev) => [
         ...prev,
-        { type: 'assistant', text: 'Nao consegui consultar o assistente agora. Tente novamente em instantes.' }
+        { type: 'assistant', text: 'Não consegui responder agora. Tente novamente em instantes.' }
       ]);
     } finally {
       setLoading(false);
@@ -118,18 +132,18 @@ export default function ChatAssistant() {
         onMouseMove={handleMascotMove}
         onMouseLeave={() => setTilt({ x: 0, y: 0 })}
         style={{ '--tilt-x': `${tilt.x}deg`, '--tilt-y': `${tilt.y}deg` }}
-        aria-label="Abrir assistente RH"
+        aria-label="Falar com Yuri"
       >
-        <img className="mascot-image" src="/mascote-ia.png" alt="Mascote Assistente RH Log20" />
+        <img className="mascot-image" src="/mascote-ia.png" alt="Yuri, mascote da LOG20 Cascavel" />
         <span className="mascot-shadow" />
-        <span className="mascot-bubble">{loading ? 'Pensando...' : open ? 'Estou aqui!' : 'Oi, posso ajudar?'}</span>
+        <span className="mascot-bubble">{loading ? 'Pensando...' : open ? 'Yuri está aqui para ajudar' : 'Falar com Yuri'}</span>
       </button>
-      <button className="chat-toggle" onClick={toggleChat}>
-        <span>IA</span>
-        Assistente RH
+      <button className="chat-toggle" onClick={toggleChat} aria-label="Falar com Yuri">
+        <span>Y</span>
+        Yuri
       </button>
       {open ? (
-        <section className="chat-window" aria-label="Assistente RH com IA">
+        <section className="chat-window" aria-label="Yuri, Assistente de RH">
           <div className="chat-header">
             <div className="chat-agent">
               <div className="chat-avatar">
@@ -137,8 +151,8 @@ export default function ChatAssistant() {
                 <span />
               </div>
               <div>
-                <strong>Assistente RH Log20</strong>
-                <span>{loading ? 'Analisando sua mensagem...' : 'Online e conectado ao RH'}</span>
+                <strong>Yuri</strong>
+                <span>{loading ? 'Analisando sua mensagem...' : 'Assistente de RH LOG20'}</span>
               </div>
             </div>
             <button className="chat-close" onClick={() => setOpen(false)} aria-label="Fechar chat">
@@ -154,7 +168,8 @@ export default function ChatAssistant() {
               </div>
             ))}
             {loading ? (
-              <div className="chat-message assistant typing" aria-label="Assistente pensando">
+              <div className="chat-message assistant typing" aria-label="Yuri pensando">
+                <p>Yuri está digitando...</p>
                 <span />
                 <span />
                 <span />
@@ -175,7 +190,7 @@ export default function ChatAssistant() {
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Escreva sua duvida..."
+              placeholder="Escreva sua dúvida..."
             />
             <button onClick={() => sendQuestion(question)} disabled={loading || !question.trim()}>
               Enviar

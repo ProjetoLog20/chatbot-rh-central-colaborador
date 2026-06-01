@@ -16,6 +16,9 @@ DATABASE_URL=postgresql://user:password@host:5432/database
 JWT_SECRET=troque_por_um_segredo_forte
 FRONTEND_URL=http://localhost:5173
 NODE_ENV=production
+OPENAI_API_KEY=
+YURI_AI_ENABLED=true
+OPENAI_MODEL=gpt-4o-mini
 ```
 
 Observacoes:
@@ -26,6 +29,12 @@ Observacoes:
 - `NODE_ENV` deve ser `production` no Render para a aplicação rodar em modo de produção.
 
 Para desenvolvimento local simples, o backend continua suportando SQLite se `DATABASE_URL` não estiver definido.
+
+Variaveis do Yuri com IA:
+
+- `OPENAI_API_KEY` habilita a IA real do Yuri pelo backend. Nunca use essa chave no frontend.
+- `YURI_AI_ENABLED=true` ativa a chamada da OpenAI. Use `false` para manter o Yuri com resposta padrao sem IA.
+- `OPENAI_MODEL` define o modelo usado pelo Yuri. Padrao recomendado: `gpt-4o-mini`.
 
 ## Instalacao
 
@@ -55,11 +64,11 @@ Variáveis de ambiente necessárias:
 - `JWT_SECRET`
 - `FRONTEND_URL` (por exemplo `https://seu-app.onrender.com`)
 - `NODE_ENV=production`
+- `OPENAI_API_KEY`
+- `YURI_AI_ENABLED=true`
+- `OPENAI_MODEL=gpt-4o-mini`
 
-Opcional:
-
-- `OPENAI_API_KEY` se usar o assistente OpenAI
-- `OPENAI_MODEL` (por exemplo `gpt-5-mini`)
+Para desativar temporariamente a IA do Yuri sem remover a chave, use `YURI_AI_ENABLED=false`.
 
 No Render, execute as migrations uma vez antes de subir a aplicação para garantir que o banco PostgreSQL esteja com o schema correto. Use:
 
@@ -171,11 +180,13 @@ Regras:
 ## Segurança e privacidade
 
 - O segredo JWT fica apenas em `JWT_SECRET`.
+- A chave `OPENAI_API_KEY` fica apenas no backend e nao deve ser exposta no frontend.
 - CORS usa `FRONTEND_URL`, mantendo localhost para desenvolvimento.
 - Colaborador e motorista acessam somente os proprios dados.
 - Admin pode acessar e gerenciar todos os dados.
 - A IA externa nao recebe CPF, telefone ou e-mail.
 - Para prontuario, a IA recebe somente pontuacao, faixa e orientacao resumida.
+- O Yuri usa a rota protegida `POST /api/yuri/chat`, exige token JWT e orienta procurar o RH em assuntos sensiveis como pagamento, premio, prontuario, SKAP, contestacao ou dados pessoais.
 - `atendimentos.colaborador_id` aceita `NULL` para futuro WhatsApp antes da identificacao do numero.
 
 ## Funcionalidades

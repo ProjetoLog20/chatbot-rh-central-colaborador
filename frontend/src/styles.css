@@ -1141,6 +1141,12 @@ button.dashboard-card-item {
   padding: 0.9rem 1rem;
 }
 
+.chat-message.typing p {
+  margin-right: 0.25rem;
+  color: #6B7280;
+  font-size: 0.85rem;
+}
+
 .chat-message.typing span {
   width: 8px;
   height: 8px;
@@ -1149,11 +1155,11 @@ button.dashboard-card-item {
   animation: typingDot 900ms ease-in-out infinite;
 }
 
-.chat-message.typing span:nth-child(2) {
+.chat-message.typing span:nth-of-type(2) {
   animation-delay: 120ms;
 }
 
-.chat-message.typing span:nth-child(3) {
+.chat-message.typing span:nth-of-type(3) {
   animation-delay: 240ms;
 }
 

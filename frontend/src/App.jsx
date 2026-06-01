@@ -55,7 +55,7 @@ function App() {
         <div className="brand-block">
           <img src="/rh-logo.jpg" alt="RH Log20 Cascavel" />
           <div>
-            <strong>Chat Bot RH</strong>
+            <strong>Yuri, Assistente de RH</strong>
             <span>Central do Colaborador</span>
           </div>
         </div>
@@ -89,7 +89,7 @@ function App() {
         </Routes>
       </main>
 
-      {shouldShowChatAssistant ? <ChatAssistant /> : null}
+      {shouldShowChatAssistant ? <ChatAssistant user={user} /> : null}
     </div>
   );
 }

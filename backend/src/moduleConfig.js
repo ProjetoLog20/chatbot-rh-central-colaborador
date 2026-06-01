@@ -11,7 +11,7 @@ const MODULE_DEFAULTS = [
   ['premio_produtividade', 'Premio de Produtividade', 'Indicadores, metas e valor previsto do premio.', false, true, 'Estamos ajustando os dados deste painel para garantir que as informacoes sejam apresentadas corretamente. Em breve ele estara disponivel.', 50],
   ['prontuario_motorista', 'Prontuario do Motorista', 'Pontuacao, faixa atual e ocorrencias registradas.', true, false, null, 60],
   ['ouvidoria', 'Ouvidoria', 'Canal oficial para solicitacoes, duvidas ou relatos.', true, false, null, 70],
-  ['assistente_rh', 'Assistente RH', 'Atendimento virtual da Central do Colaborador.', true, false, null, 80]
+  ['assistente_rh', 'Yuri, Assistente de RH', 'Atendimento virtual da Central do Colaborador.', true, false, null, 80]
 ];
 
 function normalizePerfil(perfil) {
@@ -70,6 +70,20 @@ async function ensureModuleConfigTable() {
       item
     );
   }
+
+  await db.run(
+    `UPDATE configuracoes_modulos
+     SET nome = ?, descricao = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE chave = ? AND nome IN (?, ?, ?)`,
+    [
+      'Yuri, Assistente de RH',
+      'Atendimento virtual da Central do Colaborador.',
+      'assistente_rh',
+      'Assistente RH',
+      'IA Assistente RH',
+      'Assistente RH Log20'
+    ]
+  );
 
   schemaReady = true;
 }

@@ -360,7 +360,7 @@ function connectSqlite() {
       ['premio_produtividade', 'Premio de Produtividade', 'Indicadores, metas e valor previsto do premio.', 0, 1, 'Estamos ajustando os dados deste painel para garantir que as informacoes sejam apresentadas corretamente. Em breve ele estara disponivel.', 50],
       ['prontuario_motorista', 'Prontuario do Motorista', 'Pontuacao, faixa atual e ocorrencias registradas.', 1, 0, null, 60],
       ['ouvidoria', 'Ouvidoria', 'Canal oficial para solicitacoes, duvidas ou relatos.', 1, 0, null, 70],
-      ['assistente_rh', 'Assistente RH', 'Atendimento virtual da Central do Colaborador.', 1, 0, null, 80]
+      ['assistente_rh', 'Yuri, Assistente de RH', 'Atendimento virtual da Central do Colaborador.', 1, 0, null, 80]
     ];
 
     moduloDefaults.forEach((item) => {
