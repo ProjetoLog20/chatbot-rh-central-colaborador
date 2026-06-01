@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getMeuSkap, getProntuarioMe, getPublicAcoes } from '../api.js';
+import { getMeuSkap, getModulos, getProntuarioMe, getPublicAcoes } from '../api.js';
 import ActionsCarousel from './ActionsCarousel.jsx';
 
 const generalCards = [
   {
-    id: 'pesquisa',
+    id: 'pesquisa_clima',
     icon: '📊',
     title: 'Pesquisa de Clima',
     description: 'Acompanhe e participe das pesquisas de satisfação da empresa.',
@@ -23,7 +23,7 @@ const generalCards = [
     route: '/skap'
   },
   {
-    id: 'campeao',
+    id: 'campeao_seguranca',
     icon: '🏆',
     title: 'Campeão de Segurança',
     description: 'Reconheça atitudes seguras e acompanhe destaques da operação.',
@@ -32,7 +32,7 @@ const generalCards = [
     route: '/profile'
   },
   {
-    id: 'tres-rs',
+    id: 'tres_rs',
     icon: '♻️',
     title: '3 Rs',
     description: 'Conheça responsabilidades, recursos e reconhecimentos da metodologia 3Rs.',
@@ -41,17 +41,17 @@ const generalCards = [
     route: '/3rs'
   },
   {
-    id: 'produtividade',
+    id: 'premio_produtividade',
     icon: '⭐',
     title: 'Prêmio de Produtividade',
-    description: 'Veja seus indicadores, metas batidas e valor previsto do prÃªmio.',
+    description: 'Veja seus indicadores, metas batidas e valor previsto do prêmio.',
     action: 'Acessar',
     color: '#003B68',
     route: '/produtividade'
   },
   {
-    id: 'prontuario',
-    icon: '🚛',
+    id: 'prontuario_motorista',
+    icon: '🚚',
     title: 'Prontuário do Motorista',
     description: 'Consulte sua pontuação, faixa atual e ocorrências registradas.',
     action: 'Ver prontuário',
@@ -100,18 +100,37 @@ function formatLevel(value) {
   return labels[value] || value;
 }
 
-function DashboardCard({ card, index }) {
+function MaintenanceNotice({ module, onClose }) {
+  if (!module) return null;
+  const title = module.id === 'premio_produtividade'
+    ? 'Prêmio de Produtividade em manutenção'
+    : 'Painel em manutenção';
+  const message = module.mensagem_manutencao || 'Estamos ajustando este painel para garantir que as informações sejam apresentadas corretamente. Em breve ele estará disponível.';
+
+  return (
+    <div className="maintenance-modal-backdrop" role="presentation">
+      <section className="maintenance-modal" role="dialog" aria-modal="true" aria-labelledby="maintenance-title">
+        <span className="maintenance-modal-icon" aria-hidden="true">!</span>
+        <h2 id="maintenance-title">{title}</h2>
+        <p>{message}</p>
+        <button type="button" onClick={onClose}>Voltar para a Central</button>
+      </section>
+    </div>
+  );
+}
+
+function DashboardCard({ card, index, onMaintenance }) {
   const content = (
     <>
       <div className="dashboard-card-top">
         <span className="dashboard-card-icon" aria-hidden="true">{card.icon}</span>
-        {card.badge ? <span className="dashboard-card-badge">{card.badge}</span> : null}
+        {card.maintenance ? <span className="dashboard-card-badge maintenance">Em manutenção</span> : (card.badge ? <span className="dashboard-card-badge">{card.badge}</span> : null)}
       </div>
       <div className="dashboard-card-copy">
         <h3>{card.title}</h3>
-        <p>{card.description}</p>
+        <p>{card.maintenance ? 'Estamos ajustando este painel.' : card.description}</p>
       </div>
-      <span className="dashboard-card-action">{card.action}</span>
+      <span className="dashboard-card-action">{card.maintenance ? 'Ver aviso' : card.action}</span>
     </>
   );
 
@@ -120,11 +139,11 @@ function DashboardCard({ card, index }) {
     animationDelay: `${index * 70}ms`
   };
 
-  if (card.disabled) {
+  if (card.maintenance) {
     return (
-      <article className="dashboard-card-item dashboard-card-disabled" style={style}>
+      <button type="button" className="dashboard-card-item dashboard-card-disabled" style={style} onClick={() => onMaintenance(card)}>
         {content}
-      </article>
+      </button>
     );
   }
 
@@ -147,6 +166,8 @@ export default function Dashboard({ user }) {
   const [acoes, setAcoes] = useState([]);
   const [skap, setSkap] = useState(null);
   const [prontuario, setProntuario] = useState(null);
+  const [modulos, setModulos] = useState([]);
+  const [maintenanceModule, setMaintenanceModule] = useState(null);
   const perfil = normalizePerfil(user?.perfil);
   const isAdmin = perfil === 'admin';
   const isMotorista = perfil === 'motorista';
@@ -154,6 +175,10 @@ export default function Dashboard({ user }) {
   useEffect(() => {
     getPublicAcoes()
       .then(setAcoes)
+      .catch((err) => console.error(err));
+
+    getModulos()
+      .then(setModulos)
       .catch((err) => console.error(err));
   }, []);
 
@@ -167,23 +192,37 @@ export default function Dashboard({ user }) {
     getProntuarioMe()
       .then(setProntuario)
       .catch(() => setProntuario(null));
-
   }, [user, isAdmin, isMotorista]);
 
   const cards = useMemo(() => {
-    const shapedCards = generalCards.map((card) => {
+    const moduleByKey = new Map(modulos.map((modulo) => [modulo.chave, modulo]));
+    const visibleCards = modulos.length
+      ? generalCards.filter((card) => moduleByKey.has(card.id))
+      : generalCards;
+
+    const shapedCards = visibleCards.map((card) => {
+      const modulo = moduleByKey.get(card.id);
+      const maintenance = Boolean(modulo && (!modulo.ativo || modulo.em_manutencao));
+      const baseCard = {
+        ...card,
+        title: modulo?.nome || card.title,
+        description: modulo?.descricao || card.description,
+        maintenance,
+        mensagem_manutencao: modulo?.mensagem_manutencao
+      };
+
       if (card.id === 'skap') {
         return {
-          ...card,
+          ...baseCard,
           badge: isAdmin ? 'Painel geral' : (skap?.nivel_skap ? `Nível ${formatLevel(skap.nivel_skap)}` : 'Meu acompanhamento'),
           featured: isMotorista
         };
       }
 
-      if (card.id === 'prontuario') {
+      if (card.id === 'prontuario_motorista') {
         if (isMotorista) {
           return {
-            ...card,
+            ...baseCard,
             badge: prontuario?.faixa ? `Faixa ${prontuario.faixa}` : 'Motorista',
             featured: true
           };
@@ -191,23 +230,23 @@ export default function Dashboard({ user }) {
 
         if (isAdmin) {
           return {
-            ...card,
+            ...baseCard,
             badge: 'Consulta admin'
           };
         }
 
         return {
-          ...card,
+          ...baseCard,
           action: 'Ver prontuário',
           badge: prontuario?.faixa ? `Faixa ${prontuario.faixa}` : 'Meu prontuário'
         };
       }
 
-      return card;
+      return baseCard;
     });
 
     return isAdmin ? [adminCard, ...shapedCards] : shapedCards;
-  }, [isAdmin, isMotorista, prontuario, skap]);
+  }, [isAdmin, isMotorista, modulos, prontuario, skap]);
 
   return (
     <div className="dashboard-page">
@@ -227,12 +266,13 @@ export default function Dashboard({ user }) {
       <section className="dashboard-card-section" aria-label="Atalhos da Central do Colaborador">
         <div className="card-grid">
           {cards.map((card, index) => (
-            <DashboardCard card={card} index={index} key={card.id} />
+            <DashboardCard card={card} index={index} key={card.id} onMaintenance={setMaintenanceModule} />
           ))}
         </div>
       </section>
 
       <ActionsCarousel items={acoes} />
+      <MaintenanceNotice module={maintenanceModule} onClose={() => setMaintenanceModule(null)} />
     </div>
   );
 }

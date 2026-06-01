@@ -218,6 +218,21 @@ export async function getPublicAcoes() {
   return request('/acoes/publicas');
 }
 
+export async function getModulos() {
+  return request('/modulos');
+}
+
+export async function getAdminModulos() {
+  return request('/admin/modulos');
+}
+
+export async function updateAdminModulo(chave, payload) {
+  return request(`/admin/modulos/${chave}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload)
+  });
+}
+
 export async function getAdminAcoes() {
   return request('/acoes');
 }

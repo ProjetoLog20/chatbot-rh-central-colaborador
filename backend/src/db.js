@@ -275,6 +275,42 @@ function connectSqlite() {
       atualizado_em TEXT
     )`);
 
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS configuracoes_modulos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      chave TEXT UNIQUE NOT NULL,
+      nome TEXT NOT NULL,
+      descricao TEXT,
+      ativo INTEGER DEFAULT 1,
+      em_manutencao INTEGER DEFAULT 0,
+      mensagem_manutencao TEXT,
+      visivel_para_admin INTEGER DEFAULT 1,
+      visivel_para_motorista INTEGER DEFAULT 1,
+      visivel_para_colaborador INTEGER DEFAULT 1,
+      ordem INTEGER DEFAULT 0,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    const moduloDefaults = [
+      ['pesquisa_clima', 'Pesquisa de Clima', 'Pesquisas de satisfacao da empresa.', 1, 0, null, 10],
+      ['skap', 'SKAP', 'Evolucao, nivel atual e habilidades avaliadas.', 1, 0, null, 20],
+      ['campeao_seguranca', 'Campeao de Seguranca', 'Reconhecimento de atitudes seguras.', 1, 0, null, 30],
+      ['tres_rs', '3 Rs', 'Responsabilidades, recursos e reconhecimentos da metodologia 3Rs.', 1, 0, null, 40],
+      ['premio_produtividade', 'Premio de Produtividade', 'Indicadores, metas e valor previsto do premio.', 0, 1, 'Estamos ajustando os dados deste painel para garantir que as informacoes sejam apresentadas corretamente. Em breve ele estara disponivel.', 50],
+      ['prontuario_motorista', 'Prontuario do Motorista', 'Pontuacao, faixa atual e ocorrencias registradas.', 1, 0, null, 60],
+      ['ouvidoria', 'Ouvidoria', 'Canal oficial para solicitacoes, duvidas ou relatos.', 1, 0, null, 70],
+      ['assistente_rh', 'Assistente RH', 'Atendimento virtual da Central do Colaborador.', 1, 0, null, 80]
+    ];
+
+    moduloDefaults.forEach((item) => {
+      sqliteDb.run(
+        `INSERT OR IGNORE INTO configuracoes_modulos
+         (chave, nome, descricao, ativo, em_manutencao, mensagem_manutencao, ordem)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        item
+      );
+    });
+
     sqliteDb.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_prontuario_motoristas_colaborador ON prontuario_motoristas(colaborador_id)');
     sqliteDb.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_prontuarios_motoristas_colaborador ON prontuarios_motoristas(colaborador_id)');
     sqliteDb.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_skap_avaliacoes_colaborador ON skap_avaliacoes(colaborador_id)');

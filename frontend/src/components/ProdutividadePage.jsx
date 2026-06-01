@@ -101,6 +101,17 @@ function StatusBadge({ type, value }) {
   return <span className={`prod-badge ${className}`}>{value || 'Sem dados'}</span>;
 }
 
+function ProdutividadeMaintenance({ message }) {
+  return (
+    <div className="page-card maintenance-page">
+      <span className="maintenance-modal-icon" aria-hidden="true">!</span>
+      <h1>Prêmio de Produtividade em manutenção</h1>
+      <p>{message || 'Estamos ajustando os dados deste painel para garantir que as informações sejam apresentadas corretamente. Em breve ele estará disponível.'}</p>
+      <a className="maintenance-back-link" href="/">Voltar para a Central</a>
+    </div>
+  );
+}
+
 function ProdutividadeDetail({ registro }) {
   if (!registro) return null;
 
@@ -145,6 +156,7 @@ function ColaboradorProdutividade() {
   const [rows, setRows] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [message, setMessage] = useState('');
+  const [maintenance, setMaintenance] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -154,11 +166,21 @@ function ColaboradorProdutividade() {
         setRows(list);
         setSelectedId(list[0]?.id ? String(list[0].id) : '');
       })
-      .catch((err) => setMessage(err.error || 'Voce ainda nao possui dados de Premio de Produtividade para este periodo.'))
+      .catch((err) => {
+        if (err.code === 'MODULO_EM_MANUTENCAO') {
+          setMaintenance(err.modulo);
+          return;
+        }
+        setMessage(err.error || 'Voce ainda nao possui dados de Premio de Produtividade para este periodo.');
+      })
       .finally(() => setLoading(false));
   }, []);
 
   const selected = rows.find((row) => String(row.id) === selectedId) || rows[0];
+
+  if (maintenance) {
+    return <ProdutividadeMaintenance message={maintenance.mensagem_manutencao} />;
+  }
 
   return (
     <div className="page-card produtividade-page">

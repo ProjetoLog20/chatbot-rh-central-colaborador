@@ -12,7 +12,9 @@ import {
   createAcao,
   updateAcao,
   deleteAcao,
-  resetCollaboratorPassword
+  resetCollaboratorPassword,
+  getAdminModulos,
+  updateAdminModulo
 } from '../api.js';
 
 function AdminActionImage({ item }) {
@@ -50,12 +52,102 @@ const importOptions = [
   }
 ];
 
+function ModuleConfigItem({ modulo, onSave }) {
+  const [form, setForm] = useState({
+    ativo: Boolean(modulo.ativo),
+    em_manutencao: Boolean(modulo.em_manutencao),
+    visivel_para_admin: Boolean(modulo.visivel_para_admin),
+    visivel_para_motorista: Boolean(modulo.visivel_para_motorista),
+    visivel_para_colaborador: Boolean(modulo.visivel_para_colaborador),
+    mensagem_manutencao: modulo.mensagem_manutencao || '',
+    ordem: modulo.ordem || 0
+  });
+
+  useEffect(() => {
+    setForm({
+      ativo: Boolean(modulo.ativo),
+      em_manutencao: Boolean(modulo.em_manutencao),
+      visivel_para_admin: Boolean(modulo.visivel_para_admin),
+      visivel_para_motorista: Boolean(modulo.visivel_para_motorista),
+      visivel_para_colaborador: Boolean(modulo.visivel_para_colaborador),
+      mensagem_manutencao: modulo.mensagem_manutencao || '',
+      ordem: modulo.ordem || 0
+    });
+  }, [modulo]);
+
+  function setBoolean(field, checked) {
+    setForm((current) => ({ ...current, [field]: checked }));
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    onSave(modulo.chave, {
+      ...form,
+      ordem: Number(form.ordem || 0)
+    });
+  }
+
+  return (
+    <article className="module-config-card">
+      <div className="module-config-header">
+        <div>
+          <h3>{modulo.nome}</h3>
+          <span>{modulo.chave}</span>
+        </div>
+        <div className="module-status-row">
+          <span className={form.ativo ? 'module-status active' : 'module-status inactive'}>{form.ativo ? 'Ativo' : 'Inativo'}</span>
+          <span className={form.em_manutencao ? 'module-status maintenance' : 'module-status active'}>{form.em_manutencao ? 'Manutenção' : 'Normal'}</span>
+        </div>
+      </div>
+
+      <p>{modulo.descricao || 'Sem descrição cadastrada.'}</p>
+
+      <form className="admin-form module-config-form" onSubmit={handleSubmit}>
+        <div className="module-check-grid">
+          <label className="inline-check">
+            <input type="checkbox" checked={form.ativo} onChange={(event) => setBoolean('ativo', event.target.checked)} />
+            Ativo
+          </label>
+          <label className="inline-check">
+            <input type="checkbox" checked={form.em_manutencao} onChange={(event) => setBoolean('em_manutencao', event.target.checked)} />
+            Em manutenção
+          </label>
+          <label className="inline-check">
+            <input type="checkbox" checked={form.visivel_para_admin} onChange={(event) => setBoolean('visivel_para_admin', event.target.checked)} />
+            Admin
+          </label>
+          <label className="inline-check">
+            <input type="checkbox" checked={form.visivel_para_motorista} onChange={(event) => setBoolean('visivel_para_motorista', event.target.checked)} />
+            Motorista
+          </label>
+          <label className="inline-check">
+            <input type="checkbox" checked={form.visivel_para_colaborador} onChange={(event) => setBoolean('visivel_para_colaborador', event.target.checked)} />
+            Colaborador
+          </label>
+        </div>
+        <div className="form-grid">
+          <label>
+            Ordem
+            <input type="number" value={form.ordem} onChange={(event) => setForm({ ...form, ordem: event.target.value })} />
+          </label>
+          <label className="wide-field">
+            Mensagem de manutenção
+            <textarea rows="3" value={form.mensagem_manutencao} onChange={(event) => setForm({ ...form, mensagem_manutencao: event.target.value })} />
+          </label>
+        </div>
+        <button type="submit">Salvar</button>
+      </form>
+    </article>
+  );
+}
+
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('excel');
   const [colaboradores, setColaboradores] = useState([]);
   const [prontuarios, setProntuarios] = useState([]);
   const [respostas, setRespostas] = useState([]);
   const [acoes, setAcoes] = useState([]);
+  const [modulos, setModulos] = useState([]);
   const [message, setMessage] = useState('');
   const [importErrors, setImportErrors] = useState(null);
   const [respostaText, setRespostaText] = useState({ pergunta: '', resposta: '', categoria: '', ativo: true });
@@ -85,11 +177,12 @@ export default function AdminPage() {
 
   async function refresh() {
     try {
-      const [col, pr, resp, acoesData] = await Promise.all([getCollaborators(), getProntuarios(), getRespostas(), getAdminAcoes()]);
+      const [col, pr, resp, acoesData, modulosData] = await Promise.all([getCollaborators(), getProntuarios(), getRespostas(), getAdminAcoes(), getAdminModulos()]);
       setColaboradores(col);
       setProntuarios(pr);
       setRespostas(resp);
       setAcoes(acoesData);
+      setModulos(modulosData);
     } catch (err) {
       console.error(err);
     }
@@ -251,6 +344,16 @@ export default function AdminPage() {
     }
   }
 
+  async function handleSaveModulo(chave, payload) {
+    try {
+      await updateAdminModulo(chave, payload);
+      setMessage('Configuração de módulo salva.');
+      refresh();
+    } catch (err) {
+      setMessage(err.error || 'Erro ao salvar módulo');
+    }
+  }
+
   return (
     <div className="page-card admin-card">
       <div className="admin-heading">
@@ -264,6 +367,7 @@ export default function AdminPage() {
         <button className={activeTab === 'excel' ? 'active' : ''} onClick={() => setActiveTab('excel')}>Exportar para a pagina via Excel</button>
         <button className={activeTab === 'dados' ? 'active' : ''} onClick={() => setActiveTab('dados')}>Dados publicados</button>
         <button className={activeTab === 'acoes' ? 'active' : ''} onClick={() => setActiveTab('acoes')}>Acoes e Eventos</button>
+        <button className={activeTab === 'modulos' ? 'active' : ''} onClick={() => setActiveTab('modulos')}>Configuração de Módulos</button>
         <button className={activeTab === 'chatbot' ? 'active' : ''} onClick={() => setActiveTab('chatbot')}>Chatbot</button>
       </div>
 
@@ -408,6 +512,18 @@ export default function AdminPage() {
             </div>
             <button type="submit">Criar resposta</button>
           </form>
+        </section>
+      ) : null}
+
+      {activeTab === 'modulos' ? (
+        <section className="admin-section">
+          <h2>Configuração de Módulos</h2>
+          <p className="section-help">Controle quais cards aparecem para cada perfil e coloque painéis em manutenção quando necessário.</p>
+          <div className="module-config-list">
+            {modulos.map((modulo) => (
+              <ModuleConfigItem key={modulo.chave} modulo={modulo} onSave={handleSaveModulo} />
+            ))}
+          </div>
         </section>
       ) : null}
 

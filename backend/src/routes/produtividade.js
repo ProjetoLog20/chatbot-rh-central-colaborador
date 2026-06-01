@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const db = require('../db');
 const { authenticateToken, authorizeRoles } = require('../authMiddleware');
+const { ensureModuleAvailable, maintenancePayload } = require('../moduleConfig');
 const { importWorkbook } = require('../../scripts/importRvXlsx');
 
 const router = express.Router();
@@ -171,6 +172,9 @@ async function getAdminRows(query) {
 
 router.get('/meu', authenticateToken, async (req, res) => {
   try {
+    const { available, modulo } = await ensureModuleAvailable('premio_produtividade', req.user);
+    if (!available) return res.status(503).json(maintenancePayload(modulo));
+
     const rows = await db.all(
       `${selectProdutividade}
        WHERE p.colaborador_id = ?
