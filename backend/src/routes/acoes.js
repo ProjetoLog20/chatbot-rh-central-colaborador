@@ -63,6 +63,7 @@ function getDb(sql, params = []) {
 function normalizeCategory(categoria) {
   const value = String(categoria || '').trim().toLowerCase();
   if (value === 'cafe' || value === 'cafe_com_gerente') return 'cafe_com_gerente';
+  if (value === 'comite' || value === 'comite_de_gente' || value === 'comitê de gente') return 'comite_de_gente';
   return 'cipa';
 }
 
@@ -74,33 +75,76 @@ function normalizeActive(value, fallback = 1) {
   if (value === undefined || value === null || value === '') return fallback;
   if (value === true || value === 1 || value === '1') return 1;
   if (String(value).toLowerCase() === 'true') return 1;
+  if (String(value).toLowerCase() === 'sim') return 1;
   return 0;
 }
 
-router.get('/publicas', authenticateToken, async (req, res) => {
+function rowSelect() {
+  return `id, categoria, titulo, descricao, imagem_url, data_evento, data_evento AS data_acao,
+    responsavel, encaminhamento, COALESCE(status, CASE WHEN ativo = 1 THEN 'publicado' ELSE 'oculto' END) AS status,
+    ativo, ativo AS publicado`;
+}
+
+async function listPublicActions(req, res) {
   try {
+    const params = [];
+    const filters = ['ativo = 1'];
+    if (req.query.categoria) {
+      filters.push('categoria = ?');
+      params.push(normalizeCategory(req.query.categoria));
+    }
+
     const rows = await allDb(
-      `SELECT id, categoria, titulo, descricao, imagem_url, data_evento
+      `SELECT ${rowSelect()}
        FROM acoes_comunicacao
-       WHERE ativo = 1
-       ORDER BY COALESCE(data_evento, criado_em) DESC, id DESC`
+       WHERE ${filters.join(' AND ')}
+       ORDER BY COALESCE(data_evento, criado_em) DESC, id DESC`,
+      params
     );
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao listar acoes' });
   }
+}
+
+async function listAdminActions(req, res) {
+  try {
+    const params = [];
+    const filters = [];
+    if (req.query.categoria) {
+      filters.push('categoria = ?');
+      params.push(normalizeCategory(req.query.categoria));
+    }
+
+    const rows = await allDb(
+      `SELECT ${rowSelect()}, criado_em, atualizado_em
+       FROM acoes_comunicacao
+       ${filters.length ? `WHERE ${filters.join(' AND ')}` : ''}
+       ORDER BY COALESCE(data_evento, criado_em) DESC, id DESC`,
+      params
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao listar acoes' });
+  }
+}
+
+router.get('/publicas', authenticateToken, listPublicActions);
+
+router.get('/', authenticateToken, async (req, res) => {
+  if (req.baseUrl.endsWith('/acoes-encontros') && !req.baseUrl.includes('/admin/')) {
+    return listPublicActions(req, res);
+  }
+
+  if (String(req.user?.perfil || '').trim().toLowerCase() !== 'admin') {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+
+  return listAdminActions(req, res);
 });
 
-router.get('/', authenticateToken, authorizeRoles('admin'), async (req, res) => {
-  try {
-    const rows = await allDb(
-      `SELECT * FROM acoes_comunicacao
-       ORDER BY COALESCE(data_evento, criado_em) DESC, id DESC`
-    );
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: 'Erro ao listar acoes' });
-  }
+router.get('/admin', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+  return listAdminActions(req, res);
 });
 
 router.post(
@@ -110,26 +154,29 @@ router.post(
   upload.single('imagem'),
   handleUploadError,
   async (req, res) => {
-    const { titulo, descricao, categoria, data_evento, ativo } = req.body;
+    const { titulo, descricao, categoria, data_evento, data_acao, responsavel, encaminhamento, status, ativo, publicado } = req.body;
     if (!titulo || !descricao) {
       return res.status(400).json({ error: 'Titulo e descricao sao obrigatorios' });
     }
-    if (!req.file) return res.status(400).json({ error: 'Imagem e obrigatoria' });
 
     const now = new Date().toISOString();
-    const imagemUrl = imageToDataUrl(req.file);
+    const imagemUrl = req.file ? imageToDataUrl(req.file) : '';
 
     try {
       const result = await runDb(
-        `INSERT INTO acoes_comunicacao (categoria, titulo, descricao, imagem_url, ativo, data_evento, criado_em, atualizado_em)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO acoes_comunicacao
+         (categoria, titulo, descricao, imagem_url, ativo, data_evento, responsavel, encaminhamento, status, criado_em, atualizado_em)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           normalizeCategory(categoria),
           titulo.trim(),
           descricao.trim(),
           imagemUrl,
-          ativo === '0' ? 0 : 1,
-          data_evento || null,
+          normalizeActive(publicado ?? ativo, 1),
+          data_acao || data_evento || null,
+          responsavel?.trim() || null,
+          encaminhamento?.trim() || null,
+          status?.trim() || 'publicado',
           now,
           now
         ]
@@ -141,44 +188,52 @@ router.post(
   }
 );
 
-router.put(
-  '/:id',
+async function updateAction(req, res) {
+  const id = Number(req.params.id);
+  const { titulo, descricao, categoria, data_evento, data_acao, responsavel, encaminhamento, status, ativo, publicado } = req.body;
+
+  try {
+    const current = await getDb('SELECT * FROM acoes_comunicacao WHERE id = ?', [id]);
+    if (!current) return res.status(404).json({ error: 'Acao nao encontrada' });
+
+    const imagemUrl = req.file ? imageToDataUrl(req.file) : current.imagem_url;
+
+    await runDb(
+      `UPDATE acoes_comunicacao
+       SET categoria = ?, titulo = ?, descricao = ?, imagem_url = ?, ativo = ?, data_evento = ?,
+           responsavel = ?, encaminhamento = ?, status = ?, atualizado_em = ?
+       WHERE id = ?`,
+      [
+        normalizeCategory(categoria || current.categoria),
+        titulo ? titulo.trim() : current.titulo,
+        descricao ? descricao.trim() : current.descricao,
+        imagemUrl,
+        normalizeActive(publicado ?? ativo, current.ativo),
+        data_acao === undefined && data_evento === undefined ? current.data_evento : data_acao || data_evento || null,
+        responsavel === undefined ? current.responsavel : responsavel?.trim() || null,
+        encaminhamento === undefined ? current.encaminhamento : encaminhamento?.trim() || null,
+        status === undefined ? current.status : status?.trim() || 'publicado',
+        new Date().toISOString(),
+        id
+      ]
+    );
+
+    res.json({ changed: 1, imagem_url: imagemUrl });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao atualizar acao' });
+  }
+}
+
+const updateActionMiddlewares = [
   authenticateToken,
   authorizeRoles('admin'),
   upload.single('imagem'),
   handleUploadError,
-  async (req, res) => {
-    const id = Number(req.params.id);
-    const { titulo, descricao, categoria, data_evento, ativo } = req.body;
+  updateAction
+];
 
-    try {
-      const current = await getDb('SELECT * FROM acoes_comunicacao WHERE id = ?', [id]);
-      if (!current) return res.status(404).json({ error: 'Acao nao encontrada' });
-
-      const imagemUrl = req.file ? imageToDataUrl(req.file) : current.imagem_url;
-
-      await runDb(
-        `UPDATE acoes_comunicacao
-         SET categoria = ?, titulo = ?, descricao = ?, imagem_url = ?, ativo = ?, data_evento = ?, atualizado_em = ?
-         WHERE id = ?`,
-        [
-          normalizeCategory(categoria || current.categoria),
-          titulo ? titulo.trim() : current.titulo,
-          descricao ? descricao.trim() : current.descricao,
-          imagemUrl,
-          normalizeActive(ativo, current.ativo),
-          data_evento === undefined ? current.data_evento : data_evento || null,
-          new Date().toISOString(),
-          id
-        ]
-      );
-
-      res.json({ changed: 1, imagem_url: imagemUrl });
-    } catch (err) {
-      res.status(500).json({ error: 'Erro ao atualizar acao' });
-    }
-  }
-);
+router.put('/:id', ...updateActionMiddlewares);
+router.patch('/:id', ...updateActionMiddlewares);
 
 router.delete('/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
   const id = Number(req.params.id);

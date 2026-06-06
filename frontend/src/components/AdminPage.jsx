@@ -18,6 +18,16 @@ import {
 } from '../api.js';
 import AdminCampeoesSeguranca from './AdminCampeoesSeguranca.jsx';
 
+const actionCategories = [
+  ['cipa', 'CIPA'],
+  ['cafe_com_gerente', 'Café com o Gerente'],
+  ['comite_de_gente', 'Comitê de Gente']
+];
+
+function labelForActionCategory(category) {
+  return actionCategories.find(([value]) => value === category)?.[1] || 'CIPA';
+}
+
 function AdminActionImage({ item }) {
   const [failed, setFailed] = useState(false);
 
@@ -155,11 +165,15 @@ export default function AdminPage() {
   const [editingRespostaId, setEditingRespostaId] = useState(null);
   const [respostaEditText, setRespostaEditText] = useState({ pergunta: '', resposta: '', categoria: '', ativo: true });
   const [editingAcaoId, setEditingAcaoId] = useState(null);
+  const [acaoAdminFilter, setAcaoAdminFilter] = useState('todas');
   const [acaoForm, setAcaoForm] = useState({
     categoria: 'cipa',
     titulo: '',
     descricao: '',
     data_evento: '',
+    responsavel: '',
+    status: 'publicado',
+    encaminhamento: '',
     imagem: null,
     ativo: true
   });
@@ -168,6 +182,9 @@ export default function AdminPage() {
     titulo: '',
     descricao: '',
     data_evento: '',
+    responsavel: '',
+    status: 'publicado',
+    encaminhamento: '',
     imagem: null,
     ativo: true
   });
@@ -280,22 +297,20 @@ export default function AdminPage() {
 
   async function handleCreateAcao(e) {
     e.preventDefault();
-    if (!acaoForm.imagem) {
-      setMessage('Selecione uma imagem para publicar a acao.');
-      return;
-    }
-
     try {
       await createAcao({
         categoria: acaoForm.categoria,
         titulo: acaoForm.titulo,
         descricao: acaoForm.descricao,
         data_evento: acaoForm.data_evento,
+        responsavel: acaoForm.responsavel,
+        status: acaoForm.status,
+        encaminhamento: acaoForm.encaminhamento,
         ativo: acaoForm.ativo ? 1 : 0,
         imagem: acaoForm.imagem
       });
       setMessage('Acao publicada com sucesso.');
-      setAcaoForm({ categoria: 'cipa', titulo: '', descricao: '', data_evento: '', imagem: null, ativo: true });
+      setAcaoForm({ categoria: 'cipa', titulo: '', descricao: '', data_evento: '', responsavel: '', status: 'publicado', encaminhamento: '', imagem: null, ativo: true });
       e.target.reset();
       refresh();
     } catch (err) {
@@ -319,6 +334,9 @@ export default function AdminPage() {
       titulo: item.titulo || '',
       descricao: item.descricao || '',
       data_evento: item.data_evento || '',
+      responsavel: item.responsavel || '',
+      status: item.status || 'publicado',
+      encaminhamento: item.encaminhamento || '',
       imagem: null,
       ativo: Boolean(item.ativo)
     });
@@ -327,7 +345,7 @@ export default function AdminPage() {
 
   function cancelEditAcao() {
     setEditingAcaoId(null);
-    setAcaoEditForm({ categoria: 'cipa', titulo: '', descricao: '', data_evento: '', imagem: null, ativo: true });
+    setAcaoEditForm({ categoria: 'cipa', titulo: '', descricao: '', data_evento: '', responsavel: '', status: 'publicado', encaminhamento: '', imagem: null, ativo: true });
   }
 
   async function handleUpdateAcao(e) {
@@ -340,6 +358,9 @@ export default function AdminPage() {
         titulo: acaoEditForm.titulo,
         descricao: acaoEditForm.descricao,
         data_evento: acaoEditForm.data_evento,
+        responsavel: acaoEditForm.responsavel,
+        status: acaoEditForm.status,
+        encaminhamento: acaoEditForm.encaminhamento,
         ativo: acaoEditForm.ativo ? 1 : 0,
         imagem: acaoEditForm.imagem
       });
@@ -370,6 +391,10 @@ export default function AdminPage() {
       setMessage(err.error || 'Erro ao salvar módulo');
     }
   }
+
+  const filteredAcoes = acaoAdminFilter === 'todas'
+    ? acoes
+    : acoes.filter((item) => item.categoria === acaoAdminFilter);
 
   return (
     <div className="page-card admin-card">
@@ -549,16 +574,15 @@ export default function AdminPage() {
 
       {activeTab === 'acoes' ? (
         <section className="admin-section">
-          <h2>Acoes da CIPA e Cafe com o Gerente</h2>
-          <p className="section-help">Publique imagens e descricoes das reunioes e encontros. Todos visualizam na Central do Colaborador; somente admin altera.</p>
+          <h2>Gerenciar Ações e Encontros</h2>
+          <p className="section-help">Publique registros, imagens e encaminhamentos da CIPA, Café com o Gerente e Comitê de Gente. Todos visualizam na Central do Colaborador; somente admin altera.</p>
 
           <form className="admin-form action-form" onSubmit={handleCreateAcao}>
             <div className="form-grid">
               <label>
                 Tipo de publicacao
                 <select value={acaoForm.categoria} onChange={(e) => setAcaoForm({ ...acaoForm, categoria: e.target.value })}>
-                  <option value="cipa">CIPA</option>
-                  <option value="cafe_com_gerente">Cafe com o Gerente</option>
+                  {actionCategories.map(([value, label]) => <option value={value} key={value}>{label}</option>)}
                 </select>
               </label>
               <label>
@@ -570,12 +594,24 @@ export default function AdminPage() {
                 <input type="date" value={acaoForm.data_evento} onChange={(e) => setAcaoForm({ ...acaoForm, data_evento: e.target.value })} />
               </label>
               <label>
-                Imagem
-                <input type="file" accept=".jpg,.jpeg,.png,.webp" onChange={(e) => setAcaoForm({ ...acaoForm, imagem: e.target.files[0] })} required />
+                Responsável ou área
+                <input value={acaoForm.responsavel} onChange={(e) => setAcaoForm({ ...acaoForm, responsavel: e.target.value })} />
+              </label>
+              <label>
+                Status
+                <input value={acaoForm.status} onChange={(e) => setAcaoForm({ ...acaoForm, status: e.target.value })} />
+              </label>
+              <label>
+                Imagem/banner
+                <input type="file" accept=".jpg,.jpeg,.png,.webp" onChange={(e) => setAcaoForm({ ...acaoForm, imagem: e.target.files[0] || null })} />
               </label>
               <label className="wide-field">
                 Descricao
                 <textarea value={acaoForm.descricao} onChange={(e) => setAcaoForm({ ...acaoForm, descricao: e.target.value })} rows="4" required />
+              </label>
+              <label className="wide-field">
+                Encaminhamento
+                <textarea value={acaoForm.encaminhamento} onChange={(e) => setAcaoForm({ ...acaoForm, encaminhamento: e.target.value })} rows="3" />
               </label>
             </div>
             <label className="inline-check">
@@ -585,15 +621,26 @@ export default function AdminPage() {
             <button type="submit">Publicar no carrossel</button>
           </form>
 
+          <div className="actions-admin-filter">
+            <label>
+              Filtrar por categoria
+              <select value={acaoAdminFilter} onChange={(e) => setAcaoAdminFilter(e.target.value)}>
+                <option value="todas">Todas</option>
+                {actionCategories.map(([value, label]) => <option value={value} key={value}>{label}</option>)}
+              </select>
+            </label>
+          </div>
+
           <div className="actions-admin-list">
-            {acoes.map((item) => (
+            {filteredAcoes.map((item) => (
               <article className="actions-admin-item" key={item.id}>
                 <AdminActionImage item={item} />
                 <div>
-                  <span>{item.categoria === 'cafe_com_gerente' ? 'Cafe com o Gerente' : 'CIPA'}</span>
+                  <span>{labelForActionCategory(item.categoria)}</span>
                   <h3>{item.titulo}</h3>
                   <p>{item.descricao}</p>
-                  <small>{item.ativo ? 'Publicado' : 'Oculto'} {item.data_evento ? `- ${item.data_evento}` : ''}</small>
+                  <small>{item.ativo ? 'Publicado' : 'Oculto'} {item.data_evento ? `- ${item.data_evento}` : ''} {item.responsavel ? `- ${item.responsavel}` : ''} {item.status ? `- ${item.status}` : ''}</small>
+                  {item.encaminhamento ? <p><strong>Encaminhamento:</strong> {item.encaminhamento}</p> : null}
                   <div className="row-actions">
                     <button onClick={() => startEditAcao(item)}>Editar</button>
                     <button onClick={() => handleToggleAcao(item)}>{item.ativo ? 'Ocultar' : 'Publicar'}</button>
@@ -605,8 +652,7 @@ export default function AdminPage() {
                         <label>
                           Tipo de publicacao
                           <select value={acaoEditForm.categoria} onChange={(e) => setAcaoEditForm({ ...acaoEditForm, categoria: e.target.value })}>
-                            <option value="cipa">CIPA</option>
-                            <option value="cafe_com_gerente">Cafe com o Gerente</option>
+                            {actionCategories.map(([value, label]) => <option value={value} key={value}>{label}</option>)}
                           </select>
                         </label>
                         <label>
@@ -618,12 +664,24 @@ export default function AdminPage() {
                           <input type="date" value={acaoEditForm.data_evento} onChange={(e) => setAcaoEditForm({ ...acaoEditForm, data_evento: e.target.value })} />
                         </label>
                         <label>
+                          Responsável ou área
+                          <input value={acaoEditForm.responsavel} onChange={(e) => setAcaoEditForm({ ...acaoEditForm, responsavel: e.target.value })} />
+                        </label>
+                        <label>
+                          Status
+                          <input value={acaoEditForm.status} onChange={(e) => setAcaoEditForm({ ...acaoEditForm, status: e.target.value })} />
+                        </label>
+                        <label>
                           Trocar imagem
                           <input type="file" accept=".jpg,.jpeg,.png,.webp" onChange={(e) => setAcaoEditForm({ ...acaoEditForm, imagem: e.target.files[0] || null })} />
                         </label>
                         <label className="wide-field">
                           Descricao
                           <textarea value={acaoEditForm.descricao} onChange={(e) => setAcaoEditForm({ ...acaoEditForm, descricao: e.target.value })} rows="4" required />
+                        </label>
+                        <label className="wide-field">
+                          Encaminhamento
+                          <textarea value={acaoEditForm.encaminhamento} onChange={(e) => setAcaoEditForm({ ...acaoEditForm, encaminhamento: e.target.value })} rows="3" />
                         </label>
                       </div>
                       <label className="inline-check">

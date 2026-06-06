@@ -288,7 +288,7 @@ export async function getChatbotSuggestions() {
 }
 
 export async function getPublicAcoes() {
-  return request('/acoes/publicas');
+  return request('/acoes-encontros');
 }
 
 export async function getModulos() {
@@ -307,7 +307,7 @@ export async function updateAdminModulo(chave, payload) {
 }
 
 export async function getAdminAcoes() {
-  return request('/acoes');
+  return request('/admin/acoes-encontros');
 }
 
 export async function getCampeoesSegurancaPublicos() {
@@ -400,7 +400,7 @@ export async function createAcao(payload) {
     if (value !== undefined && value !== null) formData.append(key, value);
   });
 
-  const res = await fetch(`${API_BASE}/acoes`, {
+  const res = await fetch(`${API_BASE}/admin/acoes-encontros`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData
@@ -418,8 +418,8 @@ export async function updateAcao(id, payload) {
       if (value !== undefined && value !== null) formData.append(key, value);
     });
 
-    const res = await fetch(`${API_BASE}/acoes/${id}`, {
-      method: 'PUT',
+    const res = await fetch(`${API_BASE}/admin/acoes-encontros/${id}`, {
+      method: 'PATCH',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData
     });
@@ -428,14 +428,14 @@ export async function updateAcao(id, payload) {
     return body;
   }
 
-  return request(`/acoes/${id}`, {
-    method: 'PUT',
+  return request(`/admin/acoes-encontros/${id}`, {
+    method: 'PATCH',
     body: JSON.stringify(payload)
   });
 }
 
 export async function deleteAcao(id) {
-  return request(`/acoes/${id}`, { method: 'DELETE' });
+  return request(`/admin/acoes-encontros/${id}`, { method: 'DELETE' });
 }
 
 export async function createResposta(payload) {

@@ -408,6 +408,19 @@ function connectSqlite() {
       atualizado_em TEXT
     )`);
 
+    const ensureAcaoColumn = (name, definition) => {
+      sqliteDb.all('PRAGMA table_info(acoes_comunicacao)', [], (err, columns) => {
+        if (err) return;
+        if (!columns.some((column) => column.name === name)) {
+          sqliteDb.run(`ALTER TABLE acoes_comunicacao ADD COLUMN ${name} ${definition}`);
+        }
+      });
+    };
+
+    ensureAcaoColumn('responsavel', 'TEXT');
+    ensureAcaoColumn('encaminhamento', 'TEXT');
+    ensureAcaoColumn('status', "TEXT DEFAULT 'publicado'");
+
     sqliteDb.run(`CREATE TABLE IF NOT EXISTS configuracoes_modulos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       chave TEXT UNIQUE NOT NULL,

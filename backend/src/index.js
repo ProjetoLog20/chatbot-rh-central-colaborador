@@ -64,6 +64,8 @@ app.use('/api/respostas_chatbot', respostasRoutes);
 app.use('/api/import', importsRoutes);
 app.use('/api/atendimentos', atendimentosRoutes);
 app.use('/api/acoes', acoesRoutes);
+app.use('/api/acoes-encontros', acoesRoutes);
+app.use('/api/admin/acoes-encontros', acoesRoutes);
 app.use('/api/pesquisa-clima', pesquisaClimaRoutes);
 app.use('/api/skap', skapRoutes);
 app.use('/api/produtividade', produtividadeRoutes);

@@ -925,6 +925,23 @@ button.dashboard-card-item {
   text-align: center;
 }
 
+.actions-image-fallback.people-committee {
+  background: linear-gradient(135deg, #E9F2FB, #FFF4E8);
+}
+
+.actions-fallback-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 0.2rem;
+  border-radius: 16px;
+  background: #fff;
+  color: #003B68;
+  font-size: 1.8rem;
+  box-shadow: 0 14px 28px rgba(0, 59, 104, 0.12);
+}
+
 .actions-image-fallback strong {
   color: #003B68;
 }
@@ -953,6 +970,11 @@ button.dashboard-card-item {
   font-weight: 800;
 }
 
+.actions-slide-content span.people-committee {
+  background: #FFF4E8;
+  color: #9A4A13;
+}
+
 .actions-slide-content h3,
 .actions-slide-content p {
   margin: 0;
@@ -966,6 +988,27 @@ button.dashboard-card-item {
 .actions-slide-content small {
   color: #6B7280;
   font-weight: 700;
+}
+
+.actions-slide-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.75rem;
+}
+
+.actions-forwarding {
+  border-left: 4px solid #E87522;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0.75rem;
+}
+
+.actions-forwarding strong {
+  color: #003B68;
+}
+
+.actions-forwarding p {
+  margin-top: 0.25rem;
 }
 
 .empty-carousel {
@@ -1473,6 +1516,28 @@ tr:not(:last-child) td {
   display: grid;
   gap: 1rem;
   margin-top: 1.5rem;
+}
+
+.actions-admin-filter {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.actions-admin-filter label {
+  display: grid;
+  gap: 0.45rem;
+  color: #003B68;
+  font-weight: 800;
+}
+
+.actions-admin-filter select {
+  min-width: 220px;
+  border: 1px solid #DCE5EC;
+  border-radius: 8px;
+  background: #fff;
+  color: #1F2933;
+  padding: 0.75rem 0.9rem;
 }
 
 .actions-admin-item {

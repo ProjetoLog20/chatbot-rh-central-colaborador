@@ -1,7 +1,17 @@
 import { useMemo, useState } from 'react';
 
+const categories = {
+  cipa: { label: 'CIPA', icon: '🛡️' },
+  cafe_com_gerente: { label: 'Café com o Gerente', icon: '☕' },
+  comite_de_gente: { label: 'Comitê de Gente', icon: '🤝' }
+};
+
 function labelForCategory(category) {
-  return category === 'cafe_com_gerente' ? 'Cafe com o Gerente' : 'CIPA';
+  return categories[category]?.label || 'CIPA';
+}
+
+function iconForCategory(category) {
+  return categories[category]?.icon || '🛡️';
 }
 
 function ActionImage({ item }) {
@@ -9,9 +19,10 @@ function ActionImage({ item }) {
 
   if (failed || !item.imagem_url) {
     return (
-      <div className="actions-image-fallback">
+      <div className={`actions-image-fallback ${item.categoria === 'comite_de_gente' ? 'people-committee' : ''}`}>
+        <span className="actions-fallback-icon" aria-hidden="true">{iconForCategory(item.categoria)}</span>
         <strong>{item.titulo}</strong>
-        <span>Imagem indisponivel</span>
+        <span>{labelForCategory(item.categoria)}</span>
       </div>
     );
   }
@@ -50,13 +61,14 @@ export default function ActionsCarousel({ items = [] }) {
       <div className="section-title-row">
         <div>
           <h2>Acoes e encontros</h2>
-          <p>CIPA e Cafe com o Gerente: registros, imagens e encaminhamentos publicados pelo RH.</p>
+          <p>CIPA, Café com o Gerente e Comitê de Gente: registros, imagens e encaminhamentos publicados pelo RH.</p>
         </div>
         <div className="carousel-filters" aria-label="Filtro de acoes">
           {[
             ['todas', 'Todas'],
             ['cipa', 'CIPA'],
-            ['cafe_com_gerente', 'Cafe com o Gerente']
+            ['cafe_com_gerente', 'Café com o Gerente'],
+            ['comite_de_gente', 'Comitê de Gente']
           ].map(([value, label]) => (
             <button key={value} className={selectedCategory === value ? 'active' : ''} onClick={() => changeCategory(value)}>
               {label}
@@ -71,10 +83,22 @@ export default function ActionsCarousel({ items = [] }) {
           <article className="actions-slide">
             <ActionImage item={currentItem} key={currentItem.id} />
             <div className="actions-slide-content">
-              <span>{labelForCategory(currentItem.categoria)}</span>
+              <span className={currentItem.categoria === 'comite_de_gente' ? 'people-committee' : ''}>
+                {iconForCategory(currentItem.categoria)} {labelForCategory(currentItem.categoria)}
+              </span>
               <h3>{currentItem.titulo}</h3>
               <p>{currentItem.descricao}</p>
-              {currentItem.data_evento ? <small>Data: {currentItem.data_evento}</small> : null}
+              <div className="actions-slide-meta">
+                {currentItem.data_acao || currentItem.data_evento ? <small>Data: {currentItem.data_acao || currentItem.data_evento}</small> : null}
+                {currentItem.responsavel ? <small>Responsável: {currentItem.responsavel}</small> : null}
+                {currentItem.status ? <small>Status: {currentItem.status}</small> : null}
+              </div>
+              {currentItem.encaminhamento ? (
+                <div className="actions-forwarding">
+                  <strong>Encaminhamentos</strong>
+                  <p>{currentItem.encaminhamento}</p>
+                </div>
+              ) : null}
             </div>
           </article>
           <button className="carousel-arrow" onClick={goNext} aria-label="Proxima acao">›</button>
