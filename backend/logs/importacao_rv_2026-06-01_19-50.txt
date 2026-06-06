@@ -1,0 +1,97 @@
+Importacao RV concluida.
+Arquivo: C:\Users\ArT\Downloads\rv_log20_apuracao_21a20_importacao_pronta.xlsx
+Importacao ID: 4
+Total de linhas lidas: 40
+Importados: 0
+Atualizados: 40
+Ignorados: 0
+Erros: 0
+Valor total RV antiga: 7420.82
+Valor total RV nova: 29812.54
+Diferenca total: 22391.72
+Registros com baixa confianca: 16
+Registros sem matricula: 0
+Matriculas nao encontradas: 0
+Alertas de periodo 21 a 20: 0
+Baixa confianca: [
+  {
+    "linha": 4,
+    "matricula": "19347",
+    "confianca": 0.59
+  },
+  {
+    "linha": 11,
+    "matricula": "19304",
+    "confianca": 0.47
+  },
+  {
+    "linha": 13,
+    "matricula": "19329",
+    "confianca": 0.64
+  },
+  {
+    "linha": 18,
+    "matricula": "19366",
+    "confianca": 0.65
+  },
+  {
+    "linha": 19,
+    "matricula": "19307",
+    "confianca": 0.6
+  },
+  {
+    "linha": 20,
+    "matricula": "19300",
+    "confianca": 0.55
+  },
+  {
+    "linha": 23,
+    "matricula": "19296",
+    "confianca": 0.65
+  },
+  {
+    "linha": 25,
+    "matricula": "19278",
+    "confianca": 0.46
+  },
+  {
+    "linha": 28,
+    "matricula": "19321",
+    "confianca": 0.42
+  },
+  {
+    "linha": 34,
+    "matricula": "19320",
+    "confianca": 0.6
+  },
+  {
+    "linha": 35,
+    "matricula": "19348",
+    "confianca": 0.43
+  },
+  {
+    "linha": 36,
+    "matricula": "19356",
+    "confianca": 0.41
+  },
+  {
+    "linha": 37,
+    "matricula": "19367",
+    "confianca": 0.52
+  },
+  {
+    "linha": 39,
+    "matricula": "19362",
+    "confianca": 0.58
+  },
+  {
+    "linha": 40,
+    "matricula": "19363",
+    "confianca": 0.43
+  },
+  {
+    "linha": 41,
+    "matricula": "19361",
+    "confianca": 0.3
+  }
+]

@@ -31,7 +31,6 @@ export default function ChatAssistant({ user }) {
   ]);
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState(defaultSuggestions);
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     if (!open) return;
@@ -78,13 +77,6 @@ export default function ChatAssistant({ user }) {
     });
   }
 
-  function handleMascotMove(event) {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width - 0.5) * 12;
-    const y = ((event.clientY - rect.top) / rect.height - 0.5) * -10;
-    setTilt({ x, y });
-  }
-
   async function sendQuestion(text) {
     const userQuestion = text.trim();
     if (!userQuestion || loading) return;
@@ -126,22 +118,12 @@ export default function ChatAssistant({ user }) {
 
   return (
     <div className={`chat-assistant ${open ? 'open' : ''} ${loading ? 'thinking' : ''}`}>
-      <button
-        className="mascot-launcher"
-        onClick={toggleChat}
-        onMouseMove={handleMascotMove}
-        onMouseLeave={() => setTilt({ x: 0, y: 0 })}
-        style={{ '--tilt-x': `${tilt.x}deg`, '--tilt-y': `${tilt.y}deg` }}
-        aria-label="Falar com Yuri"
-      >
-        <img className="mascot-image" src="/mascote-ia.png" alt="Yuri, mascote da LOG20 Cascavel" />
-        <span className="mascot-shadow" />
-        <span className="mascot-bubble">{loading ? 'Pensando...' : open ? 'Yuri está aqui para ajudar' : 'Falar com Yuri'}</span>
-      </button>
-      <button className="chat-toggle" onClick={toggleChat} aria-label="Falar com Yuri">
-        <span>Y</span>
-        Yuri
-      </button>
+      {!open ? (
+        <button className="chat-toggle" onClick={toggleChat} aria-label="Falar com Yuri">
+          <span>Y</span>
+          Yuri
+        </button>
+      ) : null}
       {open ? (
         <section className="chat-window" aria-label="Yuri, Assistente de RH">
           <div className="chat-header">

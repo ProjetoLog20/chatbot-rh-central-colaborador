@@ -1,0 +1,9 @@
+Importacao de prontuario concluida.
+Arquivo: C:\Users\ArT\Desktop\PRONTUARIO27_05_2026_02_34_05.xlsx
+Total de linhas lidas: 42
+Importados novos: 0
+Atualizados: 42
+Nao encontrados: 0
+Conflitos: 0
+Erros: 0
+Cores: verde=25, amarelo=13, vermelho=4, sem_faixa=0
