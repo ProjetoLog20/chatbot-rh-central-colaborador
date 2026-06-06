@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { askYuri, getChatbotSuggestions } from '../api.js';
 
 const defaultSuggestions = [
+  'Qual o sonho da unidade?',
   'Ver meu SKAP',
   'Ver meu prontuário',
   'Como funciona o primeiro acesso?',
@@ -96,7 +97,8 @@ export default function ChatAssistant({ user }) {
         ...prev,
         {
           type: 'assistant',
-          text: response.reply || 'Não consegui responder agora. Tente novamente em instantes.'
+          text: response.reply || 'Não consegui responder agora. Tente novamente em instantes.',
+          source: response.source
         }
       ]);
     } catch (err) {
@@ -146,7 +148,7 @@ export default function ChatAssistant({ user }) {
             {messages.map((message, index) => (
               <div key={index} className={`chat-message ${message.type}`}>
                 <p>{message.text}</p>
-                {message.source ? <small>{message.source === 'ia' ? 'Resposta gerada por IA' : 'Base do RH'}</small> : null}
+                {message.source ? <small>{message.source === 'openai' ? 'Resposta gerada por IA' : 'Base do RH'}</small> : null}
               </div>
             ))}
             {loading ? (
