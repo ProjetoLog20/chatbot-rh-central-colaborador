@@ -10,18 +10,15 @@ const MAX_HISTORY_ITEMS = 8;
 const FALLBACK_REPLY = 'Tive uma instabilidade agora. Tente novamente em alguns instantes ou procure o RH.';
 const DISABLED_REPLY = 'Essa informação ainda não está disponível comigo. Caso precise de apoio, procure o RH.';
 const MISSING_KEY_REPLY = 'A IA do Yuri ainda não foi configurada no servidor. Procure o administrador.';
-const SENSITIVE_REPLY = 'Por segurança, não posso consultar ou revelar dados sensíveis nem informações de outro colaborador. Caso não concorde ou não entenda alguma informação, procure o RH para conferência.';
-
+const GROQ_CHAT_COMPLETIONS_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const BASE_PROMPT = [
   'Voce e Yuri, a cobrinha mascote da LOG20 Cascavel e Assistente de RH da Central do Colaborador.',
   'Responda de forma simples, educada, acolhedora e objetiva.',
   'Ajude colaboradores com duvidas sobre a Central do Colaborador, primeiro acesso, senha temporaria, Pesquisa de Clima, SKAP, Prontuario do Motorista, Premio de Produtividade, 3Rs, Indicadores da Rota, Rotograma Seguro, Campeao de Seguranca, Ouvidoria, Acoes e Encontros, Comite de Gente e Sonho da Unidade.',
-  'Quando existir resposta oficial cadastrada, ela deve ter prioridade. Quando nao existir, responda usando raciocinio geral, mas sem inventar dados pessoais ou valores especificos.',
-  'Nao invente dados.',
-  'Nao revele informacoes de outros colaboradores.',
-  'Nao prometa alterar dados sozinho.',
-  'Respeite as regras de perfil do sistema.',
-  'Nunca invente dados de SKAP, prontuario, premio ou pagamento.',
+  'Nao invente dados pessoais.',
+  'Nunca revele informacoes de outro colaborador.',
+  'Nunca prometa alteracao de dados.',
+  'Nunca confirme pagamento, premio, SKAP ou prontuario sem dados oficiais.',
   'Para duvidas, discordancias ou contestacao de dados, oriente procurar o RH.',
   'Use no maximo 2 paragrafos curtos.'
 ].join('\n');
@@ -106,6 +103,8 @@ function sanitizeText(value, maxLength = MAX_MESSAGE_LENGTH) {
     .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, '[token oculto]')
     .replace(/OPENAI_API_KEY\s*=\s*\S+/gi, 'OPENAI_API_KEY=[oculta]')
     .replace(/DATABASE_URL\s*=\s*\S+/gi, 'DATABASE_URL=[oculta]')
+    .replace(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g, '[cpf oculto]')
+    .replace(/\b\d{6,}\b/g, '[numero oculto]')
     .slice(0, maxLength)
     .trim();
 }
@@ -126,24 +125,40 @@ function getUserContext(user) {
   const name = user?.nome_preferido || user?.nome_completo || 'colaborador';
   return [
     `Usuario logado: ${name}`,
-    `ID interno: ${user?.id || 'nao informado'}`,
     `Perfil: ${user?.perfil || 'nao informado'}`
   ].join('\n');
 }
 
-function isSensitiveRequest(message) {
-  const normalized = String(message || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+function buildAiMessages(message, history, user) {
+  return [
+    { role: 'system', content: BASE_PROMPT },
+    { role: 'system', content: `Contexto permitido do usuario:\n${getUserContext(user)}` },
+    ...history,
+    { role: 'user', content: message }
+  ];
+}
 
-  const asksOtherPerson =
-    /(outro|outra|colega|colaborador|funcionario|motorista|ajudante).*(dados|cpf|salario|pagamento|senha|matricula|prontuario|skap|premio)/.test(normalized) ||
-    /(dados|cpf|salario|pagamento|senha|matricula|prontuario|skap|premio).*(outro|outra|colega|colaborador|funcionario|motorista|ajudante)/.test(normalized);
+async function callGroq(messages) {
+  const response = await fetch(GROQ_CHAT_COMPLETIONS_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
+      messages,
+      temperature: 0.35,
+      max_tokens: 450
+    })
+  });
 
-  const sensitiveTopic = /(contest|discord|confer|revis|pagamento|salario|cpf|senha|token|dados pessoais|prontuario|skap|premio|produtividade)/.test(normalized);
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(body?.error?.message || `Groq HTTP ${response.status}`);
+  }
 
-  return asksOtherPerson || sensitiveTopic;
+  return body?.choices?.[0]?.message?.content?.trim() || '';
 }
 
 router.post('/chat', authenticateToken, async (req, res) => {
@@ -160,11 +175,18 @@ router.post('/chat', authenticateToken, async (req, res) => {
   }
 
   const aiEnabled = isAiEnabled();
+  const provider = String(process.env.YURI_PROVIDER || 'openai').trim().toLowerCase();
   const hasOpenAiKey = Boolean(process.env.OPENAI_API_KEY);
+  const hasGroqKey = Boolean(process.env.GROQ_API_KEY);
   const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+  const messages = buildAiMessages(message, history, req.user);
 
   console.log('[YURI] pergunta:', message);
-  console.log('[YURI] IA habilitada:', aiEnabled);
+  console.log('[YURI] provider:', process.env.YURI_PROVIDER);
+  console.log('[YURI] GROQ_API_KEY configurada:', hasGroqKey);
+  console.log('[YURI] GROQ_MODEL:', process.env.GROQ_MODEL);
+  console.log('[YURI] YURI_AI_ENABLED:', process.env.YURI_AI_ENABLED);
+  console.log('[YURI] aiEnabled:', aiEnabled);
   console.log('[YURI] OpenAI key configurada:', hasOpenAiKey);
 
   let faqMatch = null;
@@ -174,49 +196,55 @@ router.post('/chat', authenticateToken, async (req, res) => {
     console.error('[YURI] erro ao buscar resposta cadastrada:', error.message);
   }
 
-  console.log('[YURI] encontrou resposta cadastrada:', Boolean(faqMatch));
+  console.log('[YURI] faq encontrado:', Boolean(faqMatch));
 
   if (faqMatch?.resposta) {
-    console.log('[YURI] source:', 'resposta_cadastrada');
-    return res.json({ reply: faqMatch.resposta, source: 'resposta_cadastrada' });
+    const source = 'base_rh';
+    console.log('[YURI] source final:', source);
+    return res.json({ reply: faqMatch.resposta, source });
   }
 
   if (!aiEnabled) {
-    console.log('[YURI] source:', 'fallback');
-    return res.json({ reply: DISABLED_REPLY, source: 'fallback' });
+    const source = 'ia_desativada';
+    console.log('[YURI] source final:', source);
+    return res.json({ reply: DISABLED_REPLY, source });
   }
 
-  if (isSensitiveRequest(message)) {
-    console.log('[YURI] source:', 'fallback');
-    return res.json({ reply: SENSITIVE_REPLY, source: 'fallback' });
+  if (provider === 'groq' && !hasGroqKey) {
+    const source = 'ia_sem_chave';
+    console.log('[YURI] source final:', source);
+    return res.json({ reply: MISSING_KEY_REPLY, source });
   }
 
-  if (!hasOpenAiKey) {
-    console.log('[YURI] source:', 'fallback');
-    return res.json({ reply: MISSING_KEY_REPLY, source: 'fallback' });
+  if (provider !== 'groq' && !hasOpenAiKey) {
+    const source = 'ia_sem_chave';
+    console.log('[YURI] source final:', source);
+    return res.json({ reply: MISSING_KEY_REPLY, source });
   }
 
   try {
+    if (provider === 'groq') {
+      const reply = await callGroq(messages);
+      const source = reply ? 'groq' : 'fallback';
+      console.log('[YURI] source final:', source);
+      return res.json({ reply: reply || FALLBACK_REPLY, source });
+    }
+
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const completion = await client.chat.completions.create({
       model,
-      messages: [
-        { role: 'system', content: BASE_PROMPT },
-        { role: 'system', content: `Contexto permitido do usuario:\n${getUserContext(req.user)}` },
-        ...history,
-        { role: 'user', content: message }
-      ],
+      messages,
       temperature: 0.35,
       max_tokens: 450
     });
 
     const reply = completion.choices?.[0]?.message?.content?.trim();
     const source = reply ? 'openai' : 'fallback';
-    console.log('[YURI] source:', source);
+    console.log('[YURI] source final:', source);
     return res.json({ reply: reply || FALLBACK_REPLY, source });
   } catch (error) {
-    console.error('[YURI] erro OpenAI:', error.message);
-    console.log('[YURI] source:', 'fallback');
+    console.error('[YURI] erro OpenAI:', error?.message || error);
+    console.log('[YURI] source final:', 'fallback');
     return res.json({ reply: FALLBACK_REPLY, source: 'fallback' });
   }
 });

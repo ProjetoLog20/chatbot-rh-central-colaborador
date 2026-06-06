@@ -21,6 +21,19 @@ function getGreeting(user) {
   return 'Olá! Eu sou o Yuri, assistente de RH da LOG20. Como posso te ajudar hoje?';
 }
 
+function labelForSource(source) {
+  const labels = {
+    base_rh: 'Base do RH',
+    resposta_cadastrada: 'Base do RH',
+    openai: 'Yuri IA',
+    groq: 'Yuri IA',
+    fallback: 'Instabilidade',
+    ia_desativada: 'IA desativada',
+    ia_sem_chave: 'IA sem chave'
+  };
+  return labels[source] || '';
+}
+
 export default function ChatAssistant({ user }) {
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState('');
@@ -148,7 +161,7 @@ export default function ChatAssistant({ user }) {
             {messages.map((message, index) => (
               <div key={index} className={`chat-message ${message.type}`}>
                 <p>{message.text}</p>
-                {message.source ? <small>{message.source === 'openai' ? 'Resposta gerada por IA' : 'Base do RH'}</small> : null}
+                {labelForSource(message.source) ? <small>{labelForSource(message.source)}</small> : null}
               </div>
             ))}
             {loading ? (

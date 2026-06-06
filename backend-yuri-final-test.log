@@ -1,0 +1,20 @@
+Backend rodando em http://localhost:4018
+NODE_ENV: development
+[YURI] pergunta: Qual o sonho da unidade?
+[YURI] YURI_AI_ENABLED: true
+[YURI] aiEnabled: true
+[YURI] OpenAI key configurada: true
+[YURI] faq encontrado: true
+[YURI] source final: base_rh
+[YURI] pergunta: Quem é você?
+[YURI] YURI_AI_ENABLED: true
+[YURI] aiEnabled: true
+[YURI] OpenAI key configurada: true
+[YURI] faq encontrado: false
+[YURI] source final: fallback
+[YURI] pergunta: Quero contestar meu prêmio
+[YURI] YURI_AI_ENABLED: true
+[YURI] aiEnabled: true
+[YURI] OpenAI key configurada: true
+[YURI] faq encontrado: false
+[YURI] source final: fallback
