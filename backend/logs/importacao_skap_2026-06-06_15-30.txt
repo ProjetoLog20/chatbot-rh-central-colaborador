@@ -1,0 +1,12 @@
+Importacao SKAP concluida.
+Arquivo: C:\Users\ArT\Desktop\base skap.xlsx
+Total de linhas lidas: 67
+Importados: 0
+Atualizados: 62
+Ignorados: 5
+Nao encontrados: 0
+Conflitos: 0
+Historicos criados: 62
+Total Bronze: 15
+Total Prata: 13
+Total Ouro: 34

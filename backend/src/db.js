@@ -140,6 +140,17 @@ function connectSqlite() {
       nivel_skap TEXT NOT NULL,
       nivel_original TEXT,
       progresso_percentual REAL DEFAULT 0,
+      atingimento_habilidade_tecnica REAL DEFAULT 0,
+      observacao_habilidade_tecnica TEXT,
+      atingimento_habilidade_especifica REAL DEFAULT 0,
+      observacao_habilidade_especifica TEXT,
+      atingimento_habilidade_empoderamento REAL DEFAULT 0,
+      observacao_habilidade_empoderamento TEXT,
+      proficiencia REAL DEFAULT 0,
+      proximo_nivel TEXT,
+      percentual_para_proximo_nivel REAL DEFAULT 0,
+      plano_acao TEXT,
+      status_skap TEXT,
       proficiencia_percentual REAL,
       habilidades_tecnicas_percentual REAL,
       habilidades_especificas_percentual REAL,
@@ -161,10 +172,35 @@ function connectSqlite() {
       autonomia TEXT DEFAULT 'pendente',
       observacao_lideranca TEXT,
       data_avaliacao TEXT,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
       criado_em TEXT DEFAULT CURRENT_TIMESTAMP,
       atualizado_em TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE CASCADE
     )`);
+
+    const ensureSkapColumn = (name, definition) => {
+      sqliteDb.all('PRAGMA table_info(skap_avaliacoes)', [], (err, columns) => {
+        if (err) return;
+        if (!columns.some((column) => column.name === name)) {
+          sqliteDb.run(`ALTER TABLE skap_avaliacoes ADD COLUMN ${name} ${definition}`);
+        }
+      });
+    };
+
+    [
+      ['atingimento_habilidade_tecnica', 'REAL DEFAULT 0'],
+      ['observacao_habilidade_tecnica', 'TEXT'],
+      ['atingimento_habilidade_especifica', 'REAL DEFAULT 0'],
+      ['observacao_habilidade_especifica', 'TEXT'],
+      ['atingimento_habilidade_empoderamento', 'REAL DEFAULT 0'],
+      ['observacao_habilidade_empoderamento', 'TEXT'],
+      ['proficiencia', 'REAL DEFAULT 0'],
+      ['proximo_nivel', 'TEXT'],
+      ['percentual_para_proximo_nivel', 'REAL DEFAULT 0'],
+      ['plano_acao', 'TEXT'],
+      ['status_skap', 'TEXT'],
+      ['updated_at', 'TEXT DEFAULT CURRENT_TIMESTAMP']
+    ].forEach(([name, definition]) => ensureSkapColumn(name, definition));
 
     sqliteDb.run(`CREATE TABLE IF NOT EXISTS skap_historico (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
