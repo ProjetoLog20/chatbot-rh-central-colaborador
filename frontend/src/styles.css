@@ -3256,6 +3256,91 @@ tr:not(:last-child) td {
   box-shadow: 0 14px 28px rgba(232, 117, 34, 0.24);
 }
 
+.speed-alert-card {
+  display: grid;
+  gap: 1rem;
+  border: 2px solid rgba(232, 117, 34, 0.72);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 247, 237, 0.96), rgba(244, 247, 249, 0.98)),
+    #fff;
+  padding: clamp(1rem, 3vw, 1.35rem);
+  box-shadow: 0 0 0 0 rgba(232, 117, 34, 0.45), 0 18px 45px rgba(0, 59, 104, 0.1);
+  animation: speedAlertPulse 1.8s infinite ease-in-out;
+}
+
+.speed-alert-header {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.speed-alert-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border-radius: 14px;
+  background: #E87522;
+  color: #fff;
+  font-size: 1.65rem;
+  box-shadow: 0 14px 28px rgba(232, 117, 34, 0.25);
+  animation: speedAlertIconPulse 1.8s infinite ease-in-out;
+}
+
+.speed-alert-header h2,
+.speed-alert-header p {
+  margin: 0;
+}
+
+.speed-alert-header h2 {
+  color: #003B68;
+  font-size: clamp(1.25rem, 3vw, 1.65rem);
+  font-weight: 900;
+}
+
+.speed-alert-header p {
+  margin-top: 0.25rem;
+  color: #1F2933;
+  font-weight: 700;
+}
+
+.speed-alert-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.speed-alert-item {
+  display: grid;
+  gap: 0.35rem;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid rgba(0, 59, 104, 0.1);
+  padding: 1rem;
+  min-height: 104px;
+}
+
+.speed-alert-item span {
+  color: #003B68;
+  font-weight: 900;
+}
+
+.speed-alert-item strong {
+  color: #003B68;
+  font-size: clamp(2rem, 6vw, 3rem);
+  line-height: 1;
+}
+
+.speed-alert-item.dry {
+  border-left: 6px solid #005A8C;
+}
+
+.speed-alert-item.wet {
+  border-left: 6px solid #E87522;
+}
+
 .rotograma-toolbar,
 .rotograma-detail-panel,
 .rotograma-message {
@@ -3829,6 +3914,7 @@ tr:not(:last-child) td {
   .rotograma-route-selects,
   .rotograma-grid,
   .rotograma-summary-grid,
+  .speed-alert-grid,
   .risk-point-grid,
   .emergency-phone-grid,
   .premissas-grid,
@@ -3855,6 +3941,13 @@ tr:not(:last-child) td {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .speed-alert-card,
+  .speed-alert-icon {
+    animation: none;
+  }
+}
+
 @keyframes panelIn {
   from {
     opacity: 0;
@@ -3863,6 +3956,31 @@ tr:not(:last-child) td {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes speedAlertPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(232, 117, 34, 0.45), 0 18px 45px rgba(0, 59, 104, 0.1);
+    border-color: rgba(232, 117, 34, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 18px 6px rgba(232, 117, 34, 0.35), 0 24px 52px rgba(0, 59, 104, 0.14);
+    border-color: rgba(232, 117, 34, 1);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(232, 117, 34, 0.45), 0 18px 45px rgba(0, 59, 104, 0.1);
+    border-color: rgba(232, 117, 34, 0.7);
+  }
+}
+
+@keyframes speedAlertIconPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
   }
 }
 

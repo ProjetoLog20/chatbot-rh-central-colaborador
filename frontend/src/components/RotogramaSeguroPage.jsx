@@ -257,6 +257,27 @@ export default function RotogramaSeguroPage({ user }) {
         <Link to="/">Voltar para a Central</Link>
       </section>
 
+      <section className="speed-alert-card" aria-label="Limite de velocidade permitido">
+        <div className="speed-alert-header">
+          <span className="speed-alert-icon" aria-hidden="true">⚠️</span>
+          <div>
+            <h2>Limite de velocidade permitido</h2>
+            <p>Respeite os limites da via, as condições climáticas e as orientações de segurança da operação.</p>
+          </div>
+        </div>
+
+        <div className="speed-alert-grid">
+          <div className="speed-alert-item dry">
+            <span>Pista seca</span>
+            <strong>80 km/h</strong>
+          </div>
+          <div className="speed-alert-item wet">
+            <span>Pista molhada</span>
+            <strong>64 km/h</strong>
+          </div>
+        </div>
+      </section>
+
       <section className="rotograma-toolbar" aria-label="Busca e filtros de rotogramas">
         <div className="rotograma-route-selects">
           <label>
