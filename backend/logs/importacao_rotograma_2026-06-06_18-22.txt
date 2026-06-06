@@ -1,0 +1,57 @@
+Importacao Rotograma Seguro concluida.
+Arquivo: C:\Users\ArT\Desktop\Rotograma atualizado Cdd Cascavel 2026.xlsx
+Total de abas: 50
+Abas importadas: 41
+Abas ignoradas: 9
+Rotas encontradas: 43
+Rotogramas importados: 41
+Total ATENCAO: 10
+Total OK: 31
+Ignoradas por classificacao: 2
+Pontos de risco importados: 562
+Telefones importados: 369
+Checklists importados: 574
+Premissas importadas: 0
+Materiais importados: 0
+Abas ignoradas: [
+  {
+    "aba": "Aplicação do Projeto",
+    "motivo": "Aba administrativa/material nao importada nesta versao"
+  },
+  {
+    "aba": " ROTOGRAMA PONTOS ESTRATEGICOS ",
+    "motivo": "Aba administrativa/material nao importada nesta versao"
+  },
+  {
+    "aba": "TRECHOS COM RETA-CURVAS (2)",
+    "motivo": "Aba administrativa/material nao importada nesta versao"
+  },
+  {
+    "aba": "LEVANTAMENTO DE DECLIVES",
+    "motivo": "Aba de declive ignorada"
+  },
+  {
+    "aba": "One Page - NOVA LARANJEIRAS (3)",
+    "motivo": "Classificacao ausente ou diferente de ATENCAO/OK",
+    "rota": "Nova Laranjeiras",
+    "cidade_simulador": "NOVA AURORA"
+  },
+  {
+    "aba": "One Page - PALMITAL CAC",
+    "motivo": "Classificacao ausente ou diferente de ATENCAO/OK",
+    "rota": "Palmital",
+    "cidade_simulador": null
+  },
+  {
+    "aba": "Simulador Rotas Crítica",
+    "motivo": "Aba administrativa/material nao importada nesta versao"
+  },
+  {
+    "aba": "Plano de Viagem",
+    "motivo": "Aba administrativa/material nao importada nesta versao"
+  },
+  {
+    "aba": "Controle Sel. Cond. e Veiculos",
+    "motivo": "Aba administrativa/material nao importada nesta versao"
+  }
+]

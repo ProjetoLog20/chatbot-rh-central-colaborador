@@ -1,27 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getRotogramaDetail, getRotogramas, importRotogramaFile } from '../api.js';
-
-const riskLabels = {
-  Alto: 'alto',
-  Critico: 'alto',
-  Crítico: 'alto',
-  Moderado: 'medio',
-  Medio: 'medio',
-  Médio: 'medio',
-  Baixo: 'baixo',
-  'Sem classificacao': 'sem'
-};
+import { getAdminRotogramaResumo, getRotogramaDetail, getRotogramaOpcoes, getRotogramas, importRotogramaFile } from '../api.js';
 
 const filtersInitialState = {
-  busca: '',
-  cidade: '',
-  nivel_risco: '',
-  tipo_ponto: '',
-  rodovia: '',
-  rota_critica: false,
-  area_rural: false,
-  lista_vermelha: false
+  origem: '',
+  destino: '',
+  classificacao: ''
 };
 
 function normalizePerfil(perfil) {
@@ -29,7 +13,10 @@ function normalizePerfil(perfil) {
 }
 
 function riskClass(value) {
-  return riskLabels[value] || riskLabels[String(value || '').trim()] || 'sem';
+  const text = String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (text === 'atencao') return 'atencao';
+  if (text === 'ok') return 'ok';
+  return 'sem';
 }
 
 function getErrorMessage(error) {
@@ -39,12 +26,21 @@ function getErrorMessage(error) {
   return error?.error || 'Nao foi possivel carregar os rotogramas.';
 }
 
+function formatDateTime(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('pt-BR');
+}
+
 function RotogramaCard({ item, onSelect }) {
+  const classification = item.classificacao_rota || item.nivel_risco || 'OK';
+
   return (
     <article className="rotograma-card">
       <div className="rotograma-card-top">
         <span className="rotograma-road-icon" aria-hidden="true">🛣️</span>
-        <span className={`risk-badge ${riskClass(item.nivel_risco)}`}>{item.nivel_risco || 'Sem classificacao'}</span>
+        <span className={`risk-badge ${riskClass(classification)}`}>{classification}</span>
       </div>
       <h2>{item.nome}</h2>
       <dl>
@@ -60,13 +56,9 @@ function RotogramaCard({ item, onSelect }) {
           <dt>Pontos de risco</dt>
           <dd>{item.pontos_risco_count || 0}</dd>
         </div>
-        <div>
-          <dt>Telefones</dt>
-          <dd>{item.telefones_count || 0}</dd>
-        </div>
       </dl>
       <div className="rotograma-card-footer">
-        <span>{item.status || 'ativo'}</span>
+        <span>{classification}</span>
         <button type="button" onClick={() => onSelect(item.id)}>Ver detalhes</button>
       </div>
     </article>
@@ -77,7 +69,7 @@ function RiskPointCard({ point }) {
   return (
     <article className={`risk-point-card ${riskClass(point.nivel_risco)}`}>
       <div>
-        <span className={`risk-badge ${riskClass(point.nivel_risco)}`}>{point.nivel_risco || 'Sem classificacao'}</span>
+        <span className={`risk-badge ${riskClass(point.nivel_risco)}`}>{point.nivel_risco || 'Ponto'}</span>
         <h4>{point.descricao || point.tipo_ponto || 'Ponto de risco'}</h4>
         <p>{point.orientacao || 'Orientacao nao informada.'}</p>
       </div>
@@ -109,9 +101,24 @@ function DetailSection({ title, children }) {
   );
 }
 
-function RotogramaDetail({ detail, isAdmin, onClose }) {
+function AdminResumo({ resumo }) {
+  if (!resumo) return null;
+
+  return (
+    <div className="rotograma-admin-summary">
+      <span><b>{resumo.total_rotas}</b> rotas importadas</span>
+      <span><b>{resumo.total_atencao}</b> ATENCAO</span>
+      <span><b>{resumo.total_ok}</b> OK</span>
+      <span><b>{resumo.rotas_ignoradas}</b> ignoradas</span>
+      <span><b>{resumo.abas_ignoradas?.length || 0}</b> abas ignoradas</span>
+      <span><b>{formatDateTime(resumo.ultima_importacao)}</b> ultima importacao</span>
+    </div>
+  );
+}
+
+function RotogramaDetail({ detail, onClose }) {
   if (!detail) return null;
-  const { resumo, pontos = [], telefones = [], checklist = [], premissas = [], materiais = [] } = detail;
+  const { resumo, pontos = [], telefones = [], checklist = [] } = detail;
 
   return (
     <section className="rotograma-detail-panel" aria-label="Detalhes do rotograma">
@@ -129,7 +136,6 @@ function RotogramaDetail({ detail, isAdmin, onClose }) {
           {[
             ['Origem', resumo.origem],
             ['Destino', resumo.destino],
-            ['Transportadora', resumo.transportadora],
             ['Cidade', resumo.cidade],
             ['Classificacao', resumo.classificacao_rota || resumo.nivel_risco],
             ['Ultima atualizacao', resumo.data_atualizacao]
@@ -165,34 +171,6 @@ function RotogramaDetail({ detail, isAdmin, onClose }) {
           {checklist.map((item) => <li key={item.id}>{item.item}</li>)}
         </ul>
       </DetailSection>
-
-      {isAdmin ? (
-        <DetailSection title="Premissas de condutor/veiculo">
-          <div className="premissas-grid">
-            {premissas.slice(0, 12).map((item) => (
-              <article key={item.id}>
-                <span>{item.categoria || 'Premissa'}</span>
-                <strong>{item.titulo}</strong>
-                <p>{item.descricao}</p>
-              </article>
-            ))}
-          </div>
-        </DetailSection>
-      ) : null}
-
-      {isAdmin ? (
-        <DetailSection title="Materiais de Seguranca">
-          <div className="materials-grid">
-            {materiais.map((material) => (
-              <article key={material.id}>
-                <span>{material.tipo}</span>
-                <strong>{material.titulo}</strong>
-                <p>{material.descricao || 'Material importado da planilha.'}</p>
-              </article>
-            ))}
-          </div>
-        </DetailSection>
-      ) : null}
     </section>
   );
 }
@@ -205,14 +183,17 @@ export default function RotogramaSeguroPage({ user }) {
   const [detailLoading, setDetailLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [importStatus, setImportStatus] = useState('');
+  const [adminResumo, setAdminResumo] = useState(null);
+  const [opcoes, setOpcoes] = useState({ origens: [], destinos: [] });
   const isAdmin = normalizePerfil(user?.perfil) === 'admin';
 
-  const activeFilters = useMemo(() => ({
-    ...filters,
-    rota_critica: filters.rota_critica ? '1' : '',
-    area_rural: filters.area_rural ? '1' : '',
-    lista_vermelha: filters.lista_vermelha ? '1' : ''
-  }), [filters]);
+  const activeFilters = useMemo(() => filters, [filters]);
+
+  useEffect(() => {
+    getRotogramaOpcoes()
+      .then(setOpcoes)
+      .catch(() => setOpcoes({ origens: [], destinos: [] }));
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -227,6 +208,13 @@ export default function RotogramaSeguroPage({ user }) {
       })
       .finally(() => setLoading(false));
   }, [activeFilters]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    getAdminRotogramaResumo()
+      .then(setAdminResumo)
+      .catch(() => setAdminResumo(null));
+  }, [isAdmin, importStatus]);
 
   function updateFilter(field, value) {
     setFilters((current) => ({ ...current, [field]: value }));
@@ -246,7 +234,9 @@ export default function RotogramaSeguroPage({ user }) {
     setImportStatus('Importando planilha...');
     try {
       const result = await importRotogramaFile(file);
-      setImportStatus(`Importacao concluida: ${result.rotogramas_importados} rotogramas e ${result.pontos_risco_importados} pontos de risco.`);
+      setImportStatus(`Importacao concluida: ${result.rotogramas_importados} rotogramas, ${result.total_atencao || 0} ATENCAO e ${result.total_ok || 0} OK.`);
+      const nextOpcoes = await getRotogramaOpcoes();
+      setOpcoes(nextOpcoes);
       const rows = await getRotogramas(activeFilters);
       setRotogramas(rows);
     } catch (error) {
@@ -260,74 +250,58 @@ export default function RotogramaSeguroPage({ user }) {
     <div className="rotograma-page">
       <section className="rotograma-hero">
         <div>
-          <span>Seguranca vem antes de qualquer rota.</span>
+          <span>Antes de iniciar a rota, confira os pontos de atencao e siga as orientacoes de seguranca.</span>
           <h1>Rotograma Seguro</h1>
-          <p>Consulte rotas, pontos de risco e orientacoes de seguranca para uma operacao mais segura.</p>
+          <p>Consulte rotas OK e rotas em atencao para uma operacao mais segura.</p>
         </div>
         <Link to="/">Voltar para a Central</Link>
       </section>
 
       <section className="rotograma-toolbar" aria-label="Busca e filtros de rotogramas">
-        <label className="rotograma-search">
-          <span>Busca principal</span>
-          <input
-            value={filters.busca}
-            onChange={(event) => updateFilter('busca', event.target.value)}
-            placeholder="Buscar por cidade, rota, destino ou ponto de risco"
-          />
-        </label>
+        <div className="rotograma-route-selects">
+          <label>
+            Cidade de partida
+            <select value={filters.origem} onChange={(event) => updateFilter('origem', event.target.value)}>
+              <option value="">Todas as partidas</option>
+              {opcoes.origens.map((origem) => <option value={origem} key={origem}>{origem}</option>)}
+            </select>
+          </label>
 
-        <div className="rotograma-filters">
           <label>
-            Cidade/Destino
-            <input value={filters.cidade} onChange={(event) => updateFilter('cidade', event.target.value)} placeholder="Ex.: Cascavel" />
-          </label>
-          <label>
-            Nivel de risco
-            <select value={filters.nivel_risco} onChange={(event) => updateFilter('nivel_risco', event.target.value)}>
-              <option value="">Todos</option>
-              <option value="Alto">Alto</option>
-              <option value="Moderado">Moderado</option>
-              <option value="Baixo">Baixo</option>
+            Cidade de destino
+            <select value={filters.destino} onChange={(event) => updateFilter('destino', event.target.value)}>
+              <option value="">Todos os destinos</option>
+              {opcoes.destinos.map((destino) => <option value={destino} key={destino}>{destino}</option>)}
             </select>
-          </label>
-          <label>
-            Tipo de ponto
-            <select value={filters.tipo_ponto} onChange={(event) => updateFilter('tipo_ponto', event.target.value)}>
-              <option value="">Todos</option>
-              <option value="Ponto">Ponto</option>
-              <option value="Trecho">Trecho</option>
-            </select>
-          </label>
-          <label>
-            Rodovia/Regiao
-            <input value={filters.rodovia} onChange={(event) => updateFilter('rodovia', event.target.value)} placeholder="BR 277, PR..." />
           </label>
         </div>
 
-        <div className="rotograma-switches">
+        <div className="rotograma-classification-filter" aria-label="Filtro por classificacao">
           {[
-            ['rota_critica', 'Rota critica'],
-            ...(isAdmin ? [
-              ['area_rural', 'Area rural'],
-              ['lista_vermelha', 'Lista vermelha']
-            ] : [])
-          ].map(([field, label]) => (
-            <label key={field}>
-              <input type="checkbox" checked={filters[field]} onChange={(event) => updateFilter(field, event.target.checked)} />
+            ['', 'Todas'],
+            ['ATENCAO', 'ATENCAO'],
+            ['OK', 'OK']
+          ].map(([value, label]) => (
+            <button
+              type="button"
+              className={filters.classificacao === value ? 'active' : ''}
+              key={value || 'todas'}
+              onClick={() => updateFilter('classificacao', value)}
+            >
               {label}
-            </label>
+            </button>
           ))}
         </div>
 
         {isAdmin ? (
           <div className="rotograma-admin-box">
             <strong>Gerenciar Rotogramas</strong>
+            <AdminResumo resumo={adminResumo} />
             <label>
               Importar nova planilha
               <input type="file" accept=".xlsx,.xls" onChange={handleImport} />
             </label>
-            {importStatus ? <p>{importStatus}</p> : <p>Use a importacao para atualizar rotas, pontos e materiais.</p>}
+            {importStatus ? <p>{importStatus}</p> : <p>Use a importacao para atualizar rotas OK e rotas em atencao.</p>}
           </div>
         ) : null}
       </section>
@@ -344,7 +318,7 @@ export default function RotogramaSeguroPage({ user }) {
       ) : null}
 
       {detailLoading ? <section className="rotograma-message">Carregando detalhes...</section> : null}
-      <RotogramaDetail detail={selected} isAdmin={isAdmin} onClose={() => setSelected(null)} />
+      <RotogramaDetail detail={selected} onClose={() => setSelected(null)} />
     </div>
   );
 }

@@ -85,25 +85,89 @@ function shapeSkap(row) {
   };
 }
 
+function normalizePercentInput(value) {
+  const parsed = parsePercent(value);
+  return Math.max(0, Math.min(100, parsed));
+}
+
+function buildPercentIssues(rows) {
+  const issues = [];
+  const fields = [
+    'proficiencia',
+    'proficiencia_percentual',
+    'atingimento_habilidade_tecnica',
+    'habilidades_tecnicas_percentual',
+    'atingimento_habilidade_especifica',
+    'habilidades_especificas_percentual',
+    'atingimento_habilidade_empoderamento',
+    'habilidades_empoderamento_percentual',
+    'percentual_para_proximo_nivel'
+  ];
+  const pairs = [
+    ['proficiencia', 'proficiencia_percentual'],
+    ['atingimento_habilidade_tecnica', 'habilidades_tecnicas_percentual'],
+    ['atingimento_habilidade_especifica', 'habilidades_especificas_percentual'],
+    ['atingimento_habilidade_empoderamento', 'habilidades_empoderamento_percentual']
+  ];
+
+  rows.forEach((row) => {
+    fields.forEach((field) => {
+      const value = Number(row[field]);
+      if (!Number.isFinite(value) || value < 0 || value > 100) {
+        issues.push({
+          colaborador_id: row.colaborador_id,
+          matricula: row.matricula,
+          nome_completo: row.nome_completo,
+          campo: field,
+          valor: row[field],
+          problema: 'Percentual fora do intervalo 0-100'
+        });
+      }
+    });
+
+    pairs.forEach(([primary, mirror]) => {
+      if (Math.abs(Number(row[primary] || 0) - Number(row[mirror] || 0)) > 0.01) {
+        issues.push({
+          colaborador_id: row.colaborador_id,
+          matricula: row.matricula,
+          nome_completo: row.nome_completo,
+          campo: `${primary} / ${mirror}`,
+          valor: `${row[primary]} / ${row[mirror]}`,
+          problema: 'Campos percentuais divergentes'
+        });
+      }
+    });
+  });
+
+  return issues;
+}
+
 async function upsertSkap(colaborador, payload) {
-  const proficiencia = parsePercent(payload.proficiencia ?? payload.proficiencia_percentual ?? payload.progresso_percentual);
+  const proficiencia = normalizePercentInput(payload.proficiencia ?? payload.proficiencia_percentual ?? payload.progresso_percentual);
+  const tecnica = normalizePercentInput(payload.atingimento_habilidade_tecnica ?? payload.habilidades_tecnicas_percentual);
+  const especifica = normalizePercentInput(payload.atingimento_habilidade_especifica ?? payload.habilidades_especificas_percentual);
+  const empoderamento = normalizePercentInput(payload.atingimento_habilidade_empoderamento ?? payload.habilidades_empoderamento_percentual);
   const level = calculateLevel(proficiencia);
   const existing = await db.get('SELECT * FROM skap_avaliacoes WHERE colaborador_id = ?', [colaborador.id]);
   const values = [
     level.nivel_skap,
     level.nivel_skap,
     proficiencia,
-    parsePercent(payload.atingimento_habilidade_tecnica ?? payload.habilidades_tecnicas_percentual),
+    tecnica,
     String(payload.observacao_habilidade_tecnica || ''),
-    parsePercent(payload.atingimento_habilidade_especifica ?? payload.habilidades_especificas_percentual),
+    especifica,
     String(payload.observacao_habilidade_especifica || ''),
-    parsePercent(payload.atingimento_habilidade_empoderamento ?? payload.habilidades_empoderamento_percentual),
+    empoderamento,
     String(payload.observacao_habilidade_empoderamento || ''),
     proficiencia,
     level.proximo_nivel,
     level.percentual_para_proximo_nivel,
     String(payload.plano_acao || ''),
     level.status_skap,
+    proficiencia,
+    tecnica,
+    especifica,
+    empoderamento,
     payload.data_avaliacao || new Date().toISOString().slice(0, 10)
   ];
 
@@ -115,7 +179,10 @@ async function upsertSkap(colaborador, payload) {
            atingimento_habilidade_especifica = ?, observacao_habilidade_especifica = ?,
            atingimento_habilidade_empoderamento = ?, observacao_habilidade_empoderamento = ?,
            proficiencia = ?, proximo_nivel = ?, percentual_para_proximo_nivel = ?,
-           plano_acao = ?, status_skap = ?, data_avaliacao = ?,
+           plano_acao = ?, status_skap = ?,
+           proficiencia_percentual = ?, habilidades_tecnicas_percentual = ?,
+           habilidades_especificas_percentual = ?, habilidades_empoderamento_percentual = ?,
+           data_avaliacao = ?,
            atualizado_em = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
        WHERE colaborador_id = ?`,
       [...values, colaborador.id]
@@ -128,15 +195,25 @@ async function upsertSkap(colaborador, payload) {
         atingimento_habilidade_especifica, observacao_habilidade_especifica,
         atingimento_habilidade_empoderamento, observacao_habilidade_empoderamento,
         proficiencia, proximo_nivel, percentual_para_proximo_nivel,
-        plano_acao, status_skap, data_avaliacao
+        plano_acao, status_skap,
+        proficiencia_percentual, habilidades_tecnicas_percentual,
+        habilidades_especificas_percentual, habilidades_empoderamento_percentual,
+        data_avaliacao
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [colaborador.id, ...values]
     );
   }
 
   const current = await db.get('SELECT id FROM skap_avaliacoes WHERE colaborador_id = ?', [colaborador.id]);
-  if (!existing || existing.nivel_skap !== level.nivel_skap || Number(existing.proficiencia ?? -1) !== proficiencia) {
+  const percentChanged = [
+    ['proficiencia', proficiencia],
+    ['atingimento_habilidade_tecnica', tecnica],
+    ['atingimento_habilidade_especifica', especifica],
+    ['atingimento_habilidade_empoderamento', empoderamento]
+  ].some(([field, value]) => Number(existing?.[field] ?? -1) !== value);
+
+  if (!existing || existing.nivel_skap !== level.nivel_skap || percentChanged) {
     await db.run(
       `INSERT INTO skap_historico (
         colaborador_id, avaliacao_id, nivel_anterior, nivel_novo,
@@ -150,7 +227,7 @@ async function upsertSkap(colaborador, payload) {
         level.nivel_skap,
         existing?.proficiencia ?? existing?.progresso_percentual ?? null,
         proficiencia,
-        existing ? 'Alteracao de nivel/proficiencia via painel SKAP' : 'Primeira avaliacao SKAP',
+        existing ? 'Alteracao de percentuais/nivel via painel SKAP' : 'Primeira avaliacao SKAP',
         payload.data_avaliacao || new Date().toISOString().slice(0, 10)
       ]
     );
@@ -188,6 +265,21 @@ router.get('/admin', authenticateToken, authorizeRoles('admin'), async (req, res
 
   const rows = await db.all(`${baseSkapSelect(`WHERE ${filters.join(' AND ')}`)} ORDER BY c.nome_completo`, params);
   res.json(rows.map(shapeSkap));
+});
+
+router.get('/admin/check-percentuais', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const rows = await db.all(`${baseSkapSelect('WHERE s.id IS NOT NULL')} ORDER BY c.nome_completo`);
+    const shaped = rows.map(shapeSkap);
+    const issues = buildPercentIssues(shaped);
+    return res.json({
+      total_avaliacoes: shaped.length,
+      total_problemas: issues.length,
+      problemas: issues
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao checar percentuais SKAP' });
+  }
 });
 
 router.get('/admin/:colaboradorId', authenticateToken, authorizeRoles('admin'), async (req, res) => {

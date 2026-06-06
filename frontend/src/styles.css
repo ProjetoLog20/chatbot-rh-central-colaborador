@@ -2068,6 +2068,12 @@ tr:not(:last-child) td {
   text-align: center;
 }
 
+.skap-actions button:hover,
+.skap-actions label:hover,
+.skap-primary:hover {
+  background: #005A8C;
+}
+
 .skap-actions input {
   display: none;
 }
@@ -2094,6 +2100,7 @@ tr:not(:last-child) td {
 .skap-filters select,
 .skap-edit-grid input,
 .skap-edit-grid select,
+.skap-edit-grid textarea,
 .criteria-item select,
 .skap-observation textarea {
   width: 100%;
@@ -2289,6 +2296,44 @@ tr:not(:last-child) td {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 1rem;
+}
+
+.skap-correction-group {
+  display: grid;
+  gap: 0.85rem;
+  background: #F8FAFC;
+  border: 1px solid #DCE5EC;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.skap-correction-group label {
+  font-size: 0.92rem;
+  color: #003B68;
+}
+
+.skap-check-panel {
+  display: grid;
+  gap: 0.7rem;
+  background: #FFF7ED;
+  border: 1px solid #FED7AA;
+  border-left: 5px solid #E87522;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.skap-check-panel h2,
+.skap-check-panel p {
+  margin: 0;
+}
+
+.skap-check-panel h2 {
+  color: #003B68;
+  font-size: 1.05rem;
+}
+
+.skap-check-panel p {
+  color: #4B5563;
 }
 
 .criteria-item {
@@ -3222,6 +3267,7 @@ tr:not(:last-child) td {
 }
 
 .rotograma-search,
+.rotograma-route-selects label,
 .rotograma-filters label,
 .rotograma-admin-box label {
   display: grid;
@@ -3232,6 +3278,7 @@ tr:not(:last-child) td {
 }
 
 .rotograma-search input,
+.rotograma-route-selects select,
 .rotograma-filters input,
 .rotograma-filters select {
   width: 100%;
@@ -3241,6 +3288,12 @@ tr:not(:last-child) td {
   color: #1F2933;
   padding: 0.8rem 0.9rem;
   font: inherit;
+}
+
+.rotograma-route-selects {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
 }
 
 .rotograma-filters {
@@ -3286,6 +3339,52 @@ tr:not(:last-child) td {
 .rotograma-admin-box p {
   margin: 0.45rem 0 0;
   color: #6B7280;
+}
+
+.rotograma-classification-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.9rem;
+}
+
+.rotograma-classification-filter button {
+  border: 1px solid rgba(0, 59, 104, 0.14);
+  border-radius: 999px;
+  background: #F4F7F9;
+  color: #003B68;
+  cursor: pointer;
+  font-weight: 900;
+  padding: 0.65rem 0.95rem;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.rotograma-classification-filter button:hover,
+.rotograma-classification-filter button.active {
+  border-color: #E87522;
+  background: #E87522;
+  color: #fff;
+}
+
+.rotograma-admin-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 0.75rem 0;
+}
+
+.rotograma-admin-summary span {
+  border-radius: 12px;
+  background: #fff;
+  color: #6B7280;
+  padding: 0.7rem;
+  font-weight: 800;
+}
+
+.rotograma-admin-summary b {
+  display: block;
+  color: #003B68;
+  font-size: 1.05rem;
 }
 
 .rotograma-grid {
@@ -3351,6 +3450,20 @@ tr:not(:last-child) td {
   background: #FEF2F2;
   color: #B91C1C;
   border-color: rgba(185, 28, 28, 0.2);
+}
+
+.risk-badge.atencao,
+.risk-point-card.atencao {
+  background: #FFF7ED;
+  color: #C2410C;
+  border-color: rgba(232, 117, 34, 0.28);
+}
+
+.risk-badge.ok,
+.risk-point-card.ok {
+  background: #ECFDF5;
+  color: #047857;
+  border-color: rgba(4, 120, 87, 0.18);
 }
 
 .risk-badge.medio,
@@ -3713,6 +3826,7 @@ tr:not(:last-child) td {
   }
 
   .rotograma-filters,
+  .rotograma-route-selects,
   .rotograma-grid,
   .rotograma-summary-grid,
   .risk-point-grid,
@@ -3734,6 +3848,10 @@ tr:not(:last-child) td {
 
   .rotograma-card-footer button {
     width: 100%;
+  }
+
+  .rotograma-admin-summary {
+    grid-template-columns: 1fr;
   }
 }
 

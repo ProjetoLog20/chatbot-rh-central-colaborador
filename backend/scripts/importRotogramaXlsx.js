@@ -25,12 +25,18 @@ const DEFAULT_PHONES = [
   ['SAMU', '192']
 ];
 
+const VALID_CLASSIFICATIONS = new Set(['ATENCAO', 'OK']);
+
 function stripAccents(value) {
   return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
 function normalizeText(value) {
   return stripAccents(value).toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function normalizeCompare(value) {
+  return normalizeText(value).replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
 function clean(value) {
@@ -43,6 +49,66 @@ function compactRow(row) {
 
 function slug(value) {
   return normalizeText(value).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+function normalizeClassification(value) {
+  const text = normalizeCompare(value);
+  if (!text) return null;
+  if (/\bok\b/.test(text) || text === 'rota ok') return 'OK';
+  if (/atencao/.test(text)) return 'ATENCAO';
+  return null;
+}
+
+function displayClassification(value) {
+  return normalizeClassification(value) === 'ATENCAO' ? 'ATENÇÃO' : 'OK';
+}
+
+function routeTokens(value, { dropHub = false } = {}) {
+  const normalized = normalizeCompare(value)
+    .replace(/\bone page\b/g, ' ')
+    .replace(/\bcac\b/g, ' ')
+    .replace(/\bcdd\b/g, ' ')
+    .replace(/\bdo\b|\bda\b|\bde\b|\bdos\b|\bdas\b/g, ' ')
+    .replace(/\bnovo\b|\bnova\b/g, 'nov')
+    .replace(/\bl\b/g, 'leonidas');
+
+  const tokens = normalized
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3 && !/^\d+$/.test(token));
+
+  if (dropHub && tokens.length > 1) return tokens.filter((token) => token !== 'cascavel');
+  return tokens;
+}
+
+function levenshtein(a, b) {
+  const dp = Array.from({ length: a.length + 1 }, () => Array(b.length + 1).fill(0));
+  for (let i = 0; i <= a.length; i += 1) dp[i][0] = i;
+  for (let j = 0; j <= b.length; j += 1) dp[0][j] = j;
+  for (let i = 1; i <= a.length; i += 1) {
+    for (let j = 1; j <= b.length; j += 1) {
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+  }
+  return dp[a.length][b.length];
+}
+
+function tokenMatches(candidateToken, targetToken) {
+  if (candidateToken === targetToken) return true;
+  if (candidateToken.length >= 6 && targetToken.length >= 6 && levenshtein(candidateToken, targetToken) <= 2) return true;
+  return false;
+}
+
+function routeMatchScore(candidate, target, options = {}) {
+  const candidateTokens = routeTokens(candidate, options);
+  const targetTokens = routeTokens(target, options);
+  if (!candidateTokens.length || !targetTokens.length) return 0;
+  const shared = targetTokens.filter((targetToken) => candidateTokens.some((candidateToken) => tokenMatches(candidateToken, targetToken))).length;
+  return shared / targetTokens.length;
 }
 
 function nowForFileName() {
@@ -145,9 +211,63 @@ function riskWeight(value) {
 
 function isRouteSheet(sheetName, rows) {
   const name = normalizeText(sheetName);
-  if (/one page|rotograma|trechos|declives/.test(name)) return true;
+  if (/declive/.test(name)) return false;
+  if (/one page/.test(name)) return true;
   const sample = rows.slice(0, 15).flat().map(normalizeText).join(' ');
-  return sample.includes('one pager') || sample.includes('mapeamento rota');
+  return sample.includes('one pager') && name.includes('one');
+}
+
+function shouldIgnoreSheet(sheetName) {
+  return /declive/.test(normalizeText(sheetName));
+}
+
+function extractClassificationMap(workbook) {
+  const sheetName = workbook.SheetNames.find((name) => normalizeText(name).includes('simulador'));
+  if (!sheetName) return new Map();
+  const rows = readRows(workbook, sheetName);
+  const header = rows.find((row) => row.some((value) => normalizeCompare(value) === 'unidade')) || [];
+  const classificationRow = rows.find((row) => row.some((value) => normalizeClassification(value)));
+  const map = new Map();
+
+  if (!classificationRow) return map;
+
+  classificationRow.forEach((value, index) => {
+    const classification = normalizeClassification(value);
+    if (!classification) return;
+    const city = clean(header[index]);
+    if (!city) return;
+    map.set(city, displayClassification(classification));
+  });
+
+  return map;
+}
+
+function findRouteClassification({ sheetName, cidade, destino, rota }, classificationMap) {
+  const primaryCandidates = [sheetName, cidade].filter(Boolean);
+  const fallbackCandidates = [destino, rota].filter(Boolean);
+  let best = { score: 0, classification: null, matchedCity: null };
+
+  for (const [city, classification] of classificationMap.entries()) {
+    for (const candidate of primaryCandidates) {
+      const score = routeMatchScore(candidate, city);
+      if (score > best.score) {
+        best = { score, classification, matchedCity: city };
+      }
+    }
+  }
+
+  if (best.score >= 0.55) return best;
+
+  for (const [city, classification] of classificationMap.entries()) {
+    for (const candidate of fallbackCandidates) {
+      const score = routeMatchScore(candidate, city, { dropHub: true });
+      if (score > best.score) {
+        best = { score, classification, matchedCity: city };
+      }
+    }
+  }
+
+  return best.score >= 0.55 ? best : { score: best.score, classification: null, matchedCity: best.matchedCity };
 }
 
 function rowLooksLikeRiskPoint(row) {
@@ -293,12 +413,18 @@ function extractMaterial(sheetName, rows) {
 }
 
 async function resetTables() {
+  await db.run('UPDATE rotograma_importacoes SET ativo = ? WHERE ativo = ?', [false, true]).catch(() => null);
+  await db.run('UPDATE rotogramas SET ativo = ? WHERE ativo = ?', [false, true]).catch(() => null);
   await db.run('DELETE FROM rotograma_pontos_risco');
   await db.run('DELETE FROM rotograma_telefones');
   await db.run('DELETE FROM rotograma_checklist');
   await db.run('DELETE FROM rotograma_premissas');
   await db.run('DELETE FROM rotograma_materiais');
-  await db.run('DELETE FROM rotogramas');
+}
+
+async function ensureRotogramaImportSchema() {
+  await db.run('ALTER TABLE rotogramas ADD COLUMN ativo BOOLEAN DEFAULT true').catch(() => null);
+  await db.run('ALTER TABLE rotograma_importacoes ADD COLUMN ativo BOOLEAN DEFAULT true').catch(() => null);
 }
 
 async function insertRows(table, columns, rows, chunkSize = 120) {
@@ -317,13 +443,12 @@ async function insertRows(table, columns, rows, chunkSize = 120) {
 }
 
 async function insertRotograma(meta, points) {
-  const maxRisk = points.reduce((acc, point) => riskWeight(point.nivel_risco) > riskWeight(acc) ? point.nivel_risco : acc, 'Sem classificacao');
   const result = await db.run(
     `INSERT INTO rotogramas (
       rotograma_id, nome, origem, destino, cidade, transportadora,
-      classificacao_rota, nivel_risco, status, observacao, data_atualizacao
+      classificacao_rota, nivel_risco, status, ativo, observacao, data_atualizacao
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       meta.rotograma_id,
       meta.nome,
@@ -331,9 +456,10 @@ async function insertRotograma(meta, points) {
       meta.destino,
       meta.cidade,
       meta.transportadora,
-      maxRisk,
-      maxRisk,
+      meta.classificacao,
+      meta.classificacao,
       'ativo',
+      true,
       meta.observacao,
       meta.data_atualizacao
     ]
@@ -344,12 +470,18 @@ async function insertRotograma(meta, points) {
 async function importWorkbook({ filePath, buffer } = {}) {
   const resolvedPath = filePath ? path.resolve(filePath) : DEFAULT_FILE;
   const workbook = buffer ? xlsx.read(buffer, { type: 'buffer' }) : xlsx.readFile(resolvedPath);
+  const classificationMap = extractClassificationMap(workbook);
+  const importRunId = Date.now();
   const report = {
     arquivo: buffer ? 'upload' : resolvedPath,
     total_abas: workbook.SheetNames.length,
     abas_importadas: [],
     abas_ignoradas: [],
+    rotas_encontradas: 0,
     rotogramas_importados: 0,
+    total_atencao: 0,
+    total_ok: 0,
+    ignoradas_por_classificacao: 0,
     pontos_risco_importados: 0,
     telefones_importados: 0,
     checklists_importados: 0,
@@ -358,31 +490,19 @@ async function importWorkbook({ filePath, buffer } = {}) {
     erros: []
   };
 
+  await ensureRotogramaImportSchema();
   await resetTables();
 
   for (const [sheetIndex, sheetName] of workbook.SheetNames.entries()) {
     const rows = readRows(workbook, sheetName);
     try {
-      if (/premissas/i.test(sheetName)) {
-        const premissas = extractPremissas(rows);
-        await insertRows('rotograma_premissas', ['categoria', 'titulo', 'descricao'], premissas);
-        report.premissas_importadas += premissas.length;
-        report.abas_importadas.push(sheetName);
+      if (shouldIgnoreSheet(sheetName)) {
+        report.abas_ignoradas.push({ aba: sheetName, motivo: 'Aba de declive ignorada' });
         continue;
       }
 
       if (!isRouteSheet(sheetName, rows)) {
-        const material = extractMaterial(sheetName, rows);
-        if (material.descricao) {
-          await db.run(
-            'INSERT INTO rotograma_materiais (tipo, titulo, descricao, origem_aba, dados_json) VALUES (?, ?, ?, ?, ?)',
-            [material.tipo, material.titulo, material.descricao, material.origem_aba, material.dados_json]
-          );
-          report.materiais_importados += 1;
-          report.abas_importadas.push(sheetName);
-        } else {
-          report.abas_ignoradas.push(sheetName);
-        }
+        report.abas_ignoradas.push({ aba: sheetName, motivo: 'Aba administrativa/material nao importada nesta versao' });
         continue;
       }
 
@@ -392,25 +512,37 @@ async function importWorkbook({ filePath, buffer } = {}) {
       const transportadora = findValueAfterLabel(rows, /^transportadora:?\s*/i);
       const dataAtualizacao = findValueAfterLabel(rows, /^data:?\s*/i);
       const cidade = inferNameFromSheet(sheetName, destino, rota);
-      const points = extractRiskPoints(rows, sheetName, cidade);
+      const classificationMatch = findRouteClassification({ sheetName, cidade, destino, rota }, classificationMap);
+      report.rotas_encontradas += 1;
 
-      if (!points.length && !/one page|rotograma pontos|trechos|declives/i.test(sheetName)) {
-        report.abas_ignoradas.push(sheetName);
+      if (!classificationMatch.classification || !VALID_CLASSIFICATIONS.has(normalizeClassification(classificationMatch.classification))) {
+        report.ignoradas_por_classificacao += 1;
+        report.abas_ignoradas.push({
+          aba: sheetName,
+          motivo: 'Classificacao ausente ou diferente de ATENCAO/OK',
+          rota: cidade,
+          cidade_simulador: classificationMatch.matchedCity || null
+        });
         continue;
       }
 
+      const points = extractRiskPoints(rows, sheetName, cidade);
+
       const meta = {
-        rotograma_id: slug(`${sheetIndex + 1}-${sheetName}-${cidade}`),
+        rotograma_id: slug(`${importRunId}-${sheetIndex + 1}-${sheetName}-${cidade}`),
         nome: cidade,
         origem,
         destino: destino || cidade,
         cidade,
         transportadora,
+        classificacao: classificationMatch.classification,
         observacao: `Importado da aba ${sheetName}`,
         data_atualizacao: dataAtualizacao
       };
       const rotogramaId = await insertRotograma(meta, points);
       report.rotogramas_importados += 1;
+      if (classificationMatch.classification === 'ATENÇÃO') report.total_atencao += 1;
+      if (classificationMatch.classification === 'OK') report.total_ok += 1;
 
       await insertRows(
         'rotograma_pontos_risco',
@@ -458,9 +590,9 @@ async function importWorkbook({ filePath, buffer } = {}) {
     `INSERT INTO rotograma_importacoes (
       arquivo, total_abas, abas_importadas, abas_ignoradas, rotogramas_importados,
       pontos_risco_importados, telefones_importados, checklists_importados,
-      premissas_importadas, detalhes_json
+      premissas_importadas, detalhes_json, ativo
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       report.arquivo,
       report.total_abas,
@@ -471,7 +603,8 @@ async function importWorkbook({ filePath, buffer } = {}) {
       report.telefones_importados,
       report.checklists_importados,
       report.premissas_importadas,
-      JSON.stringify(report)
+      JSON.stringify(report),
+      true
     ]
   );
 
@@ -488,7 +621,11 @@ async function main() {
   logger.log(`Total de abas: ${report.total_abas}`);
   logger.log(`Abas importadas: ${report.abas_importadas.length}`);
   logger.log(`Abas ignoradas: ${report.abas_ignoradas.length}`);
+  logger.log(`Rotas encontradas: ${report.rotas_encontradas}`);
   logger.log(`Rotogramas importados: ${report.rotogramas_importados}`);
+  logger.log(`Total ATENCAO: ${report.total_atencao}`);
+  logger.log(`Total OK: ${report.total_ok}`);
+  logger.log(`Ignoradas por classificacao: ${report.ignoradas_por_classificacao}`);
   logger.log(`Pontos de risco importados: ${report.pontos_risco_importados}`);
   logger.log(`Telefones importados: ${report.telefones_importados}`);
   logger.log(`Checklists importados: ${report.checklists_importados}`);

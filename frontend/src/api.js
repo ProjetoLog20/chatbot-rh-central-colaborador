@@ -124,6 +124,10 @@ export async function getAdminSkapDetail(colaboradorId) {
   return request(`/skap/admin/${colaboradorId}`);
 }
 
+export async function checkAdminSkapPercentuais() {
+  return request('/skap/admin/check-percentuais');
+}
+
 export async function updateAdminSkap(colaboradorId, payload) {
   return request(`/skap/admin/${colaboradorId}`, {
     method: 'PUT',
@@ -319,12 +323,20 @@ export async function getRotogramas(filters = {}) {
   return request(`/rotogramas${query ? `?${query}` : ''}`);
 }
 
+export async function getRotogramaOpcoes() {
+  return request('/rotogramas/opcoes');
+}
+
 export async function getRotogramaDetail(id) {
   return request(`/rotogramas/${id}`);
 }
 
 export async function getRotogramaMateriais() {
   return request('/rotogramas/materiais');
+}
+
+export async function getAdminRotogramaResumo() {
+  return request('/rotogramas/admin/resumo');
 }
 
 export async function importRotogramaFile(file) {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  checkAdminSkapPercentuais,
   getAdminSkap,
   getAdminSkapDetail,
   getMeuSkap,
@@ -23,6 +24,11 @@ function asNumber(value) {
 
 function formatPercent(value, digits = 0) {
   return `${asNumber(value).toLocaleString('pt-BR', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
+}
+
+function normalizePercentInput(value) {
+  const number = asNumber(String(value).replace(',', '.'));
+  return Math.max(0, Math.min(100, number));
 }
 
 function formatDate(value) {
@@ -107,7 +113,14 @@ function SkapDetail({ detail, showIdentity = true, editable = false, onChange, o
         <section className="skap-edit-grid">
           <label>
             Proficiência
-            <input value={detail.proficiencia || ''} onChange={(e) => onChange({ ...detail, proficiencia: e.target.value })} />
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={detail.proficiencia || ''}
+              onChange={(e) => onChange({ ...detail, proficiencia: e.target.value })}
+            />
           </label>
           <label>
             Data da avaliação
@@ -135,10 +148,23 @@ function SkapDetail({ detail, showIdentity = true, editable = false, onChange, o
       {editable ? (
         <section className="skap-edit-grid">
           {skills.map(([percentKey, observationKey, title]) => (
-            <label key={observationKey}>
-              {title}
-              <textarea rows="3" value={detail[observationKey] || ''} onChange={(e) => onChange({ ...detail, [observationKey]: e.target.value })} />
-            </label>
+            <div className="skap-correction-group" key={observationKey}>
+              <label>
+                Percentual - {title}
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={detail[percentKey] ?? ''}
+                  onChange={(e) => onChange({ ...detail, [percentKey]: e.target.value })}
+                />
+              </label>
+              <label>
+                Observação - {title}
+                <textarea rows="3" value={detail[observationKey] || ''} onChange={(e) => onChange({ ...detail, [observationKey]: e.target.value })} />
+              </label>
+            </div>
           ))}
           <button className="skap-primary" onClick={onSave} disabled={saving}>{saving ? 'Salvando...' : 'Salvar avaliação'}</button>
         </section>
@@ -181,6 +207,7 @@ export default function SkapPage({ user }) {
   const [rows, setRows] = useState([]);
   const [detail, setDetail] = useState(null);
   const [message, setMessage] = useState('');
+  const [percentCheck, setPercentCheck] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const isAdmin = isAdminUser(user);
@@ -225,7 +252,14 @@ export default function SkapPage({ user }) {
   async function saveDetail() {
     setSaving(true);
     try {
-      await updateAdminSkap(detail.colaborador_id, detail);
+      const payload = {
+        ...detail,
+        proficiencia: normalizePercentInput(detail.proficiencia),
+        atingimento_habilidade_tecnica: normalizePercentInput(detail.atingimento_habilidade_tecnica),
+        atingimento_habilidade_especifica: normalizePercentInput(detail.atingimento_habilidade_especifica),
+        atingimento_habilidade_empoderamento: normalizePercentInput(detail.atingimento_habilidade_empoderamento)
+      };
+      await updateAdminSkap(detail.colaborador_id, payload);
       setMessage('Avaliação SKAP salva.');
       await openDetail(detail.colaborador_id);
       setRows(await getAdminSkap(filters));
@@ -233,6 +267,18 @@ export default function SkapPage({ user }) {
       setMessage(err.error || 'Erro ao salvar SKAP');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function checkPercentuais() {
+    try {
+      const result = await checkAdminSkapPercentuais();
+      setPercentCheck(result);
+      setMessage(result.total_problemas
+        ? `Check SKAP: ${result.total_problemas} problema(s) encontrado(s).`
+        : `Check SKAP: ${result.total_avaliacoes} avaliações revisadas, nenhum problema encontrado.`);
+    } catch (err) {
+      setMessage(err.error || 'Erro ao checar percentuais SKAP');
     }
   }
 
@@ -300,6 +346,7 @@ export default function SkapPage({ user }) {
           <p>Consulte, acompanhe e analise a evolução SKAP dos colaboradores.</p>
         </div>
         <div className="skap-actions">
+          <button type="button" onClick={checkPercentuais}>Checar percentuais</button>
           <button type="button" onClick={exportReport}>Exportar relatório</button>
           <label>
             Importar SKAP
@@ -309,6 +356,17 @@ export default function SkapPage({ user }) {
       </div>
 
       {message ? <div className="import-message">{message}</div> : null}
+
+      {percentCheck?.total_problemas ? (
+        <section className="skap-check-panel">
+          <h2>Problemas encontrados nos percentuais</h2>
+          {percentCheck.problemas.slice(0, 12).map((item, index) => (
+            <p key={`${item.colaborador_id}-${item.campo}-${index}`}>
+              <strong>{item.nome_completo} ({item.matricula})</strong>: {item.campo} = {item.valor} - {item.problema}
+            </p>
+          ))}
+        </section>
+      ) : null}
 
       <section className="skap-summary-grid">
         <div><span>Total de avaliados</span><strong>{summary.total}</strong></div>

@@ -475,6 +475,7 @@ function connectSqlite() {
       classificacao_rota TEXT,
       nivel_risco TEXT,
       status TEXT DEFAULT 'ativo',
+      ativo INTEGER DEFAULT 1,
       observacao TEXT,
       data_atualizacao TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -589,6 +590,27 @@ function connectSqlite() {
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_rotogramas_status ON rotogramas(status)');
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_rotograma_pontos_rota ON rotograma_pontos_risco(rotograma_id)');
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_rotograma_pontos_nivel ON rotograma_pontos_risco(nivel_risco)');
+
+    const ensureRotogramaColumn = (name, definition) => {
+      sqliteDb.all('PRAGMA table_info(rotogramas)', [], (err, columns) => {
+        if (err) return;
+        if (!columns.some((column) => column.name === name)) {
+          sqliteDb.run(`ALTER TABLE rotogramas ADD COLUMN ${name} ${definition}`);
+        }
+      });
+    };
+
+    const ensureRotogramaImportColumn = (name, definition) => {
+      sqliteDb.all('PRAGMA table_info(rotograma_importacoes)', [], (err, columns) => {
+        if (err) return;
+        if (!columns.some((column) => column.name === name)) {
+          sqliteDb.run(`ALTER TABLE rotograma_importacoes ADD COLUMN ${name} ${definition}`);
+        }
+      });
+    };
+
+    ensureRotogramaColumn('ativo', 'INTEGER DEFAULT 1');
+    ensureRotogramaImportColumn('ativo', 'INTEGER DEFAULT 1');
 
     const ensureProdutividadeImportColumn = (name, definition) => {
       sqliteDb.all('PRAGMA table_info(produtividade_importacoes)', [], (err, columns) => {
