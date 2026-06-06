@@ -50,6 +50,16 @@ const generalCards = [
     route: '/produtividade'
   },
   {
+    id: 'indicadores_rota',
+    icon: '🎯',
+    title: 'Indicadores da Rota',
+    description: 'Acompanhe as metas e entenda os indicadores que ajudam sua rota a ser mais produtiva, organizada e segura.',
+    action: 'Ver indicadores',
+    color: '#005A8C',
+    route: '/indicadores-rota',
+    distributionOnly: true
+  },
+  {
     id: 'prontuario_motorista',
     icon: '🚚',
     title: 'Prontuário do Motorista',
@@ -206,9 +216,10 @@ export default function Dashboard({ user }) {
 
   const cards = useMemo(() => {
     const moduleByKey = new Map(modulos.map((modulo) => [modulo.chave, modulo]));
+    const availableCards = generalCards.filter((card) => !card.distributionOnly || isDistribution || isAdmin);
     const visibleCards = modulos.length
-      ? generalCards.filter((card) => moduleByKey.has(card.id))
-      : generalCards;
+      ? availableCards.filter((card) => moduleByKey.has(card.id))
+      : availableCards;
 
     const shapedCards = visibleCards.map((card) => {
       const modulo = moduleByKey.get(card.id);

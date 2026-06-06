@@ -4,14 +4,15 @@ const DEFAULT_MAINTENANCE_MESSAGE = 'Estamos ajustando este painel para garantir
 let schemaReady = false;
 
 const MODULE_DEFAULTS = [
-  ['pesquisa_clima', 'Pesquisa de Clima', 'Pesquisas de satisfacao da empresa.', true, false, null, 10],
-  ['skap', 'SKAP', 'Evolucao, nivel atual e habilidades avaliadas.', true, false, null, 20],
-  ['campeao_seguranca', 'Campeao de Seguranca', 'Reconhecimento de atitudes seguras.', true, false, null, 30],
-  ['tres_rs', '3 Rs', 'Responsabilidades, recursos e reconhecimentos da metodologia 3Rs.', true, false, null, 40],
-  ['premio_produtividade', 'Premio de Produtividade', 'Indicadores, metas e valor previsto do premio.', false, true, 'Estamos ajustando os dados deste painel para garantir que as informacoes sejam apresentadas corretamente. Em breve ele estara disponivel.', 50],
-  ['prontuario_motorista', 'Prontuario do Motorista', 'Pontuacao, faixa atual e ocorrencias registradas.', true, false, null, 60],
-  ['ouvidoria', 'Ouvidoria', 'Canal oficial para solicitacoes, duvidas ou relatos.', true, false, null, 70],
-  ['assistente_rh', 'Yuri, Assistente de RH', 'Atendimento virtual da Central do Colaborador.', true, false, null, 80]
+  ['pesquisa_clima', 'Pesquisa de Clima', 'Pesquisas de satisfacao da empresa.', true, false, null, true, true, true, 10],
+  ['skap', 'SKAP', 'Evolucao, nivel atual e habilidades avaliadas.', true, false, null, true, true, true, 20],
+  ['campeao_seguranca', 'Campeao de Seguranca', 'Reconhecimento de atitudes seguras.', true, false, null, true, true, true, 30],
+  ['tres_rs', '3 Rs', 'Responsabilidades, recursos e reconhecimentos da metodologia 3Rs.', true, false, null, true, true, true, 40],
+  ['premio_produtividade', 'Premio de Produtividade', 'Indicadores, metas e valor previsto do premio.', false, true, 'Estamos ajustando os dados deste painel para garantir que as informacoes sejam apresentadas corretamente. Em breve ele estara disponivel.', true, true, true, 50],
+  ['indicadores_rota', 'Indicadores da Rota', 'Acompanhe as metas e entenda os indicadores que ajudam sua rota a ser mais produtiva, organizada e segura.', true, false, null, true, true, false, 55],
+  ['prontuario_motorista', 'Prontuario do Motorista', 'Pontuacao, faixa atual e ocorrencias registradas.', true, false, null, true, true, true, 60],
+  ['ouvidoria', 'Ouvidoria', 'Canal oficial para solicitacoes, duvidas ou relatos.', true, false, null, true, true, true, 70],
+  ['assistente_rh', 'Yuri, Assistente de RH', 'Atendimento virtual da Central do Colaborador.', true, false, null, true, true, true, 80]
 ];
 
 function normalizePerfil(perfil) {
@@ -64,8 +65,8 @@ async function ensureModuleConfigTable() {
   for (const item of MODULE_DEFAULTS) {
     await db.run(
       `INSERT INTO configuracoes_modulos
-       (chave, nome, descricao, ativo, em_manutencao, mensagem_manutencao, ordem)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
+       (chave, nome, descricao, ativo, em_manutencao, mensagem_manutencao, visivel_para_admin, visivel_para_motorista, visivel_para_colaborador, ordem)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (chave) DO NOTHING`,
       item
     );

@@ -15,9 +15,20 @@ import SkapPage from './components/SkapPage.jsx';
 import ThreeRsPage from './components/ThreeRsPage.jsx';
 import ProdutividadePage from './components/ProdutividadePage.jsx';
 import CampeaoSegurancaPage from './components/CampeaoSegurancaPage.jsx';
+import IndicadoresRotaPage from './components/IndicadoresRotaPage.jsx';
 
 function normalizePerfil(perfil) {
   return String(perfil || '').trim().toLowerCase();
+}
+
+function isRouteIndicatorsAllowed(user) {
+  const text = [
+    user?.perfil,
+    user?.cargo,
+    user?.tipo_colaborador
+  ].map((value) => String(value || '').trim().toLowerCase()).join(' ');
+
+  return normalizePerfil(user?.perfil) === 'admin' || text.includes('motorista') || text.includes('ajudante');
 }
 
 function App() {
@@ -41,6 +52,13 @@ function App() {
     if (!user) return <Navigate to="/login" replace />;
     if (user.primeiro_acesso || user.senha_temporaria) return <Navigate to="/primeiro-acesso" replace />;
     if (roles.length && !roles.includes(normalizePerfil(user.perfil))) return <Navigate to="/" replace />;
+    return element;
+  }
+
+  function requireRouteIndicatorsAuth(element) {
+    if (!user) return <Navigate to="/login" replace />;
+    if (user.primeiro_acesso || user.senha_temporaria) return <Navigate to="/primeiro-acesso" replace />;
+    if (!isRouteIndicatorsAllowed(user)) return <Navigate to="/" replace />;
     return element;
   }
 
@@ -81,6 +99,7 @@ function App() {
           <Route path="/pesquisa-clima" element={requireAuth(<PesquisaClimaPage />)} />
           <Route path="/3rs" element={requireAuth(<ThreeRsPage />)} />
           <Route path="/campeao-seguranca" element={requireAuth(<CampeaoSegurancaPage user={user} />)} />
+          <Route path="/indicadores-rota" element={requireRouteIndicatorsAuth(<IndicadoresRotaPage />)} />
           <Route path="/skap" element={requireAuth(<SkapPage user={user} />)} />
           <Route path="/produtividade" element={requireAuth(<ProdutividadePage user={user} />)} />
           <Route path="/admin" element={requireAuth(<AdminPage />, ['admin'])} />
