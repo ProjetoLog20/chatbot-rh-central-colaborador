@@ -101,11 +101,11 @@ function buildAdminFilters(query) {
     const text = String(busca).trim().toLowerCase();
     const doc = digits(text);
     if (doc) {
-      filters.push('(LOWER(p.nome_completo) LIKE ? OR LOWER(p.matricula) LIKE ? OR p.cpf LIKE ? OR p.cpf LIKE ? OR LOWER(COALESCE(p.nome_rv, \'\')) LIKE ? OR LOWER(COALESCE(p.codigo_rv, \'\')) LIKE ?)');
-      params.push(`%${text}%`, `%${text}%`, `%${doc}%`, `%${text}%`, `%${text}%`, `%${text}%`);
+      filters.push('(LOWER(p.nome_completo) LIKE ? OR LOWER(p.matricula) LIKE ? OR LOWER(COALESCE(p.competencia, \'\')) LIKE ? OR p.cpf LIKE ? OR p.cpf LIKE ? OR LOWER(COALESCE(p.nome_rv, \'\')) LIKE ? OR LOWER(COALESCE(p.codigo_rv, \'\')) LIKE ?)');
+      params.push(`%${text}%`, `%${text}%`, `%${text}%`, `%${doc}%`, `%${text}%`, `%${text}%`, `%${text}%`);
     } else {
-      filters.push('(LOWER(p.nome_completo) LIKE ? OR LOWER(p.matricula) LIKE ? OR LOWER(COALESCE(p.nome_rv, \'\')) LIKE ? OR LOWER(COALESCE(p.codigo_rv, \'\')) LIKE ?)');
-      params.push(`%${text}%`, `%${text}%`, `%${text}%`, `%${text}%`);
+      filters.push('(LOWER(p.nome_completo) LIKE ? OR LOWER(p.matricula) LIKE ? OR LOWER(COALESCE(p.competencia, \'\')) LIKE ? OR LOWER(COALESCE(p.nome_rv, \'\')) LIKE ? OR LOWER(COALESCE(p.codigo_rv, \'\')) LIKE ?)');
+      params.push(`%${text}%`, `%${text}%`, `%${text}%`, `%${text}%`, `%${text}%`);
     }
   }
 

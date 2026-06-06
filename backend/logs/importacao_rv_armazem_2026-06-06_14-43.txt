@@ -1,0 +1,15 @@
+Importacao RV Armazem concluida.
+Arquivo: C:\Users\ArT\Downloads\rv_armazem_importacao_pronta.xlsx
+Importacao ID: 1
+Total de linhas lidas: 20
+Importados: 20
+Atualizados: 0
+Ignorados: 0
+Erros: 0
+Valor total previsto: 5219.72
+Valor total RV antiga: 2878.40
+Valor total RV nova: 5219.72
+Registros com baixa confianca: 0
+Registros sem matricula: 0
+Matriculas nao encontradas: 0
+Alertas de periodo 21 a 20: 0

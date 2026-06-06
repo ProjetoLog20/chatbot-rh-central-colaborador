@@ -2281,6 +2281,56 @@ tr:not(:last-child) td {
   font-weight: 800;
 }
 
+.prod-info-note {
+  border-left: 5px solid #005A8C;
+  border-radius: 8px;
+  background: #E9F2FB;
+  color: #003B68;
+  padding: 0.9rem 1rem;
+  font-weight: 800;
+}
+
+.prod-tabs {
+  display: inline-flex;
+  width: fit-content;
+  gap: 0.35rem;
+  border: 1px solid #DCE5EC;
+  border-radius: 8px;
+  background: #F4F7F9;
+  padding: 0.3rem;
+}
+
+.prod-tabs button {
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #003B68;
+  padding: 0.68rem 1rem;
+  font-weight: 900;
+  box-shadow: none;
+}
+
+.prod-tabs button.active {
+  background: #003B68;
+  color: #fff;
+}
+
+.prod-area-label {
+  width: fit-content;
+  border-radius: 8px;
+  background: #003B68;
+  color: #fff;
+  padding: 0.68rem 1rem;
+  font-weight: 900;
+}
+
+.prod-admin-overview {
+  border: 1px solid #DCE5EC;
+  border-radius: 8px;
+  background: #FFFFFF;
+  padding: 0.85rem;
+}
+
 .prod-selector {
   display: grid;
   gap: 0.5rem;

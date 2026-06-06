@@ -1,14 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   exportAdminProdutividade,
+  exportAdminProdutividadeArmazem,
   getAdminProdutividade,
+  getAdminProdutividadeArmazem,
+  getAdminProdutividadeArmazemDetail,
+  getAdminProdutividadeArmazemResumo,
   getAdminProdutividadeDetail,
   getAdminProdutividadeResumo,
   getMeuProdutividade,
+  getMeuProdutividadeArmazem,
+  importProdutividadeArmazemFile,
   importProdutividadeFile
 } from '../api.js';
 
-const metricFields = [
+const rotaMetricFields = [
   ['valor_total_previsto', 'Valor previsto do premio', 'money'],
   ['entregas', 'Entregas', 'number'],
   ['caixas', 'Caixas', 'number'],
@@ -17,7 +23,7 @@ const metricFields = [
   ['bonus', 'Bonus', 'money']
 ];
 
-const detailFields = [
+const rotaDetailFields = [
   ['competencia', 'Competencia'],
   ['periodo_inicio', 'Periodo inicial', 'date'],
   ['periodo_fim', 'Periodo final', 'date'],
@@ -42,7 +48,37 @@ const detailFields = [
   ['mensagem_rh', 'Mensagem RH']
 ];
 
-const emptySummary = {
+const armazemMetricFields = [
+  ['valor_total_previsto', 'Valor previsto', 'money'],
+  ['pontos', 'Pontuacao', 'number'],
+  ['faixa', 'Faixa'],
+  ['funcao_armazem', 'Funcao'],
+  ['erros', 'Erros', 'number'],
+  ['rv_nova', 'RV Nova', 'money']
+];
+
+const armazemDetailFields = [
+  ['competencia', 'Competencia'],
+  ['periodo_inicio', 'Periodo inicial', 'date'],
+  ['periodo_fim', 'Periodo final', 'date'],
+  ['funcao_armazem', 'Funcao no armazem'],
+  ['pontos', 'Pontos', 'number'],
+  ['faixa', 'Faixa'],
+  ['rv_antiga', 'RV antiga', 'money'],
+  ['rv_nova', 'RV nova', 'money'],
+  ['erros', 'Erros', 'number'],
+  ['valor_total_previsto', 'Valor total previsto', 'money'],
+  ['status_produtividade', 'Status produtividade'],
+  ['origem_calculo', 'Origem do calculo'],
+  ['status_auditoria', 'Auditoria', 'auditoria'],
+  ['metodo_cruzamento', 'Metodo cruzamento'],
+  ['confianca_cruzamento', 'Confianca cruzamento', 'percent'],
+  ['usuario_wms', 'Usuario WMS'],
+  ['codigo_operacional', 'Codigo operacional'],
+  ['mensagem_rh', 'Mensagem RH']
+];
+
+const emptyRotaSummary = {
   total_colaboradores: 0,
   total_motoristas: 0,
   total_ajudantes: 0,
@@ -53,6 +89,17 @@ const emptySummary = {
   total_nao_bateu_devolucao: 0,
   total_recargas: 0,
   total_mapas: 0,
+  total_baixa_confianca: 0
+};
+
+const emptyArmazemSummary = {
+  total_colaboradores_com_rv: 0,
+  total_ajudantes: 0,
+  total_operadores_empilhadeira: 0,
+  total_amarradores: 0,
+  valor_total_previsto: 0,
+  valor_total_rv_antiga: 0,
+  valor_total_rv_nova: 0,
   total_baixa_confianca: 0
 };
 
@@ -93,49 +140,77 @@ function formatValue(value, type) {
   return value || '-';
 }
 
+function formatRotaFuncao(value) {
+  const text = String(value || '').trim();
+  const normalized = text.toLowerCase();
+  if (normalized.includes('motorista') && !normalized.includes('ajudante')) return 'Motorista';
+  if (normalized.includes('ajudante')) return 'Ajudante de Motorista';
+  return text || '-';
+}
+
+function formatArmazemFuncao(value) {
+  const text = String(value || '').trim();
+  const normalized = text.toLowerCase();
+  if (normalized.includes('empilhadeira')) return 'Operador de Empilhadeira';
+  if (normalized.includes('amarrador')) return 'Amarrador';
+  if (normalized.includes('ajudante')) return 'Ajudante';
+  return text || '-';
+}
+
 function StatusBadge({ type, value }) {
   if (type === 'devolucao') {
-    return (
-      <span className={`prod-badge ${value ? 'success' : 'danger'}`}>
-        {value ? 'Dentro da meta' : 'Fora da meta'}
-      </span>
-    );
+    return <span className={`prod-badge ${value ? 'success' : 'danger'}`}>{value ? 'Dentro da meta' : 'Fora da meta'}</span>;
   }
 
   if (type === 'auditoria') {
     const revisar = String(value || '').toLowerCase() === 'revisar_cruzamento';
-    return (
-      <span className={`prod-badge ${revisar ? 'warning' : 'success'}`}>
-        {revisar ? 'Revisar vinculo' : 'OK'}
-      </span>
-    );
+    return <span className={`prod-badge ${revisar ? 'warning' : 'success'}`}>{revisar ? 'Revisar vinculo' : 'OK'}</span>;
   }
 
   const normalized = String(value || '').trim().toLowerCase();
-  const className = normalized ? 'success' : 'muted';
-  return <span className={`prod-badge ${className}`}>{value || 'Sem dados'}</span>;
+  return <span className={`prod-badge ${normalized ? 'success' : 'muted'}`}>{value || 'Sem dados'}</span>;
 }
 
 function ProdutividadeMaintenance({ message }) {
   return (
-    <div className="page-card maintenance-page">
+    <div className="maintenance-page">
       <span className="maintenance-modal-icon" aria-hidden="true">!</span>
-      <h1>Prêmio de Produtividade em manutenção</h1>
-      <p>{message || 'Estamos ajustando os dados deste painel para garantir que as informações sejam apresentadas corretamente. Em breve ele estará disponível.'}</p>
-      <a className="maintenance-back-link" href="/">Voltar para a Central</a>
+      <h1>Premio de Produtividade em manutencao</h1>
+      <p>{message || 'Estamos ajustando os dados deste painel para garantir que as informacoes sejam apresentadas corretamente. Em breve ele estara disponivel.'}</p>
     </div>
   );
 }
 
-function ProdutividadeDetail({ registro }) {
+function ProdTabs({ activeTab, onChange, tabs }) {
+  return (
+    <div className="prod-tabs" role="tablist" aria-label="Tipos de premio de produtividade">
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          className={activeTab === tab.id ? 'active' : ''}
+          onClick={() => onChange(tab.id)}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ProdutividadeDetail({ registro, variant = 'rota' }) {
   if (!registro) return null;
+  const isArmazem = variant === 'armazem';
+  const metricFields = isArmazem ? armazemMetricFields : rotaMetricFields;
+  const detailFields = isArmazem ? armazemDetailFields : rotaDetailFields;
+  const funcao = isArmazem ? formatArmazemFuncao(registro.funcao_armazem) : formatRotaFuncao(registro.funcao_rv);
 
   return (
     <section className="prod-detail">
       <div className="prod-detail-heading">
         <div>
           <h2>{registro.nome_completo}</h2>
-          <p>{registro.matricula} - {registro.funcao_rv || 'Funcao nao informada'}</p>
+          <p>{registro.matricula} - {funcao || 'Funcao nao informada'}</p>
         </div>
         <StatusBadge type="status" value={registro.status_produtividade} />
       </div>
@@ -159,6 +234,10 @@ function ProdutividadeDetail({ registro }) {
               <StatusBadge type="auditoria" value={registro[key]} />
             ) : key === 'status_produtividade' ? (
               <StatusBadge type="status" value={registro[key]} />
+            ) : key === 'funcao_rv' ? (
+              <strong>{formatRotaFuncao(registro[key])}</strong>
+            ) : key === 'funcao_armazem' ? (
+              <strong>{formatArmazemFuncao(registro[key])}</strong>
             ) : (
               <strong>{formatValue(registro[key], type)}</strong>
             )}
@@ -169,29 +248,12 @@ function ProdutividadeDetail({ registro }) {
   );
 }
 
-function ColaboradorProdutividade() {
-  const [rows, setRows] = useState([]);
+function ColaboradorRotaPanel({ rows }) {
   const [selectedId, setSelectedId] = useState('');
-  const [message, setMessage] = useState('');
-  const [maintenance, setMaintenance] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getMeuProdutividade()
-      .then((data) => {
-        const list = Array.isArray(data) ? data : [];
-        setRows(list);
-        setSelectedId(list[0]?.id ? String(list[0].id) : '');
-      })
-      .catch((err) => {
-        if (err.code === 'MODULO_EM_MANUTENCAO') {
-          setMaintenance(err.modulo);
-          return;
-        }
-        setMessage(err.error || 'Voce ainda nao possui dados de Premio de Produtividade para este periodo.');
-      })
-      .finally(() => setLoading(false));
-  }, []);
+    setSelectedId(rows[0]?.id ? String(rows[0].id) : '');
+  }, [rows]);
 
   const selected = rows.find((row) => String(row.id) === selectedId) || rows[0];
   const consolidated = rows.reduce((acc, row) => {
@@ -203,63 +265,143 @@ function ColaboradorProdutividade() {
     return acc;
   }, { valor_total_previsto: 0, entregas: 0, caixas: 0, recargas: 0, bonus: 0 });
 
+  return (
+    <>
+      {rows.length ? (
+        <>
+          <section className="prod-summary-grid">
+            <div><span>Valor previsto</span><strong>{formatMoney(consolidated.valor_total_previsto)}</strong></div>
+            <div><span>Funcao</span><strong>{formatRotaFuncao(selected?.funcao_rv)}</strong></div>
+            <div><span>Competencia</span><strong>{selected?.competencia || '-'}</strong></div>
+            <div><span>Indicadores principais</span><strong>{formatNumber(consolidated.entregas)} entregas</strong></div>
+            <div><span>Status</span><strong>{selected?.status_produtividade || 'Sem dados'}</strong></div>
+          </section>
+          {rows.length > 1 ? (
+              <label className="prod-selector">
+                Competencia / funcao
+                <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
+                  {rows.map((row) => <option key={row.id} value={row.id}>{row.competencia} - {formatRotaFuncao(row.funcao_rv)}</option>)}
+                </select>
+              </label>
+          ) : null}
+          <ProdutividadeDetail registro={selected} />
+        </>
+      ) : null}
+    </>
+  );
+}
+
+function ColaboradorArmazemPanel({ rows }) {
+  const [selectedId, setSelectedId] = useState('');
+
+  useEffect(() => {
+    setSelectedId(rows[0]?.id ? String(rows[0].id) : '');
+  }, [rows]);
+
+  const selected = rows.find((row) => String(row.id) === selectedId) || rows[0];
+
+  return (
+    <>
+      <div className="prod-info-note">Seu premio do armazem e calculado com base nos dados importados da apuracao oficial da RV.</div>
+      {rows.length ? (
+        <>
+          <section className="prod-summary-grid">
+            <div><span>Valor previsto</span><strong>{formatMoney(selected?.valor_total_previsto)}</strong></div>
+            <div><span>Funcao</span><strong>{formatArmazemFuncao(selected?.funcao_armazem)}</strong></div>
+            <div><span>Competencia</span><strong>{selected?.competencia || '-'}</strong></div>
+            <div><span>Indicadores principais</span><strong>{formatNumber(selected?.pontos)} pontos</strong></div>
+            <div><span>Status</span><strong>{selected?.status_produtividade || 'Sem dados'}</strong></div>
+          </section>
+          {rows.length > 1 ? (
+            <label className="prod-selector">
+              Competencia / funcao
+              <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
+                {rows.map((row) => <option key={row.id} value={row.id}>{row.competencia} - {formatArmazemFuncao(row.funcao_armazem)}</option>)}
+              </select>
+            </label>
+          ) : null}
+          {selected?.mensagem_rh ? <div className="prod-info-note">{selected.mensagem_rh}</div> : null}
+          <ProdutividadeDetail registro={selected} variant="armazem" />
+        </>
+      ) : null}
+    </>
+  );
+}
+
+function ColaboradorProdutividade() {
+  const [activeTab, setActiveTab] = useState('rota');
+  const [rotaRows, setRotaRows] = useState([]);
+  const [armazemRows, setArmazemRows] = useState([]);
+  const [maintenance, setMaintenance] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.allSettled([getMeuProdutividade(), getMeuProdutividadeArmazem()])
+      .then(([rotaResult, armazemResult]) => {
+        const rotaRows = rotaResult.status === 'fulfilled' && Array.isArray(rotaResult.value) ? rotaResult.value : [];
+        const armazemRows = armazemResult.status === 'fulfilled'
+          ? (Array.isArray(armazemResult.value) ? armazemResult.value : (armazemResult.value.rows || []))
+          : [];
+        const rotaMaintenance = rotaResult.status === 'rejected' && rotaResult.reason?.code === 'MODULO_EM_MANUTENCAO' ? rotaResult.reason.modulo : null;
+        const armazemMaintenance = armazemResult.status === 'rejected' && armazemResult.reason?.code === 'MODULO_EM_MANUTENCAO' ? armazemResult.reason.modulo : null;
+
+        setRotaRows(rotaRows);
+        setArmazemRows(armazemRows);
+
+        if (rotaMaintenance?.chave === 'premio_produtividade') {
+          setMaintenance(rotaMaintenance);
+          return;
+        }
+
+        if (!rotaRows.length && armazemRows.length) setActiveTab('armazem');
+        if (rotaRows.length) setActiveTab('rota');
+        if (!rotaRows.length && !armazemRows.length && armazemMaintenance) setMaintenance(armazemMaintenance);
+        if (!rotaRows.length && !armazemRows.length && !armazemMaintenance) {
+          setMessage('Voce ainda nao possui dados de Premio de Produtividade para este periodo.');
+        }
+      })
+      .catch(() => setMessage('Voce ainda nao possui dados de Premio de Produtividade para este periodo.'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const tabs = [
+    rotaRows.length ? { id: 'rota', label: 'Rota' } : null,
+    armazemRows.length ? { id: 'armazem', label: 'Armazém' } : null
+  ].filter(Boolean);
+
   if (maintenance) {
-    return <ProdutividadeMaintenance message={maintenance.mensagem_manutencao} />;
+    return (
+      <div className="page-card produtividade-page">
+        <ProdutividadeMaintenance message={maintenance.mensagem_manutencao} />
+      </div>
+    );
   }
 
   return (
     <div className="page-card produtividade-page">
       <div className="admin-heading">
         <div>
-          <h1>Meu Premio de Produtividade</h1>
-          <p>Seu premio e calculado com base nos indicadores importados da apuracao oficial de RV.</p>
+          <h1>{activeTab === 'armazem' ? 'Meu Prêmio de Produtividade - Armazém' : 'Meu Prêmio de Produtividade'}</h1>
+          <p>{activeTab === 'armazem' ? 'Consulte os dados oficiais importados da RV do Armazém.' : 'Seu prêmio é calculado com base nos indicadores importados da apuração oficial de RV.'}</p>
         </div>
       </div>
-
-      <div className="prod-warning">Caso nao concorde ou nao entenda alguma informacao, procure o RH.</div>
-
+      <div className="prod-warning">Caso não concorde ou não entenda alguma informação, procure o RH.</div>
       {loading ? <p>Carregando produtividade...</p> : null}
-      {!loading && message ? <div className="empty-state">{message}</div> : null}
-
-      {!loading && rows.length ? (
-        <>
-          {rows.length > 1 ? (
-            <>
-              <section className="prod-summary-grid">
-                <div><span>Total previsto</span><strong>{formatMoney(consolidated.valor_total_previsto)}</strong></div>
-                <div><span>Entregas</span><strong>{formatNumber(consolidated.entregas)}</strong></div>
-                <div><span>Caixas</span><strong>{formatNumber(consolidated.caixas)}</strong></div>
-                <div><span>Recargas</span><strong>{formatNumber(consolidated.recargas)}</strong></div>
-                <div><span>Bonus</span><strong>{formatMoney(consolidated.bonus)}</strong></div>
-              </section>
-              <label className="prod-selector">
-                Competencia / funcao
-                <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
-                  {rows.map((row) => (
-                    <option key={row.id} value={row.id}>{row.competencia} - {row.funcao_rv}</option>
-                  ))}
-                </select>
-              </label>
-            </>
-          ) : null}
-          <ProdutividadeDetail registro={selected} />
-        </>
-      ) : null}
+      {!loading && !tabs.length ? <div className="empty-state">{message || 'Voce ainda nao possui dados de Premio de Produtividade para este periodo.'}</div> : null}
+      {!loading && tabs.length > 1 ? <ProdTabs activeTab={activeTab} onChange={setActiveTab} tabs={tabs} /> : null}
+      {!loading && tabs.length === 1 ? <div className="prod-area-label">{tabs[0].label}</div> : null}
+      {!loading && activeTab === 'rota' && rotaRows.length ? <ColaboradorRotaPanel rows={rotaRows} /> : null}
+      {!loading && activeTab === 'armazem' && armazemRows.length ? <ColaboradorArmazemPanel rows={armazemRows} /> : null}
     </div>
   );
 }
 
-function AdminProdutividade() {
-  const [filters, setFilters] = useState({
-    busca: '',
-    competencia: '',
-    funcao_rv: '',
-    status_produtividade: '',
-    bateu_devolucao: '',
-    status_auditoria: ''
-  });
+function AdminRotaPanel() {
+  const [filters, setFilters] = useState({ busca: '', competencia: '', funcao_rv: '', status_produtividade: '', bateu_devolucao: '', status_auditoria: '' });
   const [rows, setRows] = useState([]);
-  const [summary, setSummary] = useState(emptySummary);
+  const [summary, setSummary] = useState(emptyRotaSummary);
   const [detail, setDetail] = useState(null);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -282,12 +424,9 @@ function AdminProdutividade() {
     setLoading(true);
     setMessage('');
     try {
-      const [listResult, resumoResult] = await Promise.all([
-        getAdminProdutividade(filters),
-        getAdminProdutividadeResumo(filters)
-      ]);
+      const [listResult, resumoResult] = await Promise.all([getAdminProdutividade(filters), getAdminProdutividadeResumo(filters)]);
       setRows(listResult.rows || []);
-      setSummary(resumoResult || listResult.summary || emptySummary);
+      setSummary(resumoResult || listResult.summary || emptyRotaSummary);
     } catch (err) {
       setMessage(err.error || 'Erro ao carregar produtividade');
     } finally {
@@ -315,14 +454,6 @@ function AdminProdutividade() {
     }
   }
 
-  async function handleExport() {
-    try {
-      await exportAdminProdutividade(filters);
-    } catch (err) {
-      setMessage(err.error || 'Erro ao exportar relatorio');
-    }
-  }
-
   const summaryCards = [
     ['Colaboradores com RV', summary.total_colaboradores, 'number'],
     ['Motoristas', summary.total_motoristas, 'number'],
@@ -338,138 +469,206 @@ function AdminProdutividade() {
   ];
 
   return (
-    <div className="page-card produtividade-page">
-      <div className="admin-heading">
-        <div>
-          <h1>Painel de Produtividade</h1>
-          <p>Consulte, filtre, importe e exporte os dados oficiais de RV.</p>
-        </div>
-        <div className="prod-actions">
-          <button onClick={handleExport}>Exportar relatorio</button>
-          <label>
-            Importar RV
-            <input type="file" accept=".xlsx" onChange={(event) => handleImport(event.target.files)} />
-          </label>
-        </div>
+    <>
+      <div className="prod-actions">
+        <button onClick={() => exportAdminProdutividade(filters)}>Exportar relatorio</button>
+        <label>Importar RV<input type="file" accept=".xlsx" onChange={(event) => handleImport(event.target.files)} /></label>
       </div>
-
       {message ? <div className="import-message">{message}</div> : null}
-
       <section className="prod-summary-grid">
-        {summaryCards.map(([label, value, type]) => (
-          <div key={label}>
-            <span>{label}</span>
-            <strong>{formatValue(value, type)}</strong>
-          </div>
-        ))}
+        {summaryCards.map(([label, value, type]) => <div key={label}><span>{label}</span><strong>{formatValue(value, type)}</strong></div>)}
       </section>
-
       <section className="prod-filters">
-        <label>
-          Buscar por nome, matricula, CPF, nome RV ou codigo RV
-          <input value={filters.busca} onChange={(event) => setFilters({ ...filters, busca: event.target.value })} />
-        </label>
-        <label>
-          Competencia
-          <select value={filters.competencia} onChange={(event) => setFilters({ ...filters, competencia: event.target.value })}>
-            <option value="">Todas</option>
-            {options.competencia.map((option) => <option key={option} value={option}>{option}</option>)}
-          </select>
-        </label>
-        <label>
-          Funcao
-          <select value={filters.funcao_rv} onChange={(event) => setFilters({ ...filters, funcao_rv: event.target.value })}>
-            <option value="">Todas</option>
-            <option value="motorista">Motorista</option>
-            <option value="ajudante">Ajudante</option>
-            {options.funcao_rv.filter((option) => !['motorista', 'ajudante'].includes(String(option).toLowerCase())).map((option) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Status
-          <select value={filters.status_produtividade} onChange={(event) => setFilters({ ...filters, status_produtividade: event.target.value })}>
-            <option value="">Todos</option>
-            {options.status_produtividade.map((option) => <option key={option} value={option}>{option}</option>)}
-          </select>
-        </label>
-        <label>
-          Devolucao
-          <select value={filters.bateu_devolucao} onChange={(event) => setFilters({ ...filters, bateu_devolucao: event.target.value })}>
-            <option value="">Todas</option>
-            <option value="true">Dentro da meta</option>
-            <option value="false">Fora da meta</option>
-          </select>
-        </label>
-        <label>
-          Auditoria
-          <select value={filters.status_auditoria} onChange={(event) => setFilters({ ...filters, status_auditoria: event.target.value })}>
-            <option value="">Todas</option>
-            {options.status_auditoria.map((option) => <option key={option} value={option}>{option}</option>)}
-          </select>
-        </label>
+        <label>Buscar por nome, matricula, CPF, competencia, nome RV ou codigo RV<input value={filters.busca} onChange={(event) => setFilters({ ...filters, busca: event.target.value })} /></label>
+        <label>Competencia<select value={filters.competencia} onChange={(event) => setFilters({ ...filters, competencia: event.target.value })}><option value="">Todas</option>{options.competencia.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
+        <label>Funcao<select value={filters.funcao_rv} onChange={(event) => setFilters({ ...filters, funcao_rv: event.target.value })}><option value="">Todas</option><option value="motorista">Motorista</option><option value="ajudante">Ajudante de Motorista</option>{options.funcao_rv.filter((option) => !['motorista', 'ajudante'].includes(String(option).toLowerCase())).map((option) => <option key={option} value={option}>{formatRotaFuncao(option)}</option>)}</select></label>
+        <label>Status<select value={filters.status_produtividade} onChange={(event) => setFilters({ ...filters, status_produtividade: event.target.value })}><option value="">Todos</option>{options.status_produtividade.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
+        <label>Devolucao<select value={filters.bateu_devolucao} onChange={(event) => setFilters({ ...filters, bateu_devolucao: event.target.value })}><option value="">Todas</option><option value="true">Dentro da meta</option><option value="false">Fora da meta</option></select></label>
+        <label>Auditoria<select value={filters.status_auditoria} onChange={(event) => setFilters({ ...filters, status_auditoria: event.target.value })}><option value="">Todas</option>{options.status_auditoria.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
       </section>
-
-      {summary.total_baixa_confianca ? (
-        <div className="prod-warning">Existem {summary.total_baixa_confianca} registro(s) com baixa confianca de cruzamento para revisao.</div>
-      ) : null}
-
+      {summary.total_baixa_confianca ? <div className="prod-warning">Existem {summary.total_baixa_confianca} registro(s) com baixa confianca de cruzamento para revisao.</div> : null}
       {loading ? <p>Carregando produtividade...</p> : null}
       {!loading && !rows.length ? <div className="empty-state">Nenhum dado de produtividade encontrado.</div> : null}
-
       {!loading && rows.length ? (
         <div className="table-scroll">
           <table>
-            <thead>
-              <tr>
-                <th>Matricula</th>
-                <th>Nome</th>
-                <th>CPF</th>
-                <th>Competencia</th>
-                <th>Funcao</th>
-                <th>Caixas</th>
-                <th>Entregas</th>
-                <th>Devolucao</th>
-                <th>Status devolucao</th>
-                <th>Recargas</th>
-                <th>Mapas</th>
-                <th>RV antiga</th>
-                <th>Nova RV</th>
-                <th>Diferenca</th>
-                <th>Status</th>
-                <th>Auditoria</th>
-                <th>Acoes</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Matricula</th><th>Nome</th><th>CPF</th><th>Competencia</th><th>Funcao</th><th>Caixas</th><th>Entregas</th><th>Devolucao</th><th>Status devolucao</th><th>Recargas</th><th>Mapas</th><th>RV antiga</th><th>Nova RV</th><th>Diferenca</th><th>Status</th><th>Auditoria</th><th>Acoes</th></tr></thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id}>
-                  <td>{row.matricula}</td>
-                  <td>{row.nome_completo}</td>
-                  <td>{row.cpf}</td>
-                  <td>{row.competencia}</td>
-                  <td>{row.funcao_rv}</td>
-                  <td>{formatNumber(row.caixas)}</td>
-                  <td>{formatNumber(row.entregas)}</td>
-                  <td>{formatPercent(row.percentual_devolucao)}</td>
-                  <td><StatusBadge type="devolucao" value={row.bateu_devolucao} /></td>
-                  <td>{formatNumber(row.recargas)}</td>
-                  <td>{formatNumber(row.mapas)}</td>
-                  <td>{formatMoney(row.antiga_rv)}</td>
-                  <td>{formatMoney(row.nova_rv)}</td>
-                  <td>{formatMoney(row.diferenca_rv)}</td>
-                  <td><StatusBadge type="status" value={row.status_produtividade} /></td>
-                  <td><StatusBadge type="auditoria" value={row.status_auditoria} /></td>
-                  <td><button onClick={() => openDetail(row.colaborador_id)}>Ver detalhes</button></td>
+                  <td>{row.matricula}</td><td>{row.nome_completo}</td><td>{row.cpf}</td><td>{row.competencia}</td><td>{formatRotaFuncao(row.funcao_rv)}</td><td>{formatNumber(row.caixas)}</td><td>{formatNumber(row.entregas)}</td><td>{formatPercent(row.percentual_devolucao)}</td><td><StatusBadge type="devolucao" value={row.bateu_devolucao} /></td><td>{formatNumber(row.recargas)}</td><td>{formatNumber(row.mapas)}</td><td>{formatMoney(row.antiga_rv)}</td><td>{formatMoney(row.nova_rv)}</td><td>{formatMoney(row.diferenca_rv)}</td><td><StatusBadge type="status" value={row.status_produtividade} /></td><td><StatusBadge type="auditoria" value={row.status_auditoria} /></td><td><button onClick={() => openDetail(row.colaborador_id)}>Ver detalhes</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       ) : null}
-
       <ProdutividadeDetail registro={detail} />
+    </>
+  );
+}
+
+function AdminArmazemPanel() {
+  const [filters, setFilters] = useState({ busca: '', competencia: '', funcao_armazem: '', status_produtividade: '', status_auditoria: '', origem_calculo: '' });
+  const [rows, setRows] = useState([]);
+  const [summary, setSummary] = useState(emptyArmazemSummary);
+  const [detail, setDetail] = useState(null);
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  const options = useMemo(() => {
+    const uniq = (key) => [...new Set(rows.map((row) => row[key]).filter(Boolean))].sort();
+    return {
+      competencia: uniq('competencia'),
+      funcao_armazem: uniq('funcao_armazem'),
+      status_produtividade: uniq('status_produtividade'),
+      status_auditoria: uniq('status_auditoria'),
+      origem_calculo: uniq('origem_calculo')
+    };
+  }, [rows]);
+
+  useEffect(() => {
+    refresh();
+  }, [filters]);
+
+  async function refresh() {
+    setLoading(true);
+    setMessage('');
+    try {
+      const [listResult, resumoResult] = await Promise.all([getAdminProdutividadeArmazem(filters), getAdminProdutividadeArmazemResumo(filters)]);
+      setRows(listResult.rows || []);
+      setSummary(resumoResult || listResult.summary || emptyArmazemSummary);
+    } catch (err) {
+      setMessage(err.error || 'Erro ao carregar produtividade do armazem');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function openDetail(colaboradorId) {
+    try {
+      const result = await getAdminProdutividadeArmazemDetail(colaboradorId);
+      setDetail(result.registros?.[0] || result.colaborador || null);
+    } catch (err) {
+      setMessage(err.error || 'Erro ao abrir detalhe do armazem');
+    }
+  }
+
+  async function handleImport(files) {
+    if (!files.length) return;
+    try {
+      const result = await importProdutividadeArmazemFile(files[0]);
+      setMessage(`Importacao RV Armazem: ${result.created} novos, ${result.updated} atualizados, ${result.ignored} ignorados, ${result.errors.length} erros.`);
+      await refresh();
+    } catch (err) {
+      setMessage(err.error || 'Erro ao importar RV Armazem');
+    }
+  }
+
+  const summaryCards = [
+    ['Colaboradores com RV', summary.total_colaboradores_com_rv, 'number'],
+    ['Ajudantes', summary.total_ajudantes, 'number'],
+    ['Operadores empilhadeira', summary.total_operadores_empilhadeira, 'number'],
+    ['Amarradores', summary.total_amarradores, 'number'],
+    ['Valor previsto', summary.valor_total_previsto, 'money'],
+    ['RV antiga', summary.valor_total_rv_antiga, 'money'],
+    ['RV nova', summary.valor_total_rv_nova, 'money'],
+    ['Revisar vinculo', summary.total_baixa_confianca, 'number']
+  ];
+
+  return (
+    <>
+      <div className="prod-actions">
+        <button onClick={() => exportAdminProdutividadeArmazem(filters)}>Exportar relatorio</button>
+        <label>Importar RV Armazem<input type="file" accept=".xlsx" onChange={(event) => handleImport(event.target.files)} /></label>
+      </div>
+      {message ? <div className="import-message">{message}</div> : null}
+      <section className="prod-summary-grid">
+        {summaryCards.map(([label, value, type]) => <div key={label}><span>{label}</span><strong>{formatValue(value, type)}</strong></div>)}
+      </section>
+      <section className="prod-filters">
+        <label>Buscar por nome, matricula, CPF, competencia, usuario WMS ou codigo operacional<input value={filters.busca} onChange={(event) => setFilters({ ...filters, busca: event.target.value })} /></label>
+        <label>Competencia<select value={filters.competencia} onChange={(event) => setFilters({ ...filters, competencia: event.target.value })}><option value="">Todas</option>{options.competencia.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
+        <label>Funcao<select value={filters.funcao_armazem} onChange={(event) => setFilters({ ...filters, funcao_armazem: event.target.value })}><option value="">Todas</option><option value="Ajudante">Ajudante</option><option value="Operador de Empilhadeira">Operador de Empilhadeira</option><option value="Amarrador">Amarrador</option>{options.funcao_armazem.filter((option) => !['ajudante', 'operador de empilhadeira', 'amarrador'].includes(String(option).toLowerCase())).map((option) => <option key={option} value={option}>{formatArmazemFuncao(option)}</option>)}</select></label>
+        <label>Status<select value={filters.status_produtividade} onChange={(event) => setFilters({ ...filters, status_produtividade: event.target.value })}><option value="">Todos</option>{options.status_produtividade.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
+        <label>Auditoria<select value={filters.status_auditoria} onChange={(event) => setFilters({ ...filters, status_auditoria: event.target.value })}><option value="">Todas</option>{options.status_auditoria.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
+        <label>Origem calculo<select value={filters.origem_calculo} onChange={(event) => setFilters({ ...filters, origem_calculo: event.target.value })}><option value="">Todas</option>{options.origem_calculo.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
+      </section>
+      {summary.total_baixa_confianca ? <div className="prod-warning">Existem {summary.total_baixa_confianca} registro(s) com baixa confianca de cruzamento para revisao.</div> : null}
+      {loading ? <p>Carregando produtividade do armazem...</p> : null}
+      {!loading && !rows.length ? <div className="empty-state">Nenhum dado de produtividade do armazem encontrado.</div> : null}
+      {!loading && rows.length ? (
+        <div className="table-scroll">
+          <table>
+            <thead><tr><th>Matricula</th><th>Nome</th><th>Funcao</th><th>Competencia</th><th>Pontos</th><th>Faixa</th><th>RV antiga</th><th>RV nova</th><th>Erros</th><th>Valor previsto</th><th>Status</th><th>Auditoria</th><th>Acoes</th></tr></thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id}>
+                  <td>{row.matricula}</td><td>{row.nome_completo}</td><td>{formatArmazemFuncao(row.funcao_armazem)}</td><td>{row.competencia}</td><td>{formatNumber(row.pontos)}</td><td>{row.faixa || '-'}</td><td>{formatMoney(row.rv_antiga)}</td><td>{formatMoney(row.rv_nova)}</td><td>{formatNumber(row.erros)}</td><td>{formatMoney(row.valor_total_previsto)}</td><td><StatusBadge type="status" value={row.status_produtividade} /></td><td><StatusBadge type="auditoria" value={row.status_auditoria} /></td><td><button onClick={() => openDetail(row.colaborador_id)}>Ver detalhes</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+      <ProdutividadeDetail registro={detail} variant="armazem" />
+    </>
+  );
+}
+
+function AdminProdutividadeResumo() {
+  const [summary, setSummary] = useState({
+    rota: emptyRotaSummary,
+    armazem: emptyArmazemSummary
+  });
+
+  useEffect(() => {
+    Promise.allSettled([getAdminProdutividadeResumo(), getAdminProdutividadeArmazemResumo()])
+      .then(([rotaResult, armazemResult]) => {
+        setSummary({
+          rota: rotaResult.status === 'fulfilled' ? rotaResult.value : emptyRotaSummary,
+          armazem: armazemResult.status === 'fulfilled' ? armazemResult.value : emptyArmazemSummary
+        });
+      });
+  }, []);
+
+  const cards = [
+    ['Total RV Rota', summary.rota.valor_total_nova_rv, 'money'],
+    ['Total RV Armazém', summary.armazem.valor_total_previsto, 'money'],
+    ['Total Motoristas', summary.rota.total_motoristas, 'number'],
+    ['Total Ajudantes de Motorista', summary.rota.total_ajudantes, 'number'],
+    ['Total Ajudantes Armazém', summary.armazem.total_ajudantes, 'number'],
+    ['Total Operadores de Empilhadeira', summary.armazem.total_operadores_empilhadeira, 'number'],
+    ['Total Amarradores', summary.armazem.total_amarradores, 'number']
+  ];
+
+  return (
+    <section className="prod-summary-grid prod-admin-overview" aria-label="Resumo geral de produtividade">
+      {cards.map(([label, value, type]) => (
+        <div key={label}>
+          <span>{label}</span>
+          <strong>{formatValue(value, type)}</strong>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function AdminProdutividade() {
+  const [activeTab, setActiveTab] = useState('rota');
+
+  return (
+    <div className="page-card produtividade-page">
+      <div className="admin-heading">
+        <div>
+          <h1>{activeTab === 'armazem' ? 'Prêmio de Produtividade - Armazém' : 'Prêmio de Produtividade'}</h1>
+          <p>{activeTab === 'armazem' ? 'Consulte, filtre, importe e exporte os dados oficiais de RV do Armazém.' : 'Consulte, filtre, importe e exporte os dados oficiais de RV da Rota.'}</p>
+        </div>
+      </div>
+      <AdminProdutividadeResumo />
+      <ProdTabs activeTab={activeTab} onChange={setActiveTab} tabs={[{ id: 'rota', label: 'Rota' }, { id: 'armazem', label: 'Armazém' }]} />
+      <div className="prod-warning">Caso não concorde ou não entenda alguma informação, procure o RH.</div>
+      {activeTab === 'rota' ? <AdminRotaPanel /> : <AdminArmazemPanel />}
     </div>
   );
 }

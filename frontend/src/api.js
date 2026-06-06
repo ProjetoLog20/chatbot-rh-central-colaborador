@@ -209,6 +209,71 @@ export async function exportAdminProdutividade(filters = {}) {
   link.remove();
   URL.revokeObjectURL(url);
 }
+
+export async function getMeuProdutividadeArmazem() {
+  return request('/produtividade-armazem/meu');
+}
+
+export async function getAdminProdutividadeArmazem(filters = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) params.set(key, value);
+  });
+  const query = params.toString();
+  return request(`/produtividade-armazem/admin${query ? `?${query}` : ''}`);
+}
+
+export async function getAdminProdutividadeArmazemResumo(filters = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) params.set(key, value);
+  });
+  const query = params.toString();
+  return request(`/produtividade-armazem/admin/resumo${query ? `?${query}` : ''}`);
+}
+
+export async function getAdminProdutividadeArmazemDetail(colaboradorId) {
+  return request(`/produtividade-armazem/admin/${colaboradorId}`);
+}
+
+export async function importProdutividadeArmazemFile(file) {
+  const token = localStorage.getItem('token');
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE}/produtividade-armazem/importar`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw body || { error: 'Erro na importacao de RV Armazem' };
+  return body;
+}
+
+export async function exportAdminProdutividadeArmazem(filters = {}) {
+  const token = localStorage.getItem('token');
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) params.set(key, value);
+  });
+  const query = params.toString();
+  const res = await fetch(`${API_BASE}/produtividade-armazem/admin/exportar${query ? `?${query}` : ''}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw body || { error: 'Erro ao exportar produtividade do armazem' };
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'relatorio_produtividade_armazem.csv';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
  
 export async function getRespostas() {
   return request('/respostas_chatbot');
