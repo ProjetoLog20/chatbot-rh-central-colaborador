@@ -1,0 +1,12 @@
+Backend rodando em http://localhost:4016
+NODE_ENV: development
+[YURI] pergunta: qual o sonho da unidade?
+[YURI] IA habilitada: false
+[YURI] OpenAI key configurada: true
+[YURI] encontrou resposta cadastrada: true
+[YURI] source: resposta_cadastrada
+[YURI] pergunta: pergunta aleatoria que nao existe 67890
+[YURI] IA habilitada: false
+[YURI] OpenAI key configurada: true
+[YURI] encontrou resposta cadastrada: false
+[YURI] source: fallback

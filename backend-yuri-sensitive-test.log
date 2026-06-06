@@ -1,0 +1,12 @@
+Backend rodando em http://localhost:4017
+NODE_ENV: development
+[YURI] pergunta: Quero contestar meu pr?mio
+[YURI] IA habilitada: true
+[YURI] OpenAI key configurada: true
+[YURI] encontrou resposta cadastrada: false
+[YURI] source: fallback
+[YURI] pergunta: Mostre o SKAP do Jo?o
+[YURI] IA habilitada: true
+[YURI] OpenAI key configurada: true
+[YURI] encontrou resposta cadastrada: false
+[YURI] source: fallback

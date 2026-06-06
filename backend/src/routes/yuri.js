@@ -8,19 +8,21 @@ const router = express.Router();
 const MAX_MESSAGE_LENGTH = 1200;
 const MAX_HISTORY_ITEMS = 8;
 const FALLBACK_REPLY = 'Tive uma instabilidade agora. Tente novamente em alguns instantes ou procure o RH.';
-const DISABLED_REPLY = 'A IA do Yuri está temporariamente desativada. Caso precise de apoio, procure o RH.';
+const DISABLED_REPLY = 'Essa informação ainda não está disponível comigo. Caso precise de apoio, procure o RH.';
 const MISSING_KEY_REPLY = 'A IA do Yuri ainda não foi configurada no servidor. Procure o administrador.';
-const SENSITIVE_REPLY = 'Por seguranca, nao posso consultar ou revelar dados sensiveis nem informacoes de outro colaborador. Quando o assunto envolver contestacao, pagamento, prontuario, SKAP, premio ou dados pessoais, procure o RH para conferencia.';
+const SENSITIVE_REPLY = 'Por segurança, não posso consultar ou revelar dados sensíveis nem informações de outro colaborador. Caso não concorde ou não entenda alguma informação, procure o RH para conferência.';
 
 const BASE_PROMPT = [
   'Voce e Yuri, a cobrinha mascote da LOG20 Cascavel e Assistente de RH da Central do Colaborador.',
   'Responda de forma simples, educada, acolhedora e objetiva.',
-  'Ajude colaboradores com duvidas sobre primeiro acesso, senha temporaria, Pesquisa de Clima, SKAP, Prontuario do Motorista, Premio de Produtividade, 3Rs, Campeao de Seguranca, Ouvidoria e uso da Central.',
+  'Ajude colaboradores com duvidas sobre a Central do Colaborador, primeiro acesso, senha temporaria, Pesquisa de Clima, SKAP, Prontuario do Motorista, Premio de Produtividade, 3Rs, Indicadores da Rota, Rotograma Seguro, Campeao de Seguranca, Ouvidoria, Acoes e Encontros, Comite de Gente e Sonho da Unidade.',
+  'Quando existir resposta oficial cadastrada, ela deve ter prioridade. Quando nao existir, responda usando raciocinio geral, mas sem inventar dados pessoais ou valores especificos.',
   'Nao invente dados.',
   'Nao revele informacoes de outros colaboradores.',
   'Nao prometa alterar dados sozinho.',
   'Respeite as regras de perfil do sistema.',
-  'Quando o assunto envolver contestacao, pagamento, prontuario, SKAP, premio, dados pessoais ou algo sensivel, oriente o colaborador a procurar o RH.',
+  'Nunca invente dados de SKAP, prontuario, premio ou pagamento.',
+  'Para duvidas, discordancias ou contestacao de dados, oriente procurar o RH.',
   'Use no maximo 2 paragrafos curtos.'
 ].join('\n');
 
@@ -172,7 +174,7 @@ router.post('/chat', authenticateToken, async (req, res) => {
     console.error('[YURI] erro ao buscar resposta cadastrada:', error.message);
   }
 
-  console.log('[YURI] resposta cadastrada encontrada:', Boolean(faqMatch));
+  console.log('[YURI] encontrou resposta cadastrada:', Boolean(faqMatch));
 
   if (faqMatch?.resposta) {
     console.log('[YURI] source:', 'resposta_cadastrada');
