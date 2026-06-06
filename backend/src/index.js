@@ -16,6 +16,7 @@ const acoesRoutes = require('./routes/acoes');
 const pesquisaClimaRoutes = require('./routes/pesquisa-clima');
 const skapRoutes = require('./routes/skap');
 const produtividadeRoutes = require('./routes/produtividade');
+const produtividadeArmazemRoutes = require('./routes/produtividade-armazem');
 const modulosRoutes = require('./routes/modulos');
 const campeoesSegurancaRoutes = require('./routes/campeoes-seguranca');
 const errorHandler = require('./errorHandler');
@@ -65,6 +66,7 @@ app.use('/api/acoes', acoesRoutes);
 app.use('/api/pesquisa-clima', pesquisaClimaRoutes);
 app.use('/api/skap', skapRoutes);
 app.use('/api/produtividade', produtividadeRoutes);
+app.use('/api/produtividade-armazem', produtividadeArmazemRoutes);
 app.use('/api', modulosRoutes);
 app.use('/api/campeoes-seguranca', campeoesSegurancaRoutes);
 

@@ -10,6 +10,7 @@ const MODULE_DEFAULTS = [
   ['tres_rs', '3 Rs', 'Responsabilidades, recursos e reconhecimentos da metodologia 3Rs.', true, false, null, true, true, true, 40],
   ['premio_produtividade', 'Premio de Produtividade', 'Indicadores, metas e valor previsto do premio.', false, true, 'Estamos ajustando os dados deste painel para garantir que as informacoes sejam apresentadas corretamente. Em breve ele estara disponivel.', true, true, true, 50],
   ['indicadores_rota', 'Indicadores da Rota', 'Acompanhe as metas e entenda os indicadores que ajudam sua rota a ser mais produtiva, organizada e segura.', true, false, null, true, true, false, 55],
+  ['premio_produtividade_armazem', 'Premio de Produtividade do Armazem', 'RV e premio de produtividade para Ajudante, Operador de Empilhadeira e Amarrador.', false, true, DEFAULT_MAINTENANCE_MESSAGE, true, true, true, 56],
   ['prontuario_motorista', 'Prontuario do Motorista', 'Pontuacao, faixa atual e ocorrencias registradas.', true, false, null, true, true, true, 60],
   ['ouvidoria', 'Ouvidoria', 'Canal oficial para solicitacoes, duvidas ou relatos.', true, false, null, true, true, true, 70],
   ['assistente_rh', 'Yuri, Assistente de RH', 'Atendimento virtual da Central do Colaborador.', true, false, null, true, true, true, 80]

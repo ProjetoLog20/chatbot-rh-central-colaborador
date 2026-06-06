@@ -254,6 +254,65 @@ function connectSqlite() {
       FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE CASCADE
     )`);
 
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS produtividade_armazem_importacoes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      arquivo TEXT,
+      competencia TEXT,
+      periodo_inicio TEXT,
+      periodo_fim TEXT,
+      total_linhas INTEGER DEFAULT 0,
+      importados INTEGER DEFAULT 0,
+      atualizados INTEGER DEFAULT 0,
+      ignorados INTEGER DEFAULT 0,
+      erros INTEGER DEFAULT 0,
+      valor_total_previsto REAL DEFAULT 0,
+      valor_total_rv_antiga REAL DEFAULT 0,
+      valor_total_rv_nova REAL DEFAULT 0,
+      detalhes_json TEXT,
+      criado_por INTEGER,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (criado_por) REFERENCES colaboradores(id) ON DELETE SET NULL
+    )`);
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS produtividade_armazem_colaboradores (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      importacao_id INTEGER REFERENCES produtividade_armazem_importacoes(id) ON DELETE SET NULL,
+      colaborador_id INTEGER REFERENCES colaboradores(id) ON DELETE CASCADE,
+      competencia TEXT NOT NULL,
+      periodo_inicio TEXT,
+      periodo_fim TEXT,
+      matricula TEXT,
+      nome_completo TEXT,
+      cpf TEXT,
+      funcao_armazem TEXT,
+      cargo TEXT,
+      setor TEXT,
+      tipo_colaborador TEXT,
+      perfil TEXT,
+      usuario_wms TEXT,
+      codigo_operacional TEXT,
+      pontos REAL DEFAULT 0,
+      faixa TEXT,
+      rv_antiga REAL DEFAULT 0,
+      rv_nova REAL DEFAULT 0,
+      erros REAL DEFAULT 0,
+      valor_total_previsto REAL DEFAULT 0,
+      indicador_1 TEXT,
+      indicador_2 TEXT,
+      indicador_3 TEXT,
+      status_produtividade TEXT,
+      origem_calculo TEXT,
+      status_auditoria TEXT DEFAULT 'ok',
+      metodo_cruzamento TEXT,
+      confianca_cruzamento REAL,
+      observacao_cruzamento TEXT,
+      mensagem_rh TEXT,
+      dados_originais_json TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE CASCADE
+    )`);
+
     sqliteDb.run(`CREATE TABLE IF NOT EXISTS historico_pontuacao (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       colaborador_id INTEGER NOT NULL,
@@ -359,6 +418,7 @@ function connectSqlite() {
       ['tres_rs', '3 Rs', 'Responsabilidades, recursos e reconhecimentos da metodologia 3Rs.', 1, 0, null, 1, 1, 1, 40],
       ['premio_produtividade', 'Premio de Produtividade', 'Indicadores, metas e valor previsto do premio.', 0, 1, 'Estamos ajustando os dados deste painel para garantir que as informacoes sejam apresentadas corretamente. Em breve ele estara disponivel.', 1, 1, 1, 50],
       ['indicadores_rota', 'Indicadores da Rota', 'Acompanhe as metas e entenda os indicadores que ajudam sua rota a ser mais produtiva, organizada e segura.', 1, 0, null, 1, 1, 0, 55],
+      ['premio_produtividade_armazem', 'Premio de Produtividade do Armazem', 'RV e premio de produtividade para Ajudante, Operador de Empilhadeira e Amarrador.', 0, 1, 'Estamos ajustando os dados deste painel para garantir que as informacoes sejam apresentadas corretamente. Em breve ele estara disponivel.', 1, 1, 1, 56],
       ['prontuario_motorista', 'Prontuario do Motorista', 'Pontuacao, faixa atual e ocorrencias registradas.', 1, 0, null, 1, 1, 1, 60],
       ['ouvidoria', 'Ouvidoria', 'Canal oficial para solicitacoes, duvidas ou relatos.', 1, 0, null, 1, 1, 1, 70],
       ['assistente_rh', 'Yuri, Assistente de RH', 'Atendimento virtual da Central do Colaborador.', 1, 0, null, 1, 1, 1, 80]
@@ -388,6 +448,14 @@ function connectSqlite() {
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_produtividade_funcao_rv ON produtividade_colaboradores(funcao_rv)');
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_produtividade_status ON produtividade_colaboradores(status_produtividade)');
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_produtividade_bateu_devolucao ON produtividade_colaboradores(bateu_devolucao)');
+    sqliteDb.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_prod_armazem_colab_comp_funcao ON produtividade_armazem_colaboradores(colaborador_id, competencia, funcao_armazem)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_prod_armazem_matricula ON produtividade_armazem_colaboradores(matricula)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_prod_armazem_cpf ON produtividade_armazem_colaboradores(cpf)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_prod_armazem_competencia ON produtividade_armazem_colaboradores(competencia)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_prod_armazem_funcao ON produtividade_armazem_colaboradores(funcao_armazem)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_prod_armazem_status ON produtividade_armazem_colaboradores(status_produtividade)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_prod_armazem_status_auditoria ON produtividade_armazem_colaboradores(status_auditoria)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_prod_armazem_origem ON produtividade_armazem_colaboradores(origem_calculo)');
 
     const ensureProdutividadeImportColumn = (name, definition) => {
       sqliteDb.all('PRAGMA table_info(produtividade_importacoes)', [], (err, columns) => {
