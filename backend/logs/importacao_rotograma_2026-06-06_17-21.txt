@@ -1,0 +1,12 @@
+Importacao Rotograma Seguro concluida.
+Arquivo: C:\Users\ArT\Desktop\Rotograma atualizado Cdd Cascavel 2026.xlsx
+Total de abas: 57
+Abas importadas: 57
+Abas ignoradas: 0
+Rotogramas importados: 47
+Pontos de risco importados: 747
+Telefones importados: 415
+Checklists importados: 644
+Premissas importadas: 17
+Materiais importados: 9
+Abas ignoradas: []

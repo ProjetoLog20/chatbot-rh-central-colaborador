@@ -3139,6 +3139,396 @@ tr:not(:last-child) td {
   box-shadow: 0 12px 28px rgba(31, 41, 51, 0.06);
 }
 
+.rotograma-page {
+  max-width: 1220px;
+  margin: 0 auto;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.rotograma-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1.5rem;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(0, 59, 104, 0.98), rgba(0, 90, 140, 0.9)), #003B68;
+  color: #fff;
+  padding: clamp(1.35rem, 4vw, 2.4rem);
+  box-shadow: 0 24px 60px rgba(0, 59, 104, 0.2);
+  position: relative;
+  overflow: hidden;
+  animation: panelIn 360ms ease both;
+}
+
+.rotograma-hero::after {
+  content: '';
+  position: absolute;
+  right: -36px;
+  top: -52px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  border: 28px solid rgba(232, 117, 34, 0.22);
+}
+
+.rotograma-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.rotograma-hero span {
+  display: inline-flex;
+  margin-bottom: 0.6rem;
+  color: rgba(255, 255, 255, 0.78);
+  font-weight: 800;
+}
+
+.rotograma-hero h1 {
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 3.4rem);
+  letter-spacing: 0;
+}
+
+.rotograma-hero p {
+  max-width: 720px;
+  margin: 0.7rem 0 0;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 1.05rem;
+}
+
+.rotograma-hero a,
+.rotograma-detail-header button,
+.rotograma-card-footer button {
+  border: 0;
+  border-radius: 999px;
+  background: #E87522;
+  color: #fff;
+  font-weight: 900;
+  text-decoration: none;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  box-shadow: 0 14px 28px rgba(232, 117, 34, 0.24);
+}
+
+.rotograma-toolbar,
+.rotograma-detail-panel,
+.rotograma-message {
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid rgba(0, 59, 104, 0.08);
+  box-shadow: 0 18px 45px rgba(0, 59, 104, 0.08);
+  padding: 1rem;
+}
+
+.rotograma-search,
+.rotograma-filters label,
+.rotograma-admin-box label {
+  display: grid;
+  gap: 0.35rem;
+  color: #003B68;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.rotograma-search input,
+.rotograma-filters input,
+.rotograma-filters select {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 59, 104, 0.18);
+  background: #F4F7F9;
+  color: #1F2933;
+  padding: 0.8rem 0.9rem;
+  font: inherit;
+}
+
+.rotograma-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-top: 0.9rem;
+}
+
+.rotograma-switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 0.9rem;
+}
+
+.rotograma-switches label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  background: #F4F7F9;
+  color: #003B68;
+  font-weight: 900;
+  padding: 0.55rem 0.75rem;
+}
+
+.rotograma-admin-box {
+  margin-top: 1rem;
+  border-radius: 14px;
+  border: 1px dashed rgba(232, 117, 34, 0.55);
+  background: rgba(232, 117, 34, 0.08);
+  padding: 0.9rem;
+  color: #1F2933;
+}
+
+.rotograma-admin-box strong {
+  display: block;
+  color: #003B68;
+  margin-bottom: 0.5rem;
+}
+
+.rotograma-admin-box p {
+  margin: 0.45rem 0 0;
+  color: #6B7280;
+}
+
+.rotograma-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.rotograma-card,
+.risk-point-card,
+.emergency-phone-grid article,
+.premissas-grid article,
+.materials-grid article {
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid rgba(0, 59, 104, 0.08);
+  box-shadow: 0 14px 32px rgba(0, 59, 104, 0.08);
+}
+
+.rotograma-card {
+  padding: 1rem;
+  display: grid;
+  gap: 0.9rem;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.rotograma-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(232, 117, 34, 0.36);
+  box-shadow: 0 22px 44px rgba(0, 59, 104, 0.13);
+}
+
+.rotograma-card-top,
+.rotograma-card-footer,
+.rotograma-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.rotograma-road-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: rgba(0, 90, 140, 0.1);
+  font-size: 1.4rem;
+}
+
+.risk-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.risk-badge.alto,
+.risk-point-card.alto {
+  background: #FEF2F2;
+  color: #B91C1C;
+  border-color: rgba(185, 28, 28, 0.2);
+}
+
+.risk-badge.medio,
+.risk-point-card.medio {
+  background: #FFF7ED;
+  color: #C2410C;
+  border-color: rgba(232, 117, 34, 0.28);
+}
+
+.risk-badge.baixo,
+.risk-point-card.baixo {
+  background: #ECFDF5;
+  color: #047857;
+  border-color: rgba(4, 120, 87, 0.18);
+}
+
+.risk-badge.sem,
+.risk-point-card.sem {
+  background: #F3F4F6;
+  color: #4B5563;
+}
+
+.rotograma-card h2 {
+  margin: 0;
+  color: #003B68;
+  font-size: 1.25rem;
+}
+
+.rotograma-card dl,
+.risk-point-card dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 0;
+}
+
+.rotograma-card dt,
+.risk-point-card dt {
+  color: #6B7280;
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.rotograma-card dd,
+.risk-point-card dd {
+  margin: 0.12rem 0 0;
+  color: #1F2933;
+  font-weight: 800;
+}
+
+.rotograma-card-footer span {
+  color: #047857;
+  font-weight: 900;
+  text-transform: capitalize;
+}
+
+.rotograma-message {
+  color: #003B68;
+  font-weight: 900;
+}
+
+.rotograma-detail-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.rotograma-detail-header span {
+  color: #E87522;
+  font-weight: 900;
+}
+
+.rotograma-detail-header h2 {
+  margin: 0.15rem 0;
+  color: #003B68;
+}
+
+.rotograma-detail-header p {
+  margin: 0;
+  color: #6B7280;
+}
+
+.rotograma-detail-section {
+  border-radius: 14px;
+  border: 1px solid rgba(0, 59, 104, 0.08);
+  background: #F4F7F9;
+  padding: 0.9rem;
+}
+
+.rotograma-detail-section summary {
+  color: #003B68;
+  cursor: pointer;
+  font-weight: 950;
+}
+
+.rotograma-summary-grid,
+.risk-point-grid,
+.emergency-phone-grid,
+.premissas-grid,
+.materials-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-top: 0.85rem;
+}
+
+.rotograma-summary-grid div,
+.emergency-phone-grid article,
+.premissas-grid article,
+.materials-grid article {
+  padding: 0.85rem;
+}
+
+.rotograma-summary-grid span,
+.emergency-phone-grid span,
+.premissas-grid span,
+.materials-grid span {
+  color: #6B7280;
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.rotograma-summary-grid strong,
+.emergency-phone-grid strong,
+.premissas-grid strong,
+.materials-grid strong {
+  display: block;
+  margin-top: 0.2rem;
+  color: #003B68;
+}
+
+.risk-point-card {
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.75rem;
+  border-left: 5px solid currentColor;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.risk-point-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px rgba(31, 41, 51, 0.12);
+}
+
+.risk-point-card h4 {
+  margin: 0.5rem 0 0.25rem;
+  color: #1F2933;
+}
+
+.risk-point-card p,
+.premissas-grid p,
+.materials-grid p {
+  margin: 0.2rem 0 0;
+  color: #6B7280;
+}
+
+.risk-point-card a {
+  color: #005A8C;
+  font-weight: 900;
+}
+
+.safety-checklist {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0.85rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.safety-checklist li {
+  border-radius: 12px;
+  background: #fff;
+  color: #1F2933;
+  padding: 0.75rem 0.85rem;
+  font-weight: 800;
+}
+
 @media (max-width: 720px) {
   .app-header {
     flex-direction: column;
@@ -3308,6 +3698,42 @@ tr:not(:last-child) td {
 
   .route-indicator-card {
     padding: 1rem;
+  }
+
+  .rotograma-hero,
+  .rotograma-detail-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .rotograma-hero a,
+  .rotograma-detail-header button {
+    width: 100%;
+    text-align: center;
+  }
+
+  .rotograma-filters,
+  .rotograma-grid,
+  .rotograma-summary-grid,
+  .risk-point-grid,
+  .emergency-phone-grid,
+  .premissas-grid,
+  .materials-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rotograma-card dl,
+  .risk-point-card dl {
+    grid-template-columns: 1fr;
+  }
+
+  .rotograma-card-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .rotograma-card-footer button {
+    width: 100%;
   }
 }
 

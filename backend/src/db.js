@@ -447,6 +447,97 @@ function connectSqlite() {
       FOREIGN KEY (criado_por) REFERENCES colaboradores(id) ON DELETE SET NULL
     )`);
 
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS rotograma_importacoes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      arquivo TEXT,
+      total_abas INTEGER DEFAULT 0,
+      abas_importadas INTEGER DEFAULT 0,
+      abas_ignoradas INTEGER DEFAULT 0,
+      rotogramas_importados INTEGER DEFAULT 0,
+      pontos_risco_importados INTEGER DEFAULT 0,
+      telefones_importados INTEGER DEFAULT 0,
+      checklists_importados INTEGER DEFAULT 0,
+      premissas_importadas INTEGER DEFAULT 0,
+      detalhes_json TEXT,
+      criado_por INTEGER,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (criado_por) REFERENCES colaboradores(id) ON DELETE SET NULL
+    )`);
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS rotogramas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      rotograma_id TEXT UNIQUE,
+      nome TEXT NOT NULL,
+      origem TEXT,
+      destino TEXT,
+      cidade TEXT,
+      transportadora TEXT,
+      classificacao_rota TEXT,
+      nivel_risco TEXT,
+      status TEXT DEFAULT 'ativo',
+      observacao TEXT,
+      data_atualizacao TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS rotograma_pontos_risco (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      rotograma_id INTEGER,
+      tipo_ponto TEXT,
+      descricao TEXT,
+      nivel_risco TEXT,
+      rodovia_endereco TEXT,
+      orientacao TEXT,
+      latitude TEXT,
+      longitude TEXT,
+      velocidade_permitida TEXT,
+      velocidade_segura TEXT,
+      cidade TEXT,
+      origem_aba TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (rotograma_id) REFERENCES rotogramas(id) ON DELETE CASCADE
+    )`);
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS rotograma_telefones (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      rotograma_id INTEGER,
+      orgao TEXT,
+      telefone TEXT,
+      descricao TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (rotograma_id) REFERENCES rotogramas(id) ON DELETE CASCADE
+    )`);
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS rotograma_checklist (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      rotograma_id INTEGER,
+      item TEXT NOT NULL,
+      categoria TEXT,
+      obrigatorio INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (rotograma_id) REFERENCES rotogramas(id) ON DELETE CASCADE
+    )`);
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS rotograma_premissas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      categoria TEXT,
+      titulo TEXT,
+      descricao TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS rotograma_materiais (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tipo TEXT,
+      titulo TEXT,
+      descricao TEXT,
+      origem_aba TEXT,
+      dados_json TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`);
+
     const moduloDefaults = [
       ['pesquisa_clima', 'Pesquisa de Clima', 'Pesquisas de satisfacao da empresa.', 1, 0, null, 1, 1, 1, 10],
       ['skap', 'SKAP', 'Evolucao, nivel atual e habilidades avaliadas.', 1, 0, null, 1, 1, 1, 20],
@@ -455,6 +546,7 @@ function connectSqlite() {
       ['premio_produtividade', 'Premio de Produtividade', 'Indicadores, metas e valor previsto do premio.', 0, 1, 'Estamos ajustando os dados deste painel para garantir que as informacoes sejam apresentadas corretamente. Em breve ele estara disponivel.', 1, 1, 1, 50],
       ['indicadores_rota', 'Indicadores da Rota', 'Acompanhe as metas e entenda os indicadores que ajudam sua rota a ser mais produtiva, organizada e segura.', 1, 0, null, 1, 1, 0, 55],
       ['premio_produtividade_armazem', 'Premio de Produtividade do Armazem', 'RV e premio de produtividade para Ajudante, Operador de Empilhadeira e Amarrador.', 0, 1, 'Estamos ajustando os dados deste painel para garantir que as informacoes sejam apresentadas corretamente. Em breve ele estara disponivel.', 1, 1, 1, 56],
+      ['rotograma_seguro', 'Rotograma Seguro', 'Consulte rotas, pontos de risco, telefones de emergencia e orientacoes de seguranca da operacao.', 1, 0, null, 1, 1, 1, 57],
       ['prontuario_motorista', 'Prontuario do Motorista', 'Pontuacao, faixa atual e ocorrencias registradas.', 1, 0, null, 1, 1, 1, 60],
       ['ouvidoria', 'Ouvidoria', 'Canal oficial para solicitacoes, duvidas ou relatos.', 1, 0, null, 1, 1, 1, 70],
       ['assistente_rh', 'Yuri, Assistente de RH', 'Atendimento virtual da Central do Colaborador.', 1, 0, null, 1, 1, 1, 80]
@@ -492,6 +584,11 @@ function connectSqlite() {
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_prod_armazem_status ON produtividade_armazem_colaboradores(status_produtividade)');
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_prod_armazem_status_auditoria ON produtividade_armazem_colaboradores(status_auditoria)');
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_prod_armazem_origem ON produtividade_armazem_colaboradores(origem_calculo)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_rotogramas_cidade ON rotogramas(cidade)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_rotogramas_nivel_risco ON rotogramas(nivel_risco)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_rotogramas_status ON rotogramas(status)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_rotograma_pontos_rota ON rotograma_pontos_risco(rotograma_id)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_rotograma_pontos_nivel ON rotograma_pontos_risco(nivel_risco)');
 
     const ensureProdutividadeImportColumn = (name, definition) => {
       sqliteDb.all('PRAGMA table_info(produtividade_importacoes)', [], (err, columns) => {

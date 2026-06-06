@@ -310,6 +310,37 @@ export async function getCampeoesSegurancaPublicos() {
   return request('/campeoes-seguranca/publicos');
 }
 
+export async function getRotogramas(filters = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') params.set(key, value);
+  });
+  const query = params.toString();
+  return request(`/rotogramas${query ? `?${query}` : ''}`);
+}
+
+export async function getRotogramaDetail(id) {
+  return request(`/rotogramas/${id}`);
+}
+
+export async function getRotogramaMateriais() {
+  return request('/rotogramas/materiais');
+}
+
+export async function importRotogramaFile(file) {
+  const token = localStorage.getItem('token');
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE}/rotogramas/importar`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw body || { error: 'Erro na importacao de rotogramas' };
+  return body;
+}
+
 export async function getAdminCampeoesSeguranca() {
   return request('/campeoes-seguranca/admin');
 }

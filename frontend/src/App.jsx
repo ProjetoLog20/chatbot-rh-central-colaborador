@@ -16,6 +16,7 @@ import ThreeRsPage from './components/ThreeRsPage.jsx';
 import ProdutividadePage from './components/ProdutividadePage.jsx';
 import CampeaoSegurancaPage from './components/CampeaoSegurancaPage.jsx';
 import IndicadoresRotaPage from './components/IndicadoresRotaPage.jsx';
+import RotogramaSeguroPage from './components/RotogramaSeguroPage.jsx';
 
 function normalizePerfil(perfil) {
   return String(perfil || '').trim().toLowerCase();
@@ -100,6 +101,7 @@ function App() {
           <Route path="/3rs" element={requireAuth(<ThreeRsPage />)} />
           <Route path="/campeao-seguranca" element={requireAuth(<CampeaoSegurancaPage user={user} />)} />
           <Route path="/indicadores-rota" element={requireRouteIndicatorsAuth(<IndicadoresRotaPage />)} />
+          <Route path="/rotograma-seguro" element={requireAuth(<RotogramaSeguroPage user={user} />)} />
           <Route path="/skap" element={requireAuth(<SkapPage user={user} />)} />
           <Route path="/produtividade" element={requireAuth(<ProdutividadePage user={user} />)} />
           <Route path="/admin" element={requireAuth(<AdminPage />, ['admin'])} />

@@ -10,7 +10,8 @@
     "import:skap": "node scripts/importSkapXlsx.js",
     "import:prontuario": "node scripts/importProntuarioXls.js",
     "import:rv": "node scripts/importRvXlsx.js",
-    "import:rv-armazem": "node scripts/importRvArmazemXlsx.js"
+    "import:rv-armazem": "node scripts/importRvArmazemXlsx.js",
+    "import:rotograma": "node scripts/importRotogramaXlsx.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

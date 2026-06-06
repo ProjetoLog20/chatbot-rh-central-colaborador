@@ -60,6 +60,15 @@ const generalCards = [
     distributionOnly: true
   },
   {
+    id: 'rotograma_seguro',
+    icon: '🛣️',
+    title: 'Rotograma Seguro',
+    description: 'Consulte rotas, pontos de risco e orientações de segurança antes da operação.',
+    action: 'Consultar',
+    color: '#E87522',
+    route: '/rotograma-seguro'
+  },
+  {
     id: 'prontuario_motorista',
     icon: '🚚',
     title: 'Prontuário do Motorista',

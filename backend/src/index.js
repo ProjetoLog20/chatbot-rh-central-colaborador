@@ -19,6 +19,7 @@ const produtividadeRoutes = require('./routes/produtividade');
 const produtividadeArmazemRoutes = require('./routes/produtividade-armazem');
 const modulosRoutes = require('./routes/modulos');
 const campeoesSegurancaRoutes = require('./routes/campeoes-seguranca');
+const rotogramasRoutes = require('./routes/rotogramas');
 const errorHandler = require('./errorHandler');
 
 const app = express();
@@ -69,6 +70,7 @@ app.use('/api/produtividade', produtividadeRoutes);
 app.use('/api/produtividade-armazem', produtividadeArmazemRoutes);
 app.use('/api', modulosRoutes);
 app.use('/api/campeoes-seguranca', campeoesSegurancaRoutes);
+app.use('/api/rotogramas', rotogramasRoutes);
 
 // Serve static files from frontend dist
 const frontendDist = path.resolve(__dirname, "../../frontend/dist");
