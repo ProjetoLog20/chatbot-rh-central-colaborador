@@ -91,6 +91,14 @@ const adminCard = {
   featured: true
 };
 
+const unitDreamPillars = [
+  ['🌱', 'Sustentabilidade', 'Cuidar dos recursos e reduzir desperdícios.'],
+  ['🛡️', 'Segurança', 'Garantir uma operação segura para todos.'],
+  ['🤝', 'Engajamento', 'Fortalecer participação, união e pertencimento.'],
+  ['📦', 'Nível de Serviço', 'Entregar qualidade e atendimento ao cliente.'],
+  ['💰', 'Orçamento', 'Respeitar custos e usar recursos com responsabilidade.']
+];
+
 function normalizePerfil(perfil) {
   return String(perfil || '').trim().toLowerCase();
 }
@@ -179,6 +187,41 @@ function DashboardCard({ card, index, onMaintenance }) {
     <Link className={`dashboard-card-item ${card.featured ? 'dashboard-card-featured' : ''}`} style={style} to={card.route}>
       {content}
     </Link>
+  );
+}
+
+function UnitDreamPanel() {
+  const [activePillar, setActivePillar] = useState(unitDreamPillars[0]);
+
+  return (
+    <section className="unit-dream-panel" aria-labelledby="unit-dream-title">
+      <div className="unit-dream-heading">
+        <span className="unit-dream-icon" aria-hidden="true">🎯</span>
+        <div>
+          <h2 id="unit-dream-title">Sonho da Unidade</h2>
+          <p>Ser sustentável, com segurança, engajamento, entregando o nível de serviço, respeitando o orçamento.</p>
+        </div>
+      </div>
+
+      <div className="unit-dream-pillars" aria-label="Pilares do Sonho da Unidade">
+        {unitDreamPillars.map((pillar) => (
+          <button
+            type="button"
+            key={pillar[1]}
+            onMouseEnter={() => setActivePillar(pillar)}
+            onFocus={() => setActivePillar(pillar)}
+            onClick={() => setActivePillar(pillar)}
+            title={pillar[2]}
+          >
+            <span aria-hidden="true">{pillar[0]}</span>
+            {pillar[1]}
+          </button>
+        ))}
+      </div>
+
+      <p className="unit-dream-explanation">{activePillar[2]}</p>
+      <small>Esse é o nosso direcionador diário para uma operação mais segura, eficiente e sustentável.</small>
+    </section>
   );
 }
 
@@ -283,6 +326,8 @@ export default function Dashboard({ user }) {
           </div>
         </div>
       </section>
+
+      <UnitDreamPanel />
 
       <section className="dashboard-card-section" aria-label="Atalhos da Central do Colaborador">
         <div className="card-grid">

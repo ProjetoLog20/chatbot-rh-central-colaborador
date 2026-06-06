@@ -135,7 +135,7 @@ export async function importSkapFile(file) {
   const token = localStorage.getItem('token');
   const formData = new FormData();
   formData.append('file', file);
-  const res = await fetch(`${API_BASE}/skap/admin/import`, {
+  const res = await fetch(`${API_BASE}/skap/importar`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData

@@ -7,138 +7,173 @@ import {
   updateAdminSkap
 } from '../api.js';
 
-const criteria = [
-  ['atendimento', 'Atendimento'],
-  ['cinco_s', '5S'],
-  ['retorno_rota', 'Retorno de rota'],
-  ['seguranca', 'Seguranca'],
-  ['evolucao_atendimento', 'Evolucao atendimento'],
-  ['evolucao_cinco_s', 'Evolucao 5S'],
-  ['evolucao_retorno_rota', 'Evolucao retorno rota'],
-  ['evolucao_seguranca', 'Evolucao seguranca'],
-  ['empoderamento', 'Empoderamento'],
-  ['longa_distancia', 'Longa distancia'],
-  ['campeao_seguranca', 'Campeao de seguranca'],
-  ['autonomia', 'Autonomia']
+const levelOptions = ['', 'Bronze', 'Prata', 'Ouro'];
+const emptyObservation = 'Nenhuma observação registrada para este item.';
+
+const skills = [
+  ['atingimento_habilidade_tecnica', 'observacao_habilidade_tecnica', 'Habilidade Técnica'],
+  ['atingimento_habilidade_especifica', 'observacao_habilidade_especifica', 'Habilidade Específica'],
+  ['atingimento_habilidade_empoderamento', 'observacao_habilidade_empoderamento', 'Habilidade de Empoderamento']
 ];
 
-const levelOptions = ['', 'ouro', 'prata', 'bronze'];
-const criterionOptions = ['pendente', 'em_evolucao', 'concluido'];
-
-function formatLevel(value) {
-  const labels = {
-    ouro: 'Ouro',
-    prata: 'Prata',
-    verde: 'Prata',
-    bronze: 'Bronze'
-  };
-  return labels[value] || value || 'Sem nivel';
+function asNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
 }
 
-function formatPercent(value) {
-  if (value === null || value === undefined || value === '') return '0%';
-  return `${Number(value).toFixed(0)}%`;
+function formatPercent(value, digits = 0) {
+  return `${asNumber(value).toLocaleString('pt-BR', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
 }
 
 function formatDate(value) {
-  if (!value) return '';
-  return String(value).slice(0, 10);
+  if (!value) return '-';
+  return String(value).slice(0, 10).split('-').reverse().join('/');
+}
+
+function formatLevel(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'ouro') return 'Ouro';
+  if (normalized === 'prata') return 'Prata';
+  return 'Bronze';
+}
+
+function levelMessage(detail) {
+  const level = formatLevel(detail?.nivel_skap);
+  if (level === 'Ouro') return 'Você já está no nível mais alto do SKAP.';
+  return `Faltam ${formatPercent(detail?.percentual_para_proximo_nivel)} para alcançar o nível ${detail?.proximo_nivel || '-'}.`;
 }
 
 function isAdminUser(user) {
   return String(user?.perfil || '').trim().toLowerCase() === 'admin';
 }
 
-function SkapDetail({ detail, editable, onChange, onSave, saving }) {
+function ProgressBar({ value }) {
+  const percent = Math.max(0, Math.min(100, asNumber(value)));
+  return (
+    <div className="skap-progress">
+      <span style={{ width: `${percent}%` }} />
+      <i style={{ left: `${percent}%` }} />
+    </div>
+  );
+}
+
+function SkillCard({ detail, skill }) {
+  const [percentKey, observationKey, title] = skill;
+  const percent = asNumber(detail?.[percentKey]);
+  return (
+    <article className="skap-skill-card">
+      <div>
+        <h3>{title}</h3>
+        <strong>{formatPercent(percent)}</strong>
+      </div>
+      <ProgressBar value={percent} />
+      <p>{detail?.[observationKey] || emptyObservation}</p>
+    </article>
+  );
+}
+
+function SkapDetail({ detail, showIdentity = true, editable = false, onChange, onSave, saving }) {
   if (!detail) return null;
+  const level = formatLevel(detail.nivel_skap);
 
   return (
     <section className="skap-detail">
       <div className="skap-detail-header">
         <div>
-          <h2>{detail.nome_completo}</h2>
-          <p>{detail.matricula} • {detail.cargo || 'Cargo nao informado'} • {detail.setor || 'Setor nao informado'}</p>
+          <h2>{showIdentity ? detail.nome_completo : `Você está no nível ${level}.`}</h2>
+          <p>{showIdentity ? `${detail.matricula} • ${detail.cargo || 'Cargo não informado'} • ${detail.setor || 'Setor não informado'}` : levelMessage(detail)}</p>
         </div>
-        <div className={`skap-level ${detail.nivel_skap === 'verde' ? 'prata' : detail.nivel_skap || 'pendente'}`}>{formatLevel(detail.nivel_skap)}</div>
+        <div className={`skap-level ${level.toLowerCase()}`}>{level}</div>
       </div>
 
       <div className="skap-summary-grid">
-        <div>
-          <span>Progresso</span>
-          <strong>{formatPercent(detail.progresso_percentual)}</strong>
-        </div>
-        <div>
-          <span>Unidade</span>
-          <strong>{detail.unidade || '-'}</strong>
-        </div>
-        <div>
-          <span>Tipo</span>
-          <strong>{detail.tipo_colaborador || '-'}</strong>
-        </div>
-        <div>
-          <span>Ultima avaliacao</span>
-          <strong>{formatDate(detail.data_avaliacao) || '-'}</strong>
-        </div>
+        <div><span>Nível atual</span><strong>{level}</strong></div>
+        <div><span>Proficiência geral</span><strong>{formatPercent(detail.proficiencia, 2)}</strong></div>
+        <div><span>Próximo nível</span><strong>{detail.proximo_nivel || 'Nível máximo'}</strong></div>
+        <div><span>Falta para próximo nível</span><strong>{formatPercent(detail.percentual_para_proximo_nivel, 2)}</strong></div>
       </div>
+
+      <section className="skap-progress-card">
+        <div>
+          <span>Bronze</span>
+          <span>Prata 75%</span>
+          <span>Ouro 90%</span>
+        </div>
+        <ProgressBar value={detail.proficiencia} />
+        <strong>Proficiência atual: {formatPercent(detail.proficiencia, 2)}</strong>
+      </section>
 
       {editable ? (
-        <div className="skap-edit-grid">
+        <section className="skap-edit-grid">
           <label>
-            Nivel atual
-            <select value={detail.nivel_skap === 'verde' ? 'prata' : detail.nivel_skap || 'bronze'} onChange={(e) => onChange({ ...detail, nivel_skap: e.target.value })}>
-              <option value="ouro">Ouro</option>
-              <option value="prata">Prata</option>
-              <option value="bronze">Bronze</option>
-            </select>
+            Proficiência
+            <input value={detail.proficiencia || ''} onChange={(e) => onChange({ ...detail, proficiencia: e.target.value })} />
           </label>
           <label>
-            Data da avaliacao
-            <input type="date" value={formatDate(detail.data_avaliacao)} onChange={(e) => onChange({ ...detail, data_avaliacao: e.target.value })} />
+            Data da avaliação
+            <input type="date" value={String(detail.data_avaliacao || '').slice(0, 10)} onChange={(e) => onChange({ ...detail, data_avaliacao: e.target.value })} />
           </label>
-        </div>
+        </section>
       ) : null}
 
-      <div className="criteria-grid">
-        {criteria.map(([key, label]) => (
-          <label className="criteria-item" key={key}>
-            <span>{label}</span>
-            {editable ? (
-              <select value={detail[key] || 'pendente'} onChange={(e) => onChange({ ...detail, [key]: e.target.value })}>
-                {criterionOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-              </select>
-            ) : (
-              <strong>{detail[key] || 'pendente'}</strong>
-            )}
-          </label>
-        ))}
-      </div>
+      <section className="skap-skills-grid" aria-label="Percentual por habilidade">
+        {skills.map((skill) => <SkillCard key={skill[0]} detail={detail} skill={skill} />)}
+      </section>
 
-      <label className="skap-observation">
-        Observacao da lideranca
-        {editable ? (
-          <textarea rows="3" value={detail.observacao_lideranca || ''} onChange={(e) => onChange({ ...detail, observacao_lideranca: e.target.value })} />
-        ) : (
-          <p>{detail.observacao_lideranca || 'Sem observacao registrada.'}</p>
-        )}
-      </label>
+      <section className="skap-action-plan">
+        <div className="section-title-row">
+          <div>
+            <h2>Observações da liderança e plano de ação</h2>
+            <p>Confira os pontos indicados pela liderança para apoiar sua evolução no SKAP.</p>
+          </div>
+        </div>
+        <div className="skap-skills-grid">
+          {skills.map((skill) => <SkillCard key={`obs-${skill[0]}`} detail={detail} skill={skill} />)}
+        </div>
+      </section>
 
-      {editable ? <button className="skap-primary" onClick={onSave} disabled={saving}>{saving ? 'Salvando...' : 'Salvar avaliacao'}</button> : null}
+      {editable ? (
+        <section className="skap-edit-grid">
+          {skills.map(([percentKey, observationKey, title]) => (
+            <label key={observationKey}>
+              {title}
+              <textarea rows="3" value={detail[observationKey] || ''} onChange={(e) => onChange({ ...detail, [observationKey]: e.target.value })} />
+            </label>
+          ))}
+          <button className="skap-primary" onClick={onSave} disabled={saving}>{saving ? 'Salvando...' : 'Salvar avaliação'}</button>
+        </section>
+      ) : null}
 
-      <div className="skap-history">
-        <h3>Historico de evolucao</h3>
-        {detail.historico?.length ? (
-          detail.historico.map((item) => (
+      <div className="skap-footer-note">Em caso de dúvida sobre sua avaliação, procure sua liderança ou o RH.</div>
+
+      {detail.historico ? (
+        <div className="skap-history">
+          <h3>Histórico de evolução</h3>
+          {detail.historico.length ? detail.historico.map((item) => (
             <div className="history-row" key={item.id}>
-              <strong>{item.nivel_anterior ? formatLevel(item.nivel_anterior) : 'inicio'} → {formatLevel(item.nivel_novo)}</strong>
-              <span>{item.motivo} • {item.criado_em}</span>
+              <strong>{item.nivel_anterior ? formatLevel(item.nivel_anterior) : 'Início'} → {formatLevel(item.nivel_novo)}</strong>
+              <span>{item.motivo} • {formatDate(item.criado_em)}</span>
             </div>
-          ))
-        ) : (
-          <p>Sem historico registrado.</p>
-        )}
-      </div>
+          )) : <p>Sem histórico registrado.</p>}
+        </div>
+      ) : null}
     </section>
   );
+}
+
+function buildSummary(rows) {
+  const total = rows.length || 0;
+  const avg = (key) => total ? rows.reduce((sum, item) => sum + asNumber(item[key]), 0) / total : 0;
+  return {
+    total,
+    bronze: rows.filter((item) => formatLevel(item.nivel_skap) === 'Bronze').length,
+    prata: rows.filter((item) => formatLevel(item.nivel_skap) === 'Prata').length,
+    ouro: rows.filter((item) => formatLevel(item.nivel_skap) === 'Ouro').length,
+    proficiencia: avg('proficiencia'),
+    tecnica: avg('atingimento_habilidade_tecnica'),
+    especifica: avg('atingimento_habilidade_especifica'),
+    empoderamento: avg('atingimento_habilidade_empoderamento')
+  };
 }
 
 export default function SkapPage({ user }) {
@@ -159,25 +194,24 @@ export default function SkapPage({ user }) {
       tipo_colaborador: uniq('tipo_colaborador')
     };
   }, [rows]);
-  const hasSkapEvaluations = useMemo(() => rows.some((item) => item.avaliacao_id || item.nivel_skap), [rows]);
+
+  const summary = useMemo(() => buildSummary(rows), [rows]);
 
   useEffect(() => {
     setLoading(true);
     setMessage('');
-
     if (isAdmin) {
-      console.warn('[SKAP] perfil admin detectado; chamando /api/skap/admin');
       getAdminSkap(filters)
         .then((data) => setRows(Array.isArray(data) ? data : []))
         .catch((err) => setMessage(err.error || 'Erro ao carregar SKAP'))
         .finally(() => setLoading(false));
-    } else {
-      console.warn('[SKAP] perfil nao-admin; chamando /api/skap/meu');
-      getMeuSkap()
-        .then(setDetail)
-        .catch((err) => setMessage(err.error || 'Seu SKAP ainda nao foi encontrado.'))
-        .finally(() => setLoading(false));
+      return;
     }
+
+    getMeuSkap()
+      .then(setDetail)
+      .catch((err) => setMessage(err.error || 'Você ainda não possui avaliação SKAP registrada.'))
+      .finally(() => setLoading(false));
   }, [isAdmin, filters]);
 
   async function openDetail(colaboradorId) {
@@ -191,9 +225,9 @@ export default function SkapPage({ user }) {
   async function saveDetail() {
     setSaving(true);
     try {
-      await updateAdminSkap(detail.id, detail);
-      setMessage('Avaliacao SKAP salva.');
-      await openDetail(detail.id);
+      await updateAdminSkap(detail.colaborador_id, detail);
+      setMessage('Avaliação SKAP salva.');
+      await openDetail(detail.colaborador_id);
       setRows(await getAdminSkap(filters));
     } catch (err) {
       setMessage(err.error || 'Erro ao salvar SKAP');
@@ -206,7 +240,7 @@ export default function SkapPage({ user }) {
     if (!files.length) return;
     try {
       const result = await importSkapFile(files[0]);
-      setMessage(`Importacao SKAP: ${result.created} novas, ${result.updated} atualizadas, ${result.ignored} ignoradas.`);
+      setMessage(`Importação SKAP: ${result.created} novas, ${result.updated} atualizadas, ${result.ignored} ignoradas.`);
       setRows(await getAdminSkap(filters));
     } catch (err) {
       setMessage(err.error || 'Erro ao importar SKAP');
@@ -214,17 +248,25 @@ export default function SkapPage({ user }) {
   }
 
   function exportReport() {
-    const header = ['matricula', 'nome_completo', 'cargo', 'setor', 'unidade', 'tipo_colaborador', 'nivel_skap', 'progresso_percentual', 'data_avaliacao'];
+    const header = [
+      'matricula',
+      'nome_completo',
+      'cargo',
+      'setor',
+      'unidade',
+      'tipo_colaborador',
+      'proficiencia',
+      'nivel_skap',
+      'proximo_nivel',
+      'percentual_para_proximo_nivel',
+      'atingimento_habilidade_tecnica',
+      'atingimento_habilidade_especifica',
+      'atingimento_habilidade_empoderamento',
+      'updated_at'
+    ];
     const csv = [
       header.join(';'),
-      ...rows.map((row) => header.map((key) => {
-        const value = key === 'data_avaliacao'
-          ? formatDate(row[key])
-          : key === 'nivel_skap'
-            ? formatLevel(row[key])
-            : row[key];
-        return `"${String(value ?? '').replace(/"/g, '""')}"`;
-      }).join(';'))
+      ...rows.map((row) => header.map((key) => `"${String(row[key] ?? '').replace(/"/g, '""')}"`).join(';'))
     ].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -241,11 +283,11 @@ export default function SkapPage({ user }) {
         <div className="admin-heading">
           <div>
             <h1>Meu SKAP</h1>
-            <p>Acompanhe seu nivel atual, progresso e criterios avaliados.</p>
+            <p>Acompanhe sua evolução, nível atual e pontos indicados pela liderança.</p>
           </div>
         </div>
-      {message && <div className="import-message">{message}</div>}
-      {loading ? <p>Carregando SKAP...</p> : <SkapDetail detail={detail} editable={false} />}
+        {message ? <div className="empty-state">{message}</div> : null}
+        {loading ? <p>Carregando SKAP...</p> : <SkapDetail detail={detail} showIdentity={false} />}
       </div>
     );
   }
@@ -255,10 +297,10 @@ export default function SkapPage({ user }) {
       <div className="admin-heading">
         <div>
           <h1>Gestão SKAP</h1>
-          <p>Consulte e acompanhe a evolucao dos colaboradores.</p>
+          <p>Consulte, acompanhe e analise a evolução SKAP dos colaboradores.</p>
         </div>
         <div className="skap-actions">
-          <button onClick={exportReport}>Exportar relatorio</button>
+          <button type="button" onClick={exportReport}>Exportar relatório</button>
           <label>
             Importar SKAP
             <input type="file" accept=".xlsx" onChange={(e) => handleImport(e.target.files)} />
@@ -266,19 +308,22 @@ export default function SkapPage({ user }) {
         </div>
       </div>
 
-      {message && <div className="import-message">{message}</div>}
+      {message ? <div className="import-message">{message}</div> : null}
+
+      <section className="skap-summary-grid">
+        <div><span>Total de avaliados</span><strong>{summary.total}</strong></div>
+        <div><span>Total Bronze</span><strong>{summary.bronze}</strong></div>
+        <div><span>Total Prata</span><strong>{summary.prata}</strong></div>
+        <div><span>Total Ouro</span><strong>{summary.ouro}</strong></div>
+        <div><span>Média proficiência geral</span><strong>{formatPercent(summary.proficiencia, 2)}</strong></div>
+        <div><span>Média habilidade técnica</span><strong>{formatPercent(summary.tecnica, 2)}</strong></div>
+        <div><span>Média habilidade específica</span><strong>{formatPercent(summary.especifica, 2)}</strong></div>
+        <div><span>Média empoderamento</span><strong>{formatPercent(summary.empoderamento, 2)}</strong></div>
+      </section>
 
       <section className="skap-filters">
-        <label>
-          Buscar por nome ou matrícula
-          <input value={filters.busca} onChange={(e) => setFilters({ ...filters, busca: e.target.value })} />
-        </label>
-        <label>
-          Nivel SKAP
-          <select value={filters.nivel} onChange={(e) => setFilters({ ...filters, nivel: e.target.value })}>
-            {levelOptions.map((option) => <option key={option} value={option}>{option ? formatLevel(option) : 'Todos'}</option>)}
-          </select>
-        </label>
+        <label>Buscar por nome ou matrícula<input value={filters.busca} onChange={(e) => setFilters({ ...filters, busca: e.target.value })} /></label>
+        <label>Nível SKAP<select value={filters.nivel} onChange={(e) => setFilters({ ...filters, nivel: e.target.value })}>{levelOptions.map((option) => <option key={option} value={option}>{option || 'Todos'}</option>)}</select></label>
         {['setor', 'cargo', 'unidade', 'tipo_colaborador'].map((key) => (
           <label key={key}>
             {key === 'tipo_colaborador' ? 'Tipo de colaborador' : key}
@@ -291,41 +336,38 @@ export default function SkapPage({ user }) {
       </section>
 
       {loading ? <p>Carregando SKAP...</p> : null}
-      {!loading && !rows.length ? (
-        <div className="empty-state">Nenhuma avaliação SKAP encontrada. Importe uma planilha SKAP ou cadastre uma avaliação.</div>
-      ) : null}
-      {!loading && rows.length > 0 && !hasSkapEvaluations ? (
-        <div className="empty-state">Nenhuma avaliação SKAP encontrada. Importe uma planilha SKAP ou cadastre uma avaliação.</div>
-      ) : null}
+      {!loading && !rows.length ? <div className="empty-state">Nenhuma avaliação SKAP encontrada.</div> : null}
 
-      {!loading && rows.length > 0 ? <div className="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Matricula</th>
-              <th>Nome</th>
-              <th>Cargo</th>
-              <th>Setor</th>
-              <th>Nivel</th>
-              <th>Progresso</th>
-              <th>Acoes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((item) => (
-              <tr key={item.id}>
-                <td>{item.matricula}</td>
-                <td>{item.nome_completo}</td>
-                <td>{item.cargo}</td>
-                <td>{item.setor}</td>
-                <td>{item.nivel_skap ? formatLevel(item.nivel_skap) : '-'}</td>
-                <td>{formatPercent(item.progresso_percentual)}</td>
-                <td><button onClick={() => openDetail(item.id)}>Ver detalhes</button></td>
+      {!loading && rows.length ? (
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th><th>Matrícula</th><th>Cargo</th><th>Setor</th><th>Proficiência</th><th>Nível atual</th><th>Próximo nível</th><th>Falta</th><th>Técnica</th><th>Específica</th><th>Empoderamento</th><th>Atualização</th><th>Ações</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div> : null}
+            </thead>
+            <tbody>
+              {rows.map((item) => (
+                <tr key={item.colaborador_id}>
+                  <td>{item.nome_completo}</td>
+                  <td>{item.matricula}</td>
+                  <td>{item.cargo || '-'}</td>
+                  <td>{item.setor || '-'}</td>
+                  <td>{formatPercent(item.proficiencia, 2)}</td>
+                  <td><span className={`skap-level ${formatLevel(item.nivel_skap).toLowerCase()}`}>{formatLevel(item.nivel_skap)}</span></td>
+                  <td>{item.proximo_nivel || '-'}</td>
+                  <td>{formatPercent(item.percentual_para_proximo_nivel, 2)}</td>
+                  <td>{formatPercent(item.atingimento_habilidade_tecnica)}</td>
+                  <td>{formatPercent(item.atingimento_habilidade_especifica)}</td>
+                  <td>{formatPercent(item.atingimento_habilidade_empoderamento)}</td>
+                  <td>{formatDate(item.updated_at || item.data_avaliacao)}</td>
+                  <td><button onClick={() => openDetail(item.colaborador_id)}>Ver detalhes</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
 
       <SkapDetail detail={detail} editable onChange={setDetail} onSave={saveDetail} saving={saving} />
     </div>

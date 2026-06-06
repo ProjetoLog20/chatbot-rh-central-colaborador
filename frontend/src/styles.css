@@ -499,6 +499,132 @@ button:hover:not(:disabled) {
   font-size: 0.86rem;
 }
 
+.unit-dream-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid #DCE5EC;
+  border-left: 7px solid #E87522;
+  background:
+    linear-gradient(135deg, rgba(0, 90, 140, 0.08), rgba(232, 117, 34, 0.08)),
+    #FFFFFF;
+  box-shadow: 0 16px 36px rgba(31, 41, 51, 0.08);
+  padding: clamp(1.2rem, 3vw, 1.75rem);
+  display: grid;
+  gap: 1rem;
+  animation: panelIn 360ms ease both;
+}
+
+.unit-dream-panel::after {
+  content: '';
+  position: absolute;
+  right: -46px;
+  top: -56px;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 26px solid rgba(0, 59, 104, 0.06);
+}
+
+.unit-dream-heading {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.unit-dream-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: #003B68;
+  color: #fff;
+  font-size: 1.9rem;
+  box-shadow: 0 12px 26px rgba(0, 59, 104, 0.18);
+}
+
+.unit-dream-heading h2,
+.unit-dream-heading p,
+.unit-dream-panel small,
+.unit-dream-explanation {
+  margin: 0;
+}
+
+.unit-dream-heading h2 {
+  color: #003B68;
+  font-size: clamp(1.45rem, 3vw, 2rem);
+  line-height: 1.1;
+}
+
+.unit-dream-heading p {
+  margin-top: 0.45rem;
+  max-width: 860px;
+  color: #1F2933;
+  font-size: clamp(1.02rem, 2vw, 1.2rem);
+  font-weight: 900;
+  line-height: 1.45;
+}
+
+.unit-dream-pillars {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.unit-dream-pillars button {
+  min-height: 62px;
+  border: 1px solid #DCE5EC;
+  border-radius: 8px;
+  background: #FFFFFF;
+  color: #003B68;
+  padding: 0.72rem 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  font-weight: 900;
+  box-shadow: 0 8px 18px rgba(31, 41, 51, 0.05);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.unit-dream-pillars button:hover,
+.unit-dream-pillars button:focus-visible {
+  border-color: #E87522;
+  background: #FFF7ED;
+  transform: translateY(-3px);
+  box-shadow: 0 14px 28px rgba(232, 117, 34, 0.16);
+}
+
+.unit-dream-pillars span {
+  font-size: 1.2rem;
+}
+
+.unit-dream-explanation {
+  position: relative;
+  z-index: 1;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 8px;
+  background: #E9F2FB;
+  color: #003B68;
+  border: 1px solid #C9D7E2;
+  padding: 0.75rem 0.9rem;
+  font-weight: 800;
+}
+
+.unit-dream-panel small {
+  position: relative;
+  z-index: 1;
+  color: #6B7280;
+  font-weight: 800;
+}
+
 .dashboard-card-section {
   animation: panelIn 360ms ease both;
 }
@@ -2052,6 +2178,112 @@ tr:not(:last-child) td {
   color: #003B68;
 }
 
+.skap-progress-card,
+.skap-action-plan,
+.skap-footer-note {
+  border: 1px solid #DCE5EC;
+  border-radius: 8px;
+  background: #FFFFFF;
+  padding: 1rem;
+}
+
+.skap-progress-card {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.skap-progress-card > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: #6B7280;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.skap-progress {
+  position: relative;
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #B7791F 0 74.99%, #CBD5E1 75% 89.99%, #D9A21B 90% 100%);
+  overflow: visible;
+}
+
+.skap-progress span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: rgba(0, 59, 104, 0.65);
+}
+
+.skap-progress i {
+  position: absolute;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  border: 3px solid #E87522;
+  border-radius: 999px;
+  background: #fff;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 4px 12px rgba(31, 41, 51, 0.22);
+}
+
+.skap-skills-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.skap-skill-card {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  background: #F8FAFC;
+  padding: 1rem;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.skap-skill-card:hover {
+  transform: translateY(-3px);
+  border-color: #C9D7E2;
+  box-shadow: 0 12px 26px rgba(31, 41, 51, 0.1);
+}
+
+.skap-skill-card > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.skap-skill-card h3,
+.skap-skill-card p,
+.skap-action-plan h2,
+.skap-action-plan p {
+  margin: 0;
+}
+
+.skap-skill-card h3 {
+  color: #1F2933;
+  font-size: 1rem;
+}
+
+.skap-skill-card strong {
+  color: #E87522;
+}
+
+.skap-skill-card p {
+  color: #4B5563;
+  line-height: 1.5;
+}
+
+.skap-footer-note {
+  border-left: 5px solid #E87522;
+  color: #003B68;
+  font-weight: 900;
+}
+
 .skap-edit-grid,
 .criteria-grid {
   display: grid;
@@ -2941,6 +3173,18 @@ tr:not(:last-child) td {
   .dashboard-hero-content img {
     width: 78px;
     height: 78px;
+  }
+
+  .unit-dream-heading {
+    grid-template-columns: 1fr;
+  }
+
+  .unit-dream-pillars {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .unit-dream-pillars button {
+    justify-content: flex-start;
   }
 
   .card-grid {
