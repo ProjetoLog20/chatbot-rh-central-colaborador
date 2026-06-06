@@ -109,7 +109,7 @@ function DetailSection({ title, children }) {
   );
 }
 
-function RotogramaDetail({ detail, onClose }) {
+function RotogramaDetail({ detail, isAdmin, onClose }) {
   if (!detail) return null;
   const { resumo, pontos = [], telefones = [], checklist = [], premissas = [], materiais = [] } = detail;
 
@@ -166,29 +166,33 @@ function RotogramaDetail({ detail, onClose }) {
         </ul>
       </DetailSection>
 
-      <DetailSection title="Premissas de condutor/veiculo">
-        <div className="premissas-grid">
-          {premissas.slice(0, 12).map((item) => (
-            <article key={item.id}>
-              <span>{item.categoria || 'Premissa'}</span>
-              <strong>{item.titulo}</strong>
-              <p>{item.descricao}</p>
-            </article>
-          ))}
-        </div>
-      </DetailSection>
+      {isAdmin ? (
+        <DetailSection title="Premissas de condutor/veiculo">
+          <div className="premissas-grid">
+            {premissas.slice(0, 12).map((item) => (
+              <article key={item.id}>
+                <span>{item.categoria || 'Premissa'}</span>
+                <strong>{item.titulo}</strong>
+                <p>{item.descricao}</p>
+              </article>
+            ))}
+          </div>
+        </DetailSection>
+      ) : null}
 
-      <DetailSection title="Materiais de Seguranca">
-        <div className="materials-grid">
-          {materiais.map((material) => (
-            <article key={material.id}>
-              <span>{material.tipo}</span>
-              <strong>{material.titulo}</strong>
-              <p>{material.descricao || 'Material importado da planilha.'}</p>
-            </article>
-          ))}
-        </div>
-      </DetailSection>
+      {isAdmin ? (
+        <DetailSection title="Materiais de Seguranca">
+          <div className="materials-grid">
+            {materiais.map((material) => (
+              <article key={material.id}>
+                <span>{material.tipo}</span>
+                <strong>{material.titulo}</strong>
+                <p>{material.descricao || 'Material importado da planilha.'}</p>
+              </article>
+            ))}
+          </div>
+        </DetailSection>
+      ) : null}
     </section>
   );
 }
@@ -304,8 +308,10 @@ export default function RotogramaSeguroPage({ user }) {
         <div className="rotograma-switches">
           {[
             ['rota_critica', 'Rota critica'],
-            ['area_rural', 'Area rural'],
-            ['lista_vermelha', 'Lista vermelha']
+            ...(isAdmin ? [
+              ['area_rural', 'Area rural'],
+              ['lista_vermelha', 'Lista vermelha']
+            ] : [])
           ].map(([field, label]) => (
             <label key={field}>
               <input type="checkbox" checked={filters[field]} onChange={(event) => updateFilter(field, event.target.checked)} />
@@ -338,7 +344,7 @@ export default function RotogramaSeguroPage({ user }) {
       ) : null}
 
       {detailLoading ? <section className="rotograma-message">Carregando detalhes...</section> : null}
-      <RotogramaDetail detail={selected} onClose={() => setSelected(null)} />
+      <RotogramaDetail detail={selected} isAdmin={isAdmin} onClose={() => setSelected(null)} />
     </div>
   );
 }

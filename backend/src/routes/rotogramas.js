@@ -25,7 +25,11 @@ function boolValue(value) {
   return value === true || value === 1 || value === '1' || value === 'true';
 }
 
-function buildListWhere(query) {
+function isAdminUser(user) {
+  return String(user?.perfil || '').trim().toLowerCase() === 'admin';
+}
+
+function buildListWhere(query, isAdmin = false) {
   const filters = [];
   const params = [];
 
@@ -87,7 +91,7 @@ function buildListWhere(query) {
     )`);
   }
 
-  if (boolValue(query.area_rural)) {
+  if (isAdmin && boolValue(query.area_rural)) {
     filters.push(`EXISTS (
       SELECT 1 FROM rotograma_materiais m
       WHERE LOWER(COALESCE(m.tipo, '')) = 'rural'
@@ -95,7 +99,7 @@ function buildListWhere(query) {
     )`);
   }
 
-  if (boolValue(query.lista_vermelha)) {
+  if (isAdmin && boolValue(query.lista_vermelha)) {
     filters.push(`EXISTS (
       SELECT 1 FROM rotograma_materiais m
       WHERE LOWER(COALESCE(m.tipo, '')) = 'lista_vermelha'
@@ -119,7 +123,7 @@ function shapePoint(row) {
 
 router.get('/', authenticateToken, ensureRotogramaAvailable, async (req, res) => {
   try {
-    const { where, params } = buildListWhere(req.query);
+    const { where, params } = buildListWhere(req.query, isAdminUser(req.user));
     const rows = await db.all(
       `SELECT
         r.*,
@@ -143,7 +147,7 @@ router.get('/', authenticateToken, ensureRotogramaAvailable, async (req, res) =>
   }
 });
 
-router.get('/materiais', authenticateToken, ensureRotogramaAvailable, async (req, res) => {
+router.get('/materiais', authenticateToken, authorizeRoles('admin'), ensureRotogramaAvailable, async (req, res) => {
   try {
     const rows = await db.all('SELECT * FROM rotograma_materiais ORDER BY tipo, titulo');
     res.json(rows.map((row) => ({
@@ -188,28 +192,37 @@ router.get('/:id/pontos', authenticateToken, ensureRotogramaAvailable, async (re
 
 router.get('/:id', authenticateToken, ensureRotogramaAvailable, async (req, res) => {
   try {
+    const isAdmin = isAdminUser(req.user);
     const resumo = await db.get('SELECT * FROM rotogramas WHERE id = ?', [req.params.id]);
     if (!resumo) return res.status(404).json({ error: 'Rotograma nao encontrado' });
 
-    const [pontos, telefones, checklist, premissas, materiais] = await Promise.all([
+    const [pontos, telefones, checklist] = await Promise.all([
       db.all('SELECT * FROM rotograma_pontos_risco WHERE rotograma_id = ? ORDER BY id', [req.params.id]),
       db.all('SELECT * FROM rotograma_telefones WHERE rotograma_id = ? ORDER BY orgao', [req.params.id]),
-      db.all('SELECT * FROM rotograma_checklist WHERE rotograma_id = ? ORDER BY id', [req.params.id]),
-      db.all('SELECT * FROM rotograma_premissas ORDER BY categoria, titulo'),
-      db.all('SELECT * FROM rotograma_materiais ORDER BY tipo, titulo')
+      db.all('SELECT * FROM rotograma_checklist WHERE rotograma_id = ? ORDER BY id', [req.params.id])
     ]);
 
-    return res.json({
+    const payload = {
       resumo,
       pontos: pontos.map(shapePoint),
       telefones,
-      checklist,
-      premissas,
-      materiais: materiais.map((row) => ({
+      checklist
+    };
+
+    if (isAdmin) {
+      const [premissas, materiais] = await Promise.all([
+        db.all('SELECT * FROM rotograma_premissas ORDER BY categoria, titulo'),
+        db.all('SELECT * FROM rotograma_materiais ORDER BY tipo, titulo')
+      ]);
+
+      payload.premissas = premissas;
+      payload.materiais = materiais.map((row) => ({
         ...row,
         dados: row.dados_json ? JSON.parse(row.dados_json) : []
-      }))
-    });
+      }));
+    }
+
+    return res.json(payload);
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao carregar detalhe do rotograma' });
   }
