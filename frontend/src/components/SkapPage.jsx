@@ -9,6 +9,11 @@ import {
 } from '../api.js';
 
 const levelOptions = ['', 'Bronze', 'Prata', 'Ouro'];
+const skapStages = [
+  ['Bronze', '0% a 74,99%'],
+  ['Prata', '75% a 89,99%'],
+  ['Ouro', '90% ou mais']
+];
 const emptyObservation = 'Nenhuma observação registrada para este item.';
 
 const skills = [
@@ -63,6 +68,23 @@ function ProgressBar({ value }) {
   );
 }
 
+function SkapStageTrail({ level }) {
+  return (
+    <section className="skap-stage-trail" aria-label="Fase atual SKAP">
+      {skapStages.map(([stage, range]) => {
+        const active = stage === level;
+        return (
+          <div className={`skap-stage-card ${stage.toLowerCase()} ${active ? 'active' : ''}`} key={stage}>
+            <span>{active ? 'Fase atual' : 'Fase SKAP'}</span>
+            <strong>{stage}</strong>
+            <small>{range}</small>
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
 function SkillCard({ detail, skill }) {
   const [percentKey, observationKey, title] = skill;
   const percent = asNumber(detail?.[percentKey]);
@@ -91,6 +113,8 @@ function SkapDetail({ detail, showIdentity = true, editable = false, onChange, o
         </div>
         <div className={`skap-level ${level.toLowerCase()}`}>{level}</div>
       </div>
+
+      <SkapStageTrail level={level} />
 
       <div className="skap-summary-grid">
         <div><span>Nível atual</span><strong>{level}</strong></div>
