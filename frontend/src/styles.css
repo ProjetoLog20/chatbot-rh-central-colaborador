@@ -2109,6 +2109,78 @@ tr:not(:last-child) td {
   border-radius: 18px;
 }
 
+.detail-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  border: 1px solid #003B68;
+  border-radius: 8px;
+  background: #003B68;
+  color: #fff;
+  padding: 0.62rem 0.9rem;
+  font-weight: 900;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.detail-action-button:hover {
+  border-color: #E87522;
+  background: #E87522;
+  box-shadow: 0 10px 22px rgba(0, 59, 104, 0.18);
+  transform: translateY(-1px);
+}
+
+.detail-view-panel {
+  display: grid;
+  gap: 0.9rem;
+  animation: detailViewIn 180ms ease both;
+}
+
+.detail-view-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: flex-start;
+  padding: 0.25rem 0 0.15rem;
+  background: #fff;
+}
+
+.detail-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 42px;
+  border: 1px solid #C9D7E2;
+  border-radius: 8px;
+  background: #F8FAFC;
+  color: #003B68;
+  padding: 0.7rem 0.95rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.detail-back-button:hover {
+  border-color: #003B68;
+  background: #E9F2FB;
+  transform: translateY(-1px);
+}
+
+@keyframes detailViewIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .skap-page {
   display: grid;
   gap: 1.25rem;
@@ -2173,6 +2245,54 @@ tr:not(:last-child) td {
   border-radius: 8px;
   background: #fff;
   padding: 0.75rem 0.85rem;
+}
+
+.skap-detail-view {
+  display: grid;
+  gap: 0.9rem;
+  animation: skapDetailIn 180ms ease both;
+}
+
+.skap-detail-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: flex-start;
+  padding: 0.25rem 0 0.15rem;
+  background: #fff;
+}
+
+.skap-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid #C9D7E2;
+  border-radius: 8px;
+  background: #F8FAFC;
+  color: #003B68;
+  padding: 0.7rem 0.95rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.skap-back-button:hover {
+  border-color: #003B68;
+  background: #E9F2FB;
+  transform: translateY(-1px);
+}
+
+@keyframes skapDetailIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .skap-detail {

@@ -183,9 +183,19 @@ function AdminProntuarioPanel() {
   async function openDetail(colaboradorId) {
     try {
       setDetail(await getAdminProntuarioDetail(colaboradorId));
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
     } catch (err) {
       setMessage(err.error || 'Erro ao abrir prontuario');
     }
+  }
+
+  function closeDetail() {
+    setDetail(null);
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
   }
 
   async function handleImport(files) {
@@ -219,13 +229,24 @@ function AdminProntuarioPanel() {
 
       {message ? <div className="import-message">{message}</div> : null}
 
-      <section className="driver-stats">
-        <div><span>Total</span><strong>{summary.total || 0}</strong></div>
-        <div><span>Verde</span><strong>{summary.colors?.verde || 0}</strong></div>
-        <div><span>Amarela</span><strong>{summary.colors?.amarelo || 0}</strong></div>
-        <div><span>Vermelha</span><strong>{summary.colors?.vermelho || 0}</strong></div>
-        <div><span>Sem faixa</span><strong>{summary.colors?.sem_faixa || 0}</strong></div>
-      </section>
+      {detail ? (
+        <section className="detail-view-panel">
+          <div className="detail-view-toolbar">
+            <button type="button" className="detail-back-button" onClick={closeDetail}>
+              <span aria-hidden="true">&larr;</span> Retornar
+            </button>
+          </div>
+          <ProntuarioDetail prontuario={detail} />
+        </section>
+      ) : (
+        <>
+          <section className="driver-stats">
+            <div><span>Total</span><strong>{summary.total || 0}</strong></div>
+            <div><span>Verde</span><strong>{summary.colors?.verde || 0}</strong></div>
+            <div><span>Amarela</span><strong>{summary.colors?.amarelo || 0}</strong></div>
+            <div><span>Vermelha</span><strong>{summary.colors?.vermelho || 0}</strong></div>
+            <div><span>Sem faixa</span><strong>{summary.colors?.sem_faixa || 0}</strong></div>
+          </section>
 
       <section className="driver-filters">
         <label>
@@ -282,14 +303,14 @@ function AdminProntuarioPanel() {
                 <td>{formatNumber(item.pontuacao_ponderada)}</td>
                 <td>{item.faixa || '-'}</td>
                 <td><FaixaBadge color={item.cor_faixa} /></td>
-                <td><button onClick={() => openDetail(item.colaborador_id)}>Ver detalhes</button></td>
+                <td><button className="detail-action-button" onClick={() => openDetail(item.colaborador_id)}>Ver detalhes</button></td>
               </tr>
             ))}
           </tbody>
         </table>
       </div> : null}
-
-      <ProntuarioDetail prontuario={detail} />
+        </>
+      )}
     </div>
   );
 }

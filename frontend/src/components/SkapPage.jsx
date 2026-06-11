@@ -268,9 +268,19 @@ export default function SkapPage({ user }) {
   async function openDetail(colaboradorId) {
     try {
       setDetail(await getAdminSkapDetail(colaboradorId));
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
     } catch (err) {
       setMessage(err.error || 'Erro ao abrir detalhe');
     }
+  }
+
+  function closeDetail() {
+    setDetail(null);
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
   }
 
   async function saveDetail() {
@@ -381,6 +391,17 @@ export default function SkapPage({ user }) {
 
       {message ? <div className="import-message">{message}</div> : null}
 
+      {detail ? (
+        <section className="skap-detail-view">
+          <div className="skap-detail-toolbar">
+            <button type="button" className="skap-back-button" onClick={closeDetail}>
+              <span aria-hidden="true">&larr;</span> Retornar
+            </button>
+          </div>
+          <SkapDetail detail={detail} editable onChange={setDetail} onSave={saveDetail} saving={saving} />
+        </section>
+      ) : (
+        <>
       {percentCheck?.total_problemas ? (
         <section className="skap-check-panel">
           <h2>Problemas encontrados nos percentuais</h2>
@@ -443,7 +464,7 @@ export default function SkapPage({ user }) {
                   <td>{formatPercent(item.atingimento_habilidade_especifica)}</td>
                   <td>{formatPercent(item.atingimento_habilidade_empoderamento)}</td>
                   <td>{formatDate(item.updated_at || item.data_avaliacao)}</td>
-                  <td><button onClick={() => openDetail(item.colaborador_id)}>Ver detalhes</button></td>
+                  <td><button className="detail-action-button" onClick={() => openDetail(item.colaborador_id)}>Ver detalhes</button></td>
                 </tr>
               ))}
             </tbody>
@@ -451,7 +472,8 @@ export default function SkapPage({ user }) {
         </div>
       ) : null}
 
-      <SkapDetail detail={detail} editable onChange={setDetail} onSave={saveDetail} saving={saving} />
+        </>
+      )}
     </div>
   );
 }

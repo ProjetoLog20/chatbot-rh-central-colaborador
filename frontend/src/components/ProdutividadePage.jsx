@@ -452,9 +452,19 @@ function AdminRotaPanel() {
     try {
       const result = await getAdminProdutividadeDetail(colaboradorId);
       setDetail(result.registros?.[0] || result.colaborador || null);
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
     } catch (err) {
       setMessage(err.error || 'Erro ao abrir detalhe');
     }
+  }
+
+  function closeDetail() {
+    setDetail(null);
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
   }
 
   async function handleImport(files) {
@@ -487,6 +497,17 @@ function AdminRotaPanel() {
         <label>Importar Premio<input type="file" accept=".xlsx,.xlsm" onChange={(event) => handleImport(event.target.files)} /></label>
       </div>
       {message ? <div className="import-message">{message}</div> : null}
+      {detail ? (
+        <section className="detail-view-panel">
+          <div className="detail-view-toolbar">
+            <button type="button" className="detail-back-button" onClick={closeDetail}>
+              <span aria-hidden="true">&larr;</span> Retornar
+            </button>
+          </div>
+          <ProdutividadeDetail registro={detail} />
+        </section>
+      ) : (
+        <>
       <section className="prod-summary-grid">
         {summaryCards.map(([label, value, type]) => <div key={label}><span>{label}</span><strong>{formatValue(value, type)}</strong></div>)}
       </section>
@@ -567,14 +588,15 @@ function AdminRotaPanel() {
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id}>
-                  <td>{row.matricula}</td><td>{row.nome_completo}</td><td>{row.cpf}</td><td>{row.competencia}</td><td>{formatRotaFuncao(row.funcao_rv)}</td><td>{formatNumber(row.caixas)}</td><td>{formatNumber(row.entregas)}</td><td>{formatPercent(row.percentual_devolucao)}</td><td><StatusBadge type="devolucao" value={row.bateu_devolucao} /></td><td>{formatNumber(row.recargas)}</td><td>{formatNumber(row.mapas)}</td><td>{formatMoney(row.valor_total_previsto)}</td><td><StatusBadge type="status" value={row.status_produtividade} /></td><td><StatusBadge type="auditoria" value={row.status_auditoria} /></td><td><button onClick={() => openDetail(row.colaborador_id)}>Ver detalhes</button></td>
+                  <td>{row.matricula}</td><td>{row.nome_completo}</td><td>{row.cpf}</td><td>{row.competencia}</td><td>{formatRotaFuncao(row.funcao_rv)}</td><td>{formatNumber(row.caixas)}</td><td>{formatNumber(row.entregas)}</td><td>{formatPercent(row.percentual_devolucao)}</td><td><StatusBadge type="devolucao" value={row.bateu_devolucao} /></td><td>{formatNumber(row.recargas)}</td><td>{formatNumber(row.mapas)}</td><td>{formatMoney(row.valor_total_previsto)}</td><td><StatusBadge type="status" value={row.status_produtividade} /></td><td><StatusBadge type="auditoria" value={row.status_auditoria} /></td><td><button className="detail-action-button" onClick={() => openDetail(row.colaborador_id)}>Ver detalhes</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       ) : null}
-      <ProdutividadeDetail registro={detail} />
+        </>
+      )}
     </>
   );
 }
@@ -620,9 +642,19 @@ function AdminArmazemPanel() {
     try {
       const result = await getAdminProdutividadeArmazemDetail(colaboradorId);
       setDetail(result.registros?.[0] || result.colaborador || null);
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
     } catch (err) {
       setMessage(err.error || 'Erro ao abrir detalhe do armazem');
     }
+  }
+
+  function closeDetail() {
+    setDetail(null);
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
   }
 
   async function handleImport(files) {
@@ -654,6 +686,17 @@ function AdminArmazemPanel() {
         <label>Importar RV Armazem<input type="file" accept=".xlsx" onChange={(event) => handleImport(event.target.files)} /></label>
       </div>
       {message ? <div className="import-message">{message}</div> : null}
+      {detail ? (
+        <section className="detail-view-panel">
+          <div className="detail-view-toolbar">
+            <button type="button" className="detail-back-button" onClick={closeDetail}>
+              <span aria-hidden="true">&larr;</span> Retornar
+            </button>
+          </div>
+          <ProdutividadeDetail registro={detail} variant="armazem" />
+        </section>
+      ) : (
+        <>
       <section className="prod-summary-grid">
         {summaryCards.map(([label, value, type]) => <div key={label}><span>{label}</span><strong>{formatValue(value, type)}</strong></div>)}
       </section>
@@ -675,14 +718,15 @@ function AdminArmazemPanel() {
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id}>
-                  <td>{row.matricula}</td><td>{row.nome_completo}</td><td>{formatArmazemFuncao(row.funcao_armazem)}</td><td>{row.competencia}</td><td>{formatNumber(row.pontos)}</td><td>{row.faixa || '-'}</td><td>{formatMoney(row.rv_antiga)}</td><td>{formatMoney(row.rv_nova)}</td><td>{formatNumber(row.erros)}</td><td>{formatMoney(row.valor_total_previsto)}</td><td><StatusBadge type="status" value={row.status_produtividade} /></td><td><StatusBadge type="auditoria" value={row.status_auditoria} /></td><td><button onClick={() => openDetail(row.colaborador_id)}>Ver detalhes</button></td>
+                  <td>{row.matricula}</td><td>{row.nome_completo}</td><td>{formatArmazemFuncao(row.funcao_armazem)}</td><td>{row.competencia}</td><td>{formatNumber(row.pontos)}</td><td>{row.faixa || '-'}</td><td>{formatMoney(row.rv_antiga)}</td><td>{formatMoney(row.rv_nova)}</td><td>{formatNumber(row.erros)}</td><td>{formatMoney(row.valor_total_previsto)}</td><td><StatusBadge type="status" value={row.status_produtividade} /></td><td><StatusBadge type="auditoria" value={row.status_auditoria} /></td><td><button className="detail-action-button" onClick={() => openDetail(row.colaborador_id)}>Ver detalhes</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       ) : null}
-      <ProdutividadeDetail registro={detail} variant="armazem" />
+        </>
+      )}
     </>
   );
 }

@@ -59,7 +59,7 @@ function RotogramaCard({ item, onSelect }) {
       </dl>
       <div className="rotograma-card-footer">
         <span>{classification}</span>
-        <button type="button" onClick={() => onSelect(item.id)}>Ver detalhes</button>
+        <button type="button" className="detail-action-button" onClick={() => onSelect(item.id)}>Ver detalhes</button>
       </div>
     </article>
   );
@@ -128,7 +128,7 @@ function RotogramaDetail({ detail, onClose }) {
           <h2>{resumo.nome}</h2>
           <p>{resumo.origem || 'Origem nao informada'} → {resumo.destino || resumo.cidade || 'Destino nao informado'}</p>
         </div>
-        <button type="button" onClick={onClose}>Fechar</button>
+        <button type="button" onClick={onClose}>Retornar</button>
       </div>
 
       <DetailSection title="Resumo da rota">
@@ -223,9 +223,21 @@ export default function RotogramaSeguroPage({ user }) {
   function openDetail(id) {
     setDetailLoading(true);
     getRotogramaDetail(id)
-      .then(setSelected)
+      .then((detail) => {
+        setSelected(detail);
+        window.requestAnimationFrame(() => {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      })
       .catch((error) => setMessage(getErrorMessage(error)))
       .finally(() => setDetailLoading(false));
+  }
+
+  function closeDetail() {
+    setSelected(null);
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
   }
 
   async function handleImport(event) {
@@ -257,6 +269,17 @@ export default function RotogramaSeguroPage({ user }) {
         <Link to="/">Voltar para a Central</Link>
       </section>
 
+      {selected ? (
+        <section className="detail-view-panel">
+          <div className="detail-view-toolbar">
+            <button type="button" className="detail-back-button" onClick={closeDetail}>
+              <span aria-hidden="true">&larr;</span> Retornar
+            </button>
+          </div>
+          <RotogramaDetail detail={selected} onClose={closeDetail} />
+        </section>
+      ) : (
+        <>
       <section className="speed-alert-card" aria-label="Limite de velocidade permitido">
         <div className="speed-alert-header">
           <span className="speed-alert-icon" aria-hidden="true">⚠️</span>
@@ -339,7 +362,8 @@ export default function RotogramaSeguroPage({ user }) {
       ) : null}
 
       {detailLoading ? <section className="rotograma-message">Carregando detalhes...</section> : null}
-      <RotogramaDetail detail={selected} onClose={() => setSelected(null)} />
+        </>
+      )}
     </div>
   );
 }
