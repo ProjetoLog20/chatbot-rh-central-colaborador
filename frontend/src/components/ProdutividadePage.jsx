@@ -523,7 +523,8 @@ function AdminRotaPanel() {
                   <th>Matricula</th>
                   <th>Funcao</th>
                   <th>Caxaria mensal</th>
-                  <th>Premio mensal</th>
+                  <th>Valor unitario</th>
+                  <th>Prêmio mensal MSIM</th>
                   <th>MSIM do mes</th>
                   <th>Percentual MSIM</th>
                   <th>Status</th>
@@ -537,7 +538,8 @@ function AdminRotaPanel() {
                     <td>{row.matricula}</td>
                     <td>{formatRotaFuncao(row.funcao)}</td>
                     <td>{formatNumber(row.caxaria_mensal)}</td>
-                    <td>{formatMoney(row.valor_total_mensal_premio)}</td>
+                    <td>{formatMoney(row.valor_unitario_msim)}</td>
+                    <td>{formatMoney(row.premio_mensal_msim ?? row.valor_total_mensal_premio)}</td>
                     <td>{formatMoney(row.valor_msim_mes)}</td>
                     <td>{formatPercent(row.percentual_msim)}</td>
                     <td><StatusBadge type="msim" value={row.status_msim} /></td>

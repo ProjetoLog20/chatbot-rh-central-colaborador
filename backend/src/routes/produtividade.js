@@ -103,6 +103,13 @@ function msimFunctionForProdutividade(funcaoRv, cargo) {
   return null;
 }
 
+function msimUnitValueForFunction(funcaoMsim) {
+  const text = normalizeText(funcaoMsim);
+  if (text.includes('ajudante')) return 0.08;
+  if (text.includes('motorista')) return 0.12;
+  return 0;
+}
+
 function statusMsim(percentual) {
   if (percentual === null || percentual === undefined) return 'Sem MSIM';
   return Number(percentual) >= 80 ? 'Positivo' : 'Negativo';
@@ -219,6 +226,7 @@ async function getMsimRows(query) {
         funcionario: row.nome_completo,
         matricula: row.matricula,
         funcao: funcaoMsim,
+        valor_unitario_msim: msimUnitValueForFunction(funcaoMsim),
         caxaria_mensal: 0,
         valor_total_mensal_premio: 0
       });
@@ -226,7 +234,6 @@ async function getMsimRows(query) {
 
     const item = grouped.get(key);
     item.caxaria_mensal += numberValue(row.caixas);
-    item.valor_total_mensal_premio += numberValue(row.valor_total_previsto);
   });
 
   const msimRows = await db.all(
@@ -242,13 +249,16 @@ async function getMsimRows(query) {
   return [...grouped.values()]
     .map((item) => {
       const valorMsim = msimMap.get(`${normalizeText(item.funcao)}|${item.competencia}`) || null;
+      const premioMensalMsim = Number((item.caxaria_mensal * item.valor_unitario_msim).toFixed(2));
       const percentual = valorMsim
-        ? Number(((item.valor_total_mensal_premio / valorMsim) * 100).toFixed(2))
+        ? Number(((premioMensalMsim / valorMsim) * 100).toFixed(2))
         : null;
       return {
         ...item,
         caxaria_mensal: Number(item.caxaria_mensal.toFixed(2)),
-        valor_total_mensal_premio: Number(item.valor_total_mensal_premio.toFixed(2)),
+        valor_unitario_msim: Number(item.valor_unitario_msim.toFixed(2)),
+        premio_mensal_msim: premioMensalMsim,
+        valor_total_mensal_premio: premioMensalMsim,
         valor_msim_mes: valorMsim,
         percentual_msim: percentual,
         status_msim: statusMsim(percentual)
@@ -304,14 +314,16 @@ router.get('/admin/msim', authenticateToken, authorizeRoles('admin'), async (req
       acc.total_registros += 1;
       if (row.status_msim === 'Positivo') acc.positivos += 1;
       if (row.status_msim === 'Negativo') acc.negativos += 1;
-      acc.valor_total_mensal_premio += numberValue(row.valor_total_mensal_premio);
+      acc.premio_mensal_msim += numberValue(row.premio_mensal_msim);
+      acc.valor_total_mensal_premio += numberValue(row.premio_mensal_msim);
       return acc;
-    }, { total_registros: 0, positivos: 0, negativos: 0, valor_total_mensal_premio: 0 });
+    }, { total_registros: 0, positivos: 0, negativos: 0, premio_mensal_msim: 0, valor_total_mensal_premio: 0 });
 
     return res.json({
       rows,
       summary: {
         ...summary,
+        premio_mensal_msim: Number(summary.premio_mensal_msim.toFixed(2)),
         valor_total_mensal_premio: Number(summary.valor_total_mensal_premio.toFixed(2)),
         competencias_disponiveis_msim: competenciasDisponiveis
       }

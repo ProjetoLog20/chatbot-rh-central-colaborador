@@ -368,8 +368,8 @@ function readOfficialWorkbookRows(source, isBuffer) {
   const motoristaName = sheetNames[motoristaIndex];
   const ajudanteName = sheetNames[ajudanteIndex];
   const onePagerRows = xlsx.utils.sheet_to_json(workbook.Sheets[onePagerName], { header: 1, defval: '', raw: false });
-  const motoristaRows = xlsx.utils.sheet_to_json(workbook.Sheets[motoristaName], { header: 1, defval: '', raw: false });
-  const ajudanteRows = xlsx.utils.sheet_to_json(workbook.Sheets[ajudanteName], { header: 1, defval: '', raw: false });
+  const motoristaRows = xlsx.utils.sheet_to_json(workbook.Sheets[motoristaName], { header: 1, defval: '', raw: true });
+  const ajudanteRows = xlsx.utils.sheet_to_json(workbook.Sheets[ajudanteName], { header: 1, defval: '', raw: true });
   const codeNameMap = buildCodeNameMap(onePagerRows);
   const competencia = trim(rowValue((motoristaRows[1] || []), 4)) || trim(rowValue((ajudanteRows[1] || []), 4));
 
