@@ -16,7 +16,7 @@ import {
 } from '../api.js';
 
 const rotaMetricFields = [
-  ['valor_total_previsto', 'Valor previsto do premio', 'money'],
+  ['valor_total_previsto', 'Valor a receber', 'money'],
   ['entregas', 'Entregas', 'number'],
   ['caixas', 'Caixas', 'number'],
   ['percentual_devolucao', 'Devolucao', 'percent'],
@@ -38,7 +38,7 @@ const rotaDetailFields = [
   ['mapas', 'Mapas', 'number'],
   ['valor_recarga', 'Valor recarga', 'money'],
   ['bonus', 'Bonus', 'money'],
-  ['valor_total_previsto', 'Premio de Produtividade', 'money'],
+  ['valor_total_previsto', 'Valor a receber', 'money'],
   ['status_produtividade', 'Status produtividade'],
   ['status_auditoria', 'Auditoria', 'auditoria'],
   ['metodo_cruzamento', 'Metodo cruzamento'],
@@ -275,7 +275,6 @@ function ColaboradorRotaPanel({ rows }) {
       {rows.length ? (
         <>
           <section className="prod-summary-grid">
-            <div><span>Valor previsto</span><strong>{formatMoney(consolidated.valor_total_previsto)}</strong></div>
             <div><span>Funcao</span><strong>{formatRotaFuncao(selected?.funcao_rv)}</strong></div>
             <div><span>Competencia</span><strong>{selected?.competencia || '-'}</strong></div>
             <div><span>Indicadores principais</span><strong>{formatNumber(consolidated.entregas)} entregas</strong></div>
