@@ -79,6 +79,25 @@ function normalizeActive(value, fallback = 1) {
   return 0;
 }
 
+function normalizeStatus(value, active) {
+  const status = String(value || '').trim();
+  if (status) return status;
+  return active ? 'publicado' : 'oculto';
+}
+
+function resolvePublication({ ativo, publicado, status }, fallbackActive = 1) {
+  const statusText = String(status || '').trim().toLowerCase();
+  if (statusText === 'publicado') {
+    return { active: 1, status: 'publicado' };
+  }
+  if (['oculto', 'rascunho', 'inativo'].includes(statusText)) {
+    return { active: 0, status: statusText };
+  }
+
+  const active = normalizeActive(publicado ?? ativo, fallbackActive);
+  return { active, status: normalizeStatus(status, active) };
+}
+
 function rowSelect() {
   return `id, categoria, titulo, descricao, imagem_url, data_evento, data_evento AS data_acao,
     responsavel, encaminhamento, COALESCE(status, CASE WHEN ativo = 1 THEN 'publicado' ELSE 'oculto' END) AS status,
@@ -88,7 +107,7 @@ function rowSelect() {
 async function listPublicActions(req, res) {
   try {
     const params = [];
-    const filters = ['ativo = 1'];
+    const filters = [`(COALESCE(ativo, 0) = 1 OR LOWER(COALESCE(status, '')) = 'publicado')`];
     if (req.query.categoria) {
       filters.push('categoria = ?');
       params.push(normalizeCategory(req.query.categoria));
@@ -161,6 +180,7 @@ router.post(
 
     const now = new Date().toISOString();
     const imagemUrl = req.file ? imageToDataUrl(req.file) : '';
+    const publication = resolvePublication({ ativo, publicado, status }, 1);
 
     try {
       const result = await runDb(
@@ -172,11 +192,11 @@ router.post(
           titulo.trim(),
           descricao.trim(),
           imagemUrl,
-          normalizeActive(publicado ?? ativo, 1),
+          publication.active,
           data_acao || data_evento || null,
           responsavel?.trim() || null,
           encaminhamento?.trim() || null,
-          status?.trim() || 'publicado',
+          publication.status,
           now,
           now
         ]
@@ -197,6 +217,10 @@ async function updateAction(req, res) {
     if (!current) return res.status(404).json({ error: 'Acao nao encontrada' });
 
     const imagemUrl = req.file ? imageToDataUrl(req.file) : current.imagem_url;
+    const publication = resolvePublication(
+      { ativo, publicado, status: status === undefined ? current.status : status },
+      current.ativo
+    );
 
     await runDb(
       `UPDATE acoes_comunicacao
@@ -208,11 +232,11 @@ async function updateAction(req, res) {
         titulo ? titulo.trim() : current.titulo,
         descricao ? descricao.trim() : current.descricao,
         imagemUrl,
-        normalizeActive(publicado ?? ativo, current.ativo),
+        publication.active,
         data_acao === undefined && data_evento === undefined ? current.data_evento : data_acao || data_evento || null,
         responsavel === undefined ? current.responsavel : responsavel?.trim() || null,
         encaminhamento === undefined ? current.encaminhamento : encaminhamento?.trim() || null,
-        status === undefined ? current.status : status?.trim() || 'publicado',
+        publication.status,
         new Date().toISOString(),
         id
       ]

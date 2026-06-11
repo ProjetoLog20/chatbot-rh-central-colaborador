@@ -320,7 +320,8 @@ export default function AdminPage() {
 
   async function handleToggleAcao(item) {
     try {
-      await updateAcao(item.id, { ...item, ativo: item.ativo ? 0 : 1 });
+      const nextActive = item.ativo ? 0 : 1;
+      await updateAcao(item.id, { ...item, ativo: nextActive, status: nextActive ? 'publicado' : 'oculto' });
       refresh();
     } catch (err) {
       setMessage(err.error || 'Erro ao atualizar acao');
