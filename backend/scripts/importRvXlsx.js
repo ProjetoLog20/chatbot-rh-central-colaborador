@@ -144,7 +144,8 @@ function parsePercent(value) {
   return number;
 }
 
-function normalizeBonusDevolucao(value) {
+function normalizeBonusDevolucao(value, bateuDevolucao = false) {
+  if (bateuDevolucao) return 200;
   const bonus = parseNumber(value);
   return bonus === 90 ? 200 : bonus;
 }
@@ -322,6 +323,7 @@ function tableRowsToImportRows(rows, { funcaoRv, codeNameMap, competencia }) {
       const nomeRv = codeNameMap.get(codigoRv) || '';
       const normalizedCompetencia = normalizeCompetencia(competencia);
       const period = officialPeriodForCompetencia(normalizedCompetencia);
+      const bateuDevolucao = parsePercent(rowValue(row, devolucaoIndex)) <= 3.5;
       return normalizeRow({
         competencia: normalizedCompetencia,
         periodo_inicio: period.inicio,
@@ -336,11 +338,11 @@ function tableRowsToImportRows(rows, { funcaoRv, codeNameMap, competencia }) {
         entregas: rowValue(row, entregasIndex),
         percentual_devolucao: rowValue(row, devolucaoIndex),
         meta_devolucao: '3.5%',
-        bateu_devolucao: parsePercent(rowValue(row, devolucaoIndex)) <= 3.5 ? 'sim' : 'nao',
+        bateu_devolucao: bateuDevolucao ? 'sim' : 'nao',
         recargas: rowValue(row, recargasIndex),
         mapas: rowValue(row, mapasIndex),
         valor_recarga: 0,
-        bonus: normalizeBonusDevolucao(rowValue(row, bonusIndex)),
+        bonus: normalizeBonusDevolucao(rowValue(row, bonusIndex), bateuDevolucao),
         premio_produtividade: premio,
         rv_antiga: rvAntiga,
         rv_nova: premio,
@@ -431,6 +433,7 @@ function buildPayload(row, colaborador, importacaoId) {
   const premioProdutividade = firstNumber(row, ['premio_produtividade', 'valor_total_previsto', 'rv_nova', 'nova_rv']);
   const confianca = parseNumber(cell(row, 'confianca_cruzamento'));
   const statusAuditoria = confianca > 0 && confianca < LOW_CONFIDENCE_LIMIT ? 'revisar_cruzamento' : 'ok';
+  const bateuDevolucao = parseBoolean(cell(row, 'bateu_devolucao'));
 
   return {
     importacao_id: importacaoId,
@@ -452,7 +455,7 @@ function buildPayload(row, colaborador, importacaoId) {
     entregas: parseNumber(cell(row, 'entregas')),
     percentual_devolucao: parsePercent(cell(row, 'percentual_devolucao')),
     meta_devolucao: parsePercent(cell(row, 'meta_devolucao')),
-    bateu_devolucao: parseBoolean(cell(row, 'bateu_devolucao')),
+    bateu_devolucao: bateuDevolucao,
     recargas: parseNumber(cell(row, 'recargas')),
     mapas: parseNumber(cell(row, 'mapas')),
     ftr2_c_jorn: parseNumber(cell(row, 'ftr2_c_jorn')),
@@ -462,7 +465,7 @@ function buildPayload(row, colaborador, importacaoId) {
     ftr0_c_jorn: parseNumber(cell(row, 'ftr0_c_jorn')),
     ftr0_s_jorn: parseNumber(cell(row, 'ftr0_s_jorn')),
     valor_recarga: parseNumber(cell(row, 'valor_recarga')),
-    bonus: normalizeBonusDevolucao(cell(row, 'bonus')),
+    bonus: normalizeBonusDevolucao(cell(row, 'bonus'), bateuDevolucao),
     antiga_rv: 0,
     nova_rv: premioProdutividade,
     rv_antiga: 0,
