@@ -7,6 +7,7 @@ import {
   getAdminProdutividadeArmazemDetail,
   getAdminProdutividadeArmazemResumo,
   getAdminProdutividadeDetail,
+  getAdminProdutividadeMsim,
   getAdminProdutividadeResumo,
   getMeuProdutividade,
   getMeuProdutividadeArmazem,
@@ -163,6 +164,12 @@ function StatusBadge({ type, value }) {
   if (type === 'auditoria') {
     const revisar = String(value || '').toLowerCase() === 'revisar_cruzamento';
     return <span className={`prod-badge ${revisar ? 'warning' : 'success'}`}>{revisar ? 'Revisar vinculo' : 'OK'}</span>;
+  }
+
+  if (type === 'msim') {
+    const positive = String(value || '').toLowerCase() === 'positivo';
+    const negative = String(value || '').toLowerCase() === 'negativo';
+    return <span className={`prod-badge ${positive ? 'success' : negative ? 'danger' : 'muted'}`}>{value || 'Sem MSIM'}</span>;
   }
 
   const normalized = String(value || '').trim().toLowerCase();
@@ -399,6 +406,8 @@ function ColaboradorProdutividade() {
 function AdminRotaPanel() {
   const [filters, setFilters] = useState({ busca: '', competencia: '', funcao_rv: '', status_produtividade: '', bateu_devolucao: '', status_auditoria: '' });
   const [rows, setRows] = useState([]);
+  const [msimRows, setMsimRows] = useState([]);
+  const [msimSummary, setMsimSummary] = useState({ total_registros: 0, positivos: 0, negativos: 0 });
   const [summary, setSummary] = useState(emptyRotaSummary);
   const [detail, setDetail] = useState(null);
   const [message, setMessage] = useState('');
@@ -422,9 +431,15 @@ function AdminRotaPanel() {
     setLoading(true);
     setMessage('');
     try {
-      const [listResult, resumoResult] = await Promise.all([getAdminProdutividade(filters), getAdminProdutividadeResumo(filters)]);
+      const [listResult, resumoResult, msimResult] = await Promise.all([
+        getAdminProdutividade(filters),
+        getAdminProdutividadeResumo(filters),
+        getAdminProdutividadeMsim(filters)
+      ]);
       setRows(listResult.rows || []);
       setSummary(resumoResult || listResult.summary || emptyRotaSummary);
+      setMsimRows(msimResult.rows || []);
+      setMsimSummary(msimResult.summary || { total_registros: 0, positivos: 0, negativos: 0 });
     } catch (err) {
       setMessage(err.error || 'Erro ao carregar produtividade');
     } finally {
@@ -473,6 +488,54 @@ function AdminRotaPanel() {
       {message ? <div className="import-message">{message}</div> : null}
       <section className="prod-summary-grid">
         {summaryCards.map(([label, value, type]) => <div key={label}><span>{label}</span><strong>{formatValue(value, type)}</strong></div>)}
+      </section>
+      <section className="prod-msim-panel">
+        <div className="prod-section-heading">
+          <div>
+            <h2>Atingimento Mensal MSIM</h2>
+          </div>
+          <div className="prod-msim-summary">
+            <span>{formatNumber(msimSummary.total_registros)} registro(s)</span>
+            <span>{formatNumber(msimSummary.positivos)} positivo(s)</span>
+            <span>{formatNumber(msimSummary.negativos)} negativo(s)</span>
+          </div>
+        </div>
+        {!msimRows.length ? (
+          <div className="empty-state">Nenhum indicador MSIM encontrado para os filtros selecionados.</div>
+        ) : (
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Competencia</th>
+                  <th>Funcionario</th>
+                  <th>Matricula</th>
+                  <th>Funcao</th>
+                  <th>Caxaria mensal</th>
+                  <th>Premio mensal</th>
+                  <th>MSIM do mes</th>
+                  <th>Percentual MSIM</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {msimRows.map((row) => (
+                  <tr key={`${row.colaborador_id}-${row.competencia}-${row.funcao}`}>
+                    <td>{row.competencia}</td>
+                    <td>{row.funcionario}</td>
+                    <td>{row.matricula}</td>
+                    <td>{formatRotaFuncao(row.funcao)}</td>
+                    <td>{formatNumber(row.caxaria_mensal)}</td>
+                    <td>{formatMoney(row.valor_total_mensal_premio)}</td>
+                    <td>{formatMoney(row.valor_msim_mes)}</td>
+                    <td>{formatPercent(row.percentual_msim)}</td>
+                    <td><StatusBadge type="msim" value={row.status_msim} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
       <section className="prod-filters">
         <label>Buscar por nome, matricula, CPF, competencia, nome RV ou codigo RV<input value={filters.busca} onChange={(event) => setFilters({ ...filters, busca: event.target.value })} /></label>

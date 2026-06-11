@@ -87,6 +87,27 @@ function numberValue(value) {
   return Number.isFinite(number) ? number : 0;
 }
 
+function normalizeText(value) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function msimFunctionForProdutividade(funcaoRv, cargo) {
+  const text = normalizeText(`${funcaoRv || ''} ${cargo || ''}`);
+  if (text.includes('ajudante')) return 'Ajudante Distribuicao';
+  if (text.includes('motorista')) return 'Motorista Caminhao Distribuicao';
+  return null;
+}
+
+function statusMsim(percentual) {
+  if (percentual === null || percentual === undefined) return 'Sem MSIM';
+  return Number(percentual) >= 80 ? 'Positivo' : 'Negativo';
+}
+
 function buildAdminFilters(query) {
   const { busca, competencia, funcao_rv, status_produtividade, bateu_devolucao, status_auditoria } = query;
   const filters = [];
@@ -183,6 +204,59 @@ async function getAdminRows(query) {
   return db.all(`${selectProdutividade} ${where} ORDER BY p.competencia DESC, p.nome_completo`, params);
 }
 
+async function getMsimRows(query) {
+  const rows = await getAdminRows(query);
+  const grouped = new Map();
+
+  rows.forEach((row) => {
+    const funcaoMsim = msimFunctionForProdutividade(row.funcao_rv, row.cargo);
+    if (!funcaoMsim || !row.competencia) return;
+    const key = `${row.colaborador_id}|${row.competencia}|${funcaoMsim}`;
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        colaborador_id: row.colaborador_id,
+        competencia: row.competencia,
+        funcionario: row.nome_completo,
+        matricula: row.matricula,
+        funcao: funcaoMsim,
+        caxaria_mensal: 0,
+        valor_total_mensal_premio: 0
+      });
+    }
+
+    const item = grouped.get(key);
+    item.caxaria_mensal += numberValue(row.caixas);
+    item.valor_total_mensal_premio += numberValue(row.valor_total_previsto);
+  });
+
+  const msimRows = await db.all(
+    `SELECT unidade, funcao, competencia, valor_msim
+     FROM produtividade_msim_mensal
+     WHERE unidade = ?`,
+    ['CASCAVEL PR']
+  );
+  const msimMap = new Map(
+    msimRows.map((row) => [`${normalizeText(row.funcao)}|${row.competencia}`, numberValue(row.valor_msim)])
+  );
+
+  return [...grouped.values()]
+    .map((item) => {
+      const valorMsim = msimMap.get(`${normalizeText(item.funcao)}|${item.competencia}`) || null;
+      const percentual = valorMsim
+        ? Number(((item.valor_total_mensal_premio / valorMsim) * 100).toFixed(2))
+        : null;
+      return {
+        ...item,
+        caxaria_mensal: Number(item.caxaria_mensal.toFixed(2)),
+        valor_total_mensal_premio: Number(item.valor_total_mensal_premio.toFixed(2)),
+        valor_msim_mes: valorMsim,
+        percentual_msim: percentual,
+        status_msim: statusMsim(percentual)
+      };
+    })
+    .sort((a, b) => String(b.competencia).localeCompare(String(a.competencia)) || a.funcionario.localeCompare(b.funcionario));
+}
+
 router.get('/meu', authenticateToken, async (req, res) => {
   try {
     const { available, modulo } = await ensureModuleAvailable('premio_produtividade', req.user);
@@ -206,6 +280,29 @@ router.get('/admin/resumo', authenticateToken, authorizeRoles('admin'), async (r
     return res.json(summarize(rows));
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao carregar resumo de produtividade' });
+  }
+});
+
+router.get('/admin/msim', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const rows = await getMsimRows(req.query);
+    const summary = rows.reduce((acc, row) => {
+      acc.total_registros += 1;
+      if (row.status_msim === 'Positivo') acc.positivos += 1;
+      if (row.status_msim === 'Negativo') acc.negativos += 1;
+      acc.valor_total_mensal_premio += numberValue(row.valor_total_mensal_premio);
+      return acc;
+    }, { total_registros: 0, positivos: 0, negativos: 0, valor_total_mensal_premio: 0 });
+
+    return res.json({
+      rows,
+      summary: {
+        ...summary,
+        valor_total_mensal_premio: Number(summary.valor_total_mensal_premio.toFixed(2))
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao carregar Atingimento Mensal MSIM' });
   }
 });
 

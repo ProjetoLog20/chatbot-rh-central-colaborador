@@ -290,6 +290,21 @@ function connectSqlite() {
       FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE CASCADE
     )`);
 
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS produtividade_msim_mensal (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      unidade TEXT NOT NULL,
+      operacao TEXT,
+      funcao TEXT NOT NULL,
+      competencia TEXT NOT NULL,
+      mes INTEGER NOT NULL,
+      ano INTEGER NOT NULL,
+      valor_msim REAL NOT NULL DEFAULT 0,
+      fonte TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (unidade, funcao, competencia)
+    )`);
+
     sqliteDb.run(`CREATE TABLE IF NOT EXISTS produtividade_armazem_importacoes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       arquivo TEXT,
@@ -590,6 +605,8 @@ function connectSqlite() {
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_produtividade_funcao_rv ON produtividade_colaboradores(funcao_rv)');
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_produtividade_status ON produtividade_colaboradores(status_produtividade)');
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_produtividade_bateu_devolucao ON produtividade_colaboradores(bateu_devolucao)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_produtividade_msim_competencia ON produtividade_msim_mensal(competencia)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_produtividade_msim_unidade_funcao ON produtividade_msim_mensal(unidade, funcao)');
     sqliteDb.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_prod_armazem_colab_comp_funcao ON produtividade_armazem_colaboradores(colaborador_id, competencia, funcao_armazem)');
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_prod_armazem_matricula ON produtividade_armazem_colaboradores(matricula)');
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_prod_armazem_cpf ON produtividade_armazem_colaboradores(cpf)');

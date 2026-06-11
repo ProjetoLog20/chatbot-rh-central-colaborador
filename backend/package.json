@@ -11,6 +11,7 @@
     "import:prontuario": "node scripts/importProntuarioXls.js",
     "import:rv": "node scripts/importRvXlsx.js",
     "import:rv-armazem": "node scripts/importRvArmazemXlsx.js",
+    "import:msim": "node scripts/importMsim2026Xlsx.js",
     "import:rotograma": "node scripts/importRotogramaXlsx.js"
   },
   "dependencies": {

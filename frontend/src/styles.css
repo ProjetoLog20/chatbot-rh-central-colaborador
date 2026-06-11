@@ -2750,6 +2750,45 @@ tr:not(:last-child) td {
   padding: 0.75rem 0.85rem;
 }
 
+.prod-msim-panel {
+  display: grid;
+  gap: 0.85rem;
+  border: 1px solid #DCE5EC;
+  border-radius: 8px;
+  background: #FFFFFF;
+  padding: 1rem;
+}
+
+.prod-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.prod-section-heading h2 {
+  margin: 0;
+  color: #003B68;
+  font-size: 1.1rem;
+}
+
+.prod-msim-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.prod-msim-summary span {
+  border: 1px solid #DCE5EC;
+  border-radius: 999px;
+  background: #F8FAFC;
+  color: #003B68;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
 .prod-detail {
   border: 1px solid #DCE5EC;
   border-radius: 8px;
