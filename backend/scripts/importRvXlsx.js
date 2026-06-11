@@ -144,6 +144,11 @@ function parsePercent(value) {
   return number;
 }
 
+function normalizeBonusDevolucao(value) {
+  const bonus = parseNumber(value);
+  return bonus === 90 ? 200 : bonus;
+}
+
 function parseDate(value) {
   if (!value) return null;
   if (value instanceof Date) return value.toISOString().slice(0, 10);
@@ -335,7 +340,7 @@ function tableRowsToImportRows(rows, { funcaoRv, codeNameMap, competencia }) {
         recargas: rowValue(row, recargasIndex),
         mapas: rowValue(row, mapasIndex),
         valor_recarga: 0,
-        bonus: rowValue(row, bonusIndex),
+        bonus: normalizeBonusDevolucao(rowValue(row, bonusIndex)),
         premio_produtividade: premio,
         rv_antiga: rvAntiga,
         rv_nova: premio,
@@ -457,7 +462,7 @@ function buildPayload(row, colaborador, importacaoId) {
     ftr0_c_jorn: parseNumber(cell(row, 'ftr0_c_jorn')),
     ftr0_s_jorn: parseNumber(cell(row, 'ftr0_s_jorn')),
     valor_recarga: parseNumber(cell(row, 'valor_recarga')),
-    bonus: parseNumber(cell(row, 'bonus')),
+    bonus: normalizeBonusDevolucao(cell(row, 'bonus')),
     antiga_rv: 0,
     nova_rv: premioProdutividade,
     rv_antiga: 0,
@@ -709,6 +714,7 @@ module.exports = {
   parsePercent,
   parseDate,
   parseBoolean,
+  normalizeBonusDevolucao,
   officialPeriodForCompetencia,
   validateOfficialPeriod
 };
