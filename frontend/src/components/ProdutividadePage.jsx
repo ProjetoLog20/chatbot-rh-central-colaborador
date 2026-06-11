@@ -37,10 +37,7 @@ const rotaDetailFields = [
   ['mapas', 'Mapas', 'number'],
   ['valor_recarga', 'Valor recarga', 'money'],
   ['bonus', 'Bonus', 'money'],
-  ['antiga_rv', 'Antiga RV', 'money'],
-  ['nova_rv', 'Nova RV', 'money'],
-  ['diferenca_rv', 'Diferenca RV', 'money'],
-  ['valor_total_previsto', 'Valor total previsto', 'money'],
+  ['valor_total_previsto', 'Premio de Produtividade', 'money'],
   ['status_produtividade', 'Status produtividade'],
   ['status_auditoria', 'Auditoria', 'auditoria'],
   ['metodo_cruzamento', 'Metodo cruzamento'],
@@ -82,6 +79,7 @@ const emptyRotaSummary = {
   total_colaboradores: 0,
   total_motoristas: 0,
   total_ajudantes: 0,
+  valor_total_previsto: 0,
   valor_total_nova_rv: 0,
   valor_total_antiga_rv: 0,
   diferenca_total: 0,
@@ -384,7 +382,7 @@ function ColaboradorProdutividade() {
       <div className="admin-heading">
         <div>
           <h1>{activeTab === 'armazem' ? 'Meu Prêmio de Produtividade - Armazém' : 'Meu Prêmio de Produtividade'}</h1>
-          <p>{activeTab === 'armazem' ? 'Consulte os dados oficiais importados da RV do Armazém.' : 'Seu prêmio é calculado com base nos indicadores importados da apuração oficial de RV.'}</p>
+          <p>{activeTab === 'armazem' ? 'Consulte os dados oficiais importados da RV do Armazém.' : 'Seu prêmio é calculado com base nos indicadores importados da apuração oficial.'}</p>
         </div>
       </div>
       <div className="prod-warning">Caso não concorde ou não entenda alguma informação, procure o RH.</div>
@@ -447,7 +445,7 @@ function AdminRotaPanel() {
     if (!files.length) return;
     try {
       const result = await importProdutividadeFile(files[0]);
-      setMessage(`Importacao RV: ${result.created} novos, ${result.updated} atualizados, ${result.ignored} ignorados, ${result.errors.length} erros.`);
+      setMessage(`Importacao Premio de Produtividade: ${result.created} novos, ${result.updated} atualizados, ${result.ignored} ignorados, ${result.errors.length} erros.`);
       await refresh();
     } catch (err) {
       setMessage(err.error || 'Erro ao importar RV');
@@ -455,12 +453,10 @@ function AdminRotaPanel() {
   }
 
   const summaryCards = [
-    ['Colaboradores com RV', summary.total_colaboradores, 'number'],
+    ['Colaboradores com premio', summary.total_colaboradores, 'number'],
     ['Motoristas', summary.total_motoristas, 'number'],
     ['Ajudantes', summary.total_ajudantes, 'number'],
-    ['Nova RV', summary.valor_total_nova_rv, 'money'],
-    ['Antiga RV', summary.valor_total_antiga_rv, 'money'],
-    ['Diferenca total', summary.diferenca_total, 'money'],
+    ['Premio de Produtividade', summary.valor_total_previsto ?? summary.valor_total_nova_rv, 'money'],
     ['Dentro da meta', summary.total_bateu_devolucao, 'number'],
     ['Fora da meta', summary.total_nao_bateu_devolucao, 'number'],
     ['Recargas', summary.total_recargas, 'number'],
@@ -472,7 +468,7 @@ function AdminRotaPanel() {
     <>
       <div className="prod-actions">
         <button onClick={() => exportAdminProdutividade(filters)}>Exportar relatorio</button>
-        <label>Importar RV<input type="file" accept=".xlsx" onChange={(event) => handleImport(event.target.files)} /></label>
+        <label>Importar Premio<input type="file" accept=".xlsx,.xlsm" onChange={(event) => handleImport(event.target.files)} /></label>
       </div>
       {message ? <div className="import-message">{message}</div> : null}
       <section className="prod-summary-grid">
@@ -492,11 +488,11 @@ function AdminRotaPanel() {
       {!loading && rows.length ? (
         <div className="table-scroll">
           <table>
-            <thead><tr><th>Matricula</th><th>Nome</th><th>CPF</th><th>Competencia</th><th>Funcao</th><th>Caixas</th><th>Entregas</th><th>Devolucao</th><th>Status devolucao</th><th>Recargas</th><th>Mapas</th><th>RV antiga</th><th>Nova RV</th><th>Diferenca</th><th>Status</th><th>Auditoria</th><th>Acoes</th></tr></thead>
+            <thead><tr><th>Matricula</th><th>Nome</th><th>CPF</th><th>Competencia</th><th>Funcao</th><th>Caixas</th><th>Entregas</th><th>Devolucao</th><th>Status devolucao</th><th>Recargas</th><th>Mapas</th><th>Premio de Produtividade</th><th>Status</th><th>Auditoria</th><th>Acoes</th></tr></thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id}>
-                  <td>{row.matricula}</td><td>{row.nome_completo}</td><td>{row.cpf}</td><td>{row.competencia}</td><td>{formatRotaFuncao(row.funcao_rv)}</td><td>{formatNumber(row.caixas)}</td><td>{formatNumber(row.entregas)}</td><td>{formatPercent(row.percentual_devolucao)}</td><td><StatusBadge type="devolucao" value={row.bateu_devolucao} /></td><td>{formatNumber(row.recargas)}</td><td>{formatNumber(row.mapas)}</td><td>{formatMoney(row.antiga_rv)}</td><td>{formatMoney(row.nova_rv)}</td><td>{formatMoney(row.diferenca_rv)}</td><td><StatusBadge type="status" value={row.status_produtividade} /></td><td><StatusBadge type="auditoria" value={row.status_auditoria} /></td><td><button onClick={() => openDetail(row.colaborador_id)}>Ver detalhes</button></td>
+                  <td>{row.matricula}</td><td>{row.nome_completo}</td><td>{row.cpf}</td><td>{row.competencia}</td><td>{formatRotaFuncao(row.funcao_rv)}</td><td>{formatNumber(row.caixas)}</td><td>{formatNumber(row.entregas)}</td><td>{formatPercent(row.percentual_devolucao)}</td><td><StatusBadge type="devolucao" value={row.bateu_devolucao} /></td><td>{formatNumber(row.recargas)}</td><td>{formatNumber(row.mapas)}</td><td>{formatMoney(row.valor_total_previsto)}</td><td><StatusBadge type="status" value={row.status_produtividade} /></td><td><StatusBadge type="auditoria" value={row.status_auditoria} /></td><td><button onClick={() => openDetail(row.colaborador_id)}>Ver detalhes</button></td>
                 </tr>
               ))}
             </tbody>
@@ -633,7 +629,7 @@ function AdminProdutividadeResumo() {
   }, []);
 
   const cards = [
-    ['Total RV Rota', summary.rota.valor_total_nova_rv, 'money'],
+    ['Total Premio Rota', summary.rota.valor_total_previsto ?? summary.rota.valor_total_nova_rv, 'money'],
     ['Total RV Armazém', summary.armazem.valor_total_previsto, 'money'],
     ['Total Motoristas', summary.rota.total_motoristas, 'number'],
     ['Total Ajudantes de Motorista', summary.rota.total_ajudantes, 'number'],
@@ -662,7 +658,7 @@ function AdminProdutividade() {
       <div className="admin-heading">
         <div>
           <h1>{activeTab === 'armazem' ? 'Prêmio de Produtividade - Armazém' : 'Prêmio de Produtividade'}</h1>
-          <p>{activeTab === 'armazem' ? 'Consulte, filtre, importe e exporte os dados oficiais de RV do Armazém.' : 'Consulte, filtre, importe e exporte os dados oficiais de RV da Rota.'}</p>
+          <p>{activeTab === 'armazem' ? 'Consulte, filtre, importe e exporte os dados oficiais de RV do Armazém.' : 'Consulte, filtre, importe e exporte os dados oficiais do Premio de Produtividade da Rota.'}</p>
         </div>
       </div>
       <AdminProdutividadeResumo />

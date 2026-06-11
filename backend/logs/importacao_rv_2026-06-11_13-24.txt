@@ -1,0 +1,13 @@
+Importacao RV concluida.
+Arquivo: C:\Users\ArT\Desktop\Premio de Produtividade Rota.xlsm
+Importacao ID: 7
+Total de linhas lidas: 36
+Importados: 36
+Atualizados: 0
+Ignorados: 0
+Erros: 0
+Valor total Premio de Produtividade: 10730.90
+Registros com baixa confianca: 0
+Registros sem matricula: 0
+Matriculas nao encontradas: 0
+Alertas de periodo 21 a 20: 0

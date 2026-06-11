@@ -9,11 +9,11 @@ const router = express.Router();
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: 35 * 1024 * 1024 },
   fileFilter(req, file, callback) {
     const ext = file.originalname.split('.').pop().toLowerCase();
-    if (!['xlsx'].includes(ext)) {
-      return callback(new Error('Apenas arquivos .xlsx sao permitidos'));
+    if (!['xlsx', 'xlsm'].includes(ext)) {
+      return callback(new Error('Apenas arquivos .xlsx ou .xlsm sao permitidos'));
     }
     return callback(null, true);
   }
@@ -22,7 +22,7 @@ const upload = multer({
 function uploadError(err, req, res, next) {
   if (!err) return next();
   if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(400).json({ error: 'Arquivo excede o limite de 20 MB' });
+    return res.status(400).json({ error: 'Arquivo excede o limite de 35 MB' });
   }
   return res.status(400).json({ error: err.message || 'Erro no upload do arquivo' });
 }
@@ -62,11 +62,6 @@ const listColumns = [
   'mapas',
   'valor_recarga',
   'bonus',
-  'antiga_rv',
-  'nova_rv',
-  'rv_antiga',
-  'rv_nova',
-  'diferenca_rv',
   'valor_total_previsto',
   'status_produtividade',
   'status_auditoria',
@@ -133,9 +128,7 @@ function summarize(rows) {
     result.colaboradores.add(row.colaborador_id);
     if (funcao.includes('motorista')) result.motoristas.add(row.colaborador_id);
     if (funcao.includes('ajudante')) result.ajudantes.add(row.colaborador_id);
-    result.valor_total_nova_rv += numberValue(row.nova_rv);
-    result.valor_total_antiga_rv += numberValue(row.antiga_rv);
-    result.diferenca_total += numberValue(row.diferenca_rv);
+    result.valor_total_previsto += numberValue(row.valor_total_previsto);
     if (row.bateu_devolucao === true || row.bateu_devolucao === 1) result.total_bateu_devolucao += 1;
     if (row.bateu_devolucao === false || row.bateu_devolucao === 0) result.total_nao_bateu_devolucao += 1;
     result.total_recargas += numberValue(row.recargas);
@@ -147,9 +140,7 @@ function summarize(rows) {
     colaboradores: new Set(),
     motoristas: new Set(),
     ajudantes: new Set(),
-    valor_total_nova_rv: 0,
-    valor_total_antiga_rv: 0,
-    diferenca_total: 0,
+    valor_total_previsto: 0,
     total_bateu_devolucao: 0,
     total_nao_bateu_devolucao: 0,
     total_recargas: 0,
@@ -163,12 +154,13 @@ function summarize(rows) {
     total_colaboradores_com_rv: summary.colaboradores.size,
     total_motoristas: summary.motoristas.size,
     total_ajudantes: summary.ajudantes.size,
-    valor_total_nova_rv: Number(summary.valor_total_nova_rv.toFixed(2)),
-    valor_total_rv_nova: Number(summary.valor_total_nova_rv.toFixed(2)),
-    valor_total_antiga_rv: Number(summary.valor_total_antiga_rv.toFixed(2)),
-    valor_total_rv_antiga: Number(summary.valor_total_antiga_rv.toFixed(2)),
-    diferenca_total: Number(summary.diferenca_total.toFixed(2)),
-    valor_total_diferenca: Number(summary.diferenca_total.toFixed(2)),
+    valor_total_previsto: Number(summary.valor_total_previsto.toFixed(2)),
+    valor_total_nova_rv: Number(summary.valor_total_previsto.toFixed(2)),
+    valor_total_rv_nova: Number(summary.valor_total_previsto.toFixed(2)),
+    valor_total_antiga_rv: 0,
+    valor_total_rv_antiga: 0,
+    diferenca_total: 0,
+    valor_total_diferenca: 0,
     total_bateu_devolucao: summary.total_bateu_devolucao,
     total_nao_bateu_devolucao: summary.total_nao_bateu_devolucao,
     total_recargas: Number(summary.total_recargas.toFixed(2)),
