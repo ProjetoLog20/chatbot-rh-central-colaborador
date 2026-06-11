@@ -257,6 +257,17 @@ async function getMsimRows(query) {
     .sort((a, b) => String(b.competencia).localeCompare(String(a.competencia)) || a.funcionario.localeCompare(b.funcionario));
 }
 
+async function getMsimCompetencias() {
+  const rows = await db.all(
+    `SELECT DISTINCT competencia, mes, ano
+     FROM produtividade_msim_mensal
+     WHERE unidade = ?
+     ORDER BY ano DESC, mes DESC`,
+    ['CASCAVEL PR']
+  );
+  return rows.map((row) => row.competencia).filter(Boolean);
+}
+
 router.get('/meu', authenticateToken, async (req, res) => {
   try {
     const { available, modulo } = await ensureModuleAvailable('premio_produtividade', req.user);
@@ -285,7 +296,10 @@ router.get('/admin/resumo', authenticateToken, authorizeRoles('admin'), async (r
 
 router.get('/admin/msim', authenticateToken, authorizeRoles('admin'), async (req, res) => {
   try {
-    const rows = await getMsimRows(req.query);
+    const [rows, competenciasDisponiveis] = await Promise.all([
+      getMsimRows(req.query),
+      getMsimCompetencias()
+    ]);
     const summary = rows.reduce((acc, row) => {
       acc.total_registros += 1;
       if (row.status_msim === 'Positivo') acc.positivos += 1;
@@ -298,7 +312,8 @@ router.get('/admin/msim', authenticateToken, authorizeRoles('admin'), async (req
       rows,
       summary: {
         ...summary,
-        valor_total_mensal_premio: Number(summary.valor_total_mensal_premio.toFixed(2))
+        valor_total_mensal_premio: Number(summary.valor_total_mensal_premio.toFixed(2)),
+        competencias_disponiveis_msim: competenciasDisponiveis
       }
     });
   } catch (error) {

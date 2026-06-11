@@ -408,6 +408,7 @@ function AdminRotaPanel() {
   const [rows, setRows] = useState([]);
   const [msimRows, setMsimRows] = useState([]);
   const [msimSummary, setMsimSummary] = useState({ total_registros: 0, positivos: 0, negativos: 0 });
+  const [msimCompetencias, setMsimCompetencias] = useState([]);
   const [summary, setSummary] = useState(emptyRotaSummary);
   const [detail, setDetail] = useState(null);
   const [message, setMessage] = useState('');
@@ -440,6 +441,7 @@ function AdminRotaPanel() {
       setSummary(resumoResult || listResult.summary || emptyRotaSummary);
       setMsimRows(msimResult.rows || []);
       setMsimSummary(msimResult.summary || { total_registros: 0, positivos: 0, negativos: 0 });
+      setMsimCompetencias(msimResult.summary?.competencias_disponiveis_msim || []);
     } catch (err) {
       setMessage(err.error || 'Erro ao carregar produtividade');
     } finally {
@@ -500,6 +502,15 @@ function AdminRotaPanel() {
             <span>{formatNumber(msimSummary.negativos)} negativo(s)</span>
           </div>
         </div>
+        <label className="prod-msim-month">
+          Mês MSIM
+          <select value={filters.competencia} onChange={(event) => setFilters({ ...filters, competencia: event.target.value })}>
+            <option value="">Todos os meses da MSIM</option>
+            {msimCompetencias.map((competencia) => (
+              <option key={competencia} value={competencia}>{competencia}</option>
+            ))}
+          </select>
+        </label>
         {!msimRows.length ? (
           <div className="empty-state">Nenhum indicador MSIM encontrado para os filtros selecionados.</div>
         ) : (
