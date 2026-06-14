@@ -600,7 +600,11 @@ export default function AdminPage() {
               </label>
               <label>
                 Status
-                <input value={acaoForm.status} onChange={(e) => setAcaoForm({ ...acaoForm, status: e.target.value })} />
+                <select value={acaoForm.status} onChange={(e) => setAcaoForm({ ...acaoForm, status: e.target.value, ativo: e.target.value === 'publicado' })}>
+                  <option value="publicado">Publicado</option>
+                  <option value="oculto">Oculto</option>
+                  <option value="rascunho">Rascunho</option>
+                </select>
               </label>
               <label>
                 Imagem/banner
@@ -670,7 +674,11 @@ export default function AdminPage() {
                         </label>
                         <label>
                           Status
-                          <input value={acaoEditForm.status} onChange={(e) => setAcaoEditForm({ ...acaoEditForm, status: e.target.value })} />
+                          <select value={acaoEditForm.status} onChange={(e) => setAcaoEditForm({ ...acaoEditForm, status: e.target.value, ativo: e.target.value === 'publicado' })}>
+                            <option value="publicado">Publicado</option>
+                            <option value="oculto">Oculto</option>
+                            <option value="rascunho">Rascunho</option>
+                          </select>
                         </label>
                         <label>
                           Trocar imagem

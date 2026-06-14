@@ -8,6 +8,7 @@ const { authenticateToken, authorizeRoles } = require('../authMiddleware');
 const router = express.Router();
 const uploadDir = path.join(__dirname, '../../uploads/acoes');
 const allowedExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp']);
+let schemaReady = null;
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -60,6 +61,26 @@ function getDb(sql, params = []) {
   });
 }
 
+async function ensureActionsSchema() {
+  if (!process.env.DATABASE_URL) return;
+  if (!schemaReady) {
+    schemaReady = (async () => {
+      await runDb('ALTER TABLE acoes_comunicacao ADD COLUMN IF NOT EXISTS responsavel TEXT');
+      await runDb('ALTER TABLE acoes_comunicacao ADD COLUMN IF NOT EXISTS encaminhamento TEXT');
+      await runDb("ALTER TABLE acoes_comunicacao ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'publicado'");
+      await runDb(
+        `UPDATE acoes_comunicacao
+         SET status = CASE WHEN COALESCE(ativo, 1) = 1 THEN 'publicado' ELSE 'oculto' END
+         WHERE status IS NULL OR status = ''`
+      );
+    })().catch((err) => {
+      schemaReady = null;
+      throw err;
+    });
+  }
+  return schemaReady;
+}
+
 function normalizeCategory(categoria) {
   const value = String(categoria || '').trim().toLowerCase();
   if (value === 'cafe' || value === 'cafe_com_gerente') return 'cafe_com_gerente';
@@ -106,6 +127,7 @@ function rowSelect() {
 
 async function listPublicActions(req, res) {
   try {
+    await ensureActionsSchema();
     const params = [];
     const filters = [`(COALESCE(ativo, 0) = 1 OR LOWER(COALESCE(status, '')) = 'publicado')`];
     if (req.query.categoria) {
@@ -128,6 +150,7 @@ async function listPublicActions(req, res) {
 
 async function listAdminActions(req, res) {
   try {
+    await ensureActionsSchema();
     const params = [];
     const filters = [];
     if (req.query.categoria) {
@@ -183,6 +206,7 @@ router.post(
     const publication = resolvePublication({ ativo, publicado, status }, 1);
 
     try {
+      await ensureActionsSchema();
       const result = await runDb(
         `INSERT INTO acoes_comunicacao
          (categoria, titulo, descricao, imagem_url, ativo, data_evento, responsavel, encaminhamento, status, criado_em, atualizado_em)
@@ -213,6 +237,7 @@ async function updateAction(req, res) {
   const { titulo, descricao, categoria, data_evento, data_acao, responsavel, encaminhamento, status, ativo, publicado } = req.body;
 
   try {
+    await ensureActionsSchema();
     const current = await getDb('SELECT * FROM acoes_comunicacao WHERE id = ?', [id]);
     if (!current) return res.status(404).json({ error: 'Acao nao encontrada' });
 
@@ -263,6 +288,7 @@ router.delete('/:id', authenticateToken, authorizeRoles('admin'), async (req, re
   const id = Number(req.params.id);
 
   try {
+    await ensureActionsSchema();
     const current = await getDb('SELECT * FROM acoes_comunicacao WHERE id = ?', [id]);
     if (!current) return res.status(404).json({ error: 'Acao nao encontrada' });
 
