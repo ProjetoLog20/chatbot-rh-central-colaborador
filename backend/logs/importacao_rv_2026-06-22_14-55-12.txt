@@ -1,0 +1,13 @@
+Importacao RV concluida.
+Arquivo: C:\Users\ArT\AppData\Local\Temp\IMPORTACAO_RV_VAN_06_2026_ATUALIZADA.xlsx
+Importacao ID: 13
+Total de linhas lidas: 2
+Importados: 0
+Atualizados: 2
+Ignorados: 0
+Erros: 0
+Valor total Premio de Produtividade: 1712.49
+Registros com baixa confianca: 0
+Registros sem matricula: 0
+Matriculas nao encontradas: 0
+Alertas de periodo 21 a 20: 0

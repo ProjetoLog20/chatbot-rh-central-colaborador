@@ -224,7 +224,7 @@ function parseBoolean(value) {
 }
 
 function nowForFileName() {
-  return new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
+  return new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
 }
 
 function createLogger() {
@@ -280,6 +280,23 @@ function rowValue(row, index) {
 
 function buildCodeNameMap(onePagerRows) {
   const map = new Map();
+
+  const headerRowIndex = (onePagerRows || []).findIndex((row) => {
+    const headers = row.map(normalizeKey);
+    return headers.includes('cod') && headers.includes('motorista');
+  });
+
+  if (headerRowIndex !== -1) {
+    const headers = onePagerRows[headerRowIndex].map(normalizeKey);
+    const codeIndex = headers.indexOf('cod');
+    const nameIndex = headers.indexOf('motorista');
+    for (const row of onePagerRows.slice(headerRowIndex + 1)) {
+      const code = trim(rowValue(row, codeIndex));
+      const name = trim(rowValue(row, nameIndex));
+      if (code && name && /^\d+$/.test(code)) map.set(code, name);
+    }
+  }
+
   for (const row of onePagerRows || []) {
     [
       [15, 16],
@@ -291,6 +308,20 @@ function buildCodeNameMap(onePagerRows) {
     });
   }
   return map;
+}
+
+function findCompetencia(...tables) {
+  for (const rows of tables) {
+    for (const row of (rows || []).slice(0, 5)) {
+      const labelIndex = row.findIndex((value) => ['mes', 'periodo_de_pagamento'].includes(normalizeKey(value)));
+      if (labelIndex === -1) continue;
+
+      const nearbyValues = row.slice(labelIndex + 1, labelIndex + 5);
+      const month = nearbyValues.find((value) => /^\d{1,2}$/.test(trim(value)));
+      if (month) return normalizeCompetencia(month);
+    }
+  }
+  return '';
 }
 
 function tableRowsToImportRows(rows, { funcaoRv, codeNameMap, competencia }) {
@@ -363,21 +394,24 @@ function readOfficialWorkbookRows(source, isBuffer) {
   const onePagerIndex = findSheetIndex(sheetNames, (name) => name === 'one_pager');
   const motoristaIndex = findSheetIndex(sheetNames, (name) => name.includes('tabelao_mot'));
   const ajudanteIndex = findSheetIndex(sheetNames, (name) => name.includes('tabelao_ajd'));
-  if (onePagerIndex === -1 || motoristaIndex === -1 || ajudanteIndex === -1) return null;
+  if (onePagerIndex === -1 || (motoristaIndex === -1 && ajudanteIndex === -1)) return null;
 
-  const workbook = readWorkbookSubset(source, isBuffer, [onePagerIndex, motoristaIndex, ajudanteIndex]);
+  const sheetIndexes = [onePagerIndex, motoristaIndex, ajudanteIndex].filter((index) => index !== -1);
+  const workbook = readWorkbookSubset(source, isBuffer, sheetIndexes);
   const onePagerName = sheetNames[onePagerIndex];
-  const motoristaName = sheetNames[motoristaIndex];
-  const ajudanteName = sheetNames[ajudanteIndex];
   const onePagerRows = xlsx.utils.sheet_to_json(workbook.Sheets[onePagerName], { header: 1, defval: '', raw: false });
-  const motoristaRows = xlsx.utils.sheet_to_json(workbook.Sheets[motoristaName], { header: 1, defval: '', raw: true });
-  const ajudanteRows = xlsx.utils.sheet_to_json(workbook.Sheets[ajudanteName], { header: 1, defval: '', raw: true });
+  const motoristaRows = motoristaIndex === -1
+    ? []
+    : xlsx.utils.sheet_to_json(workbook.Sheets[sheetNames[motoristaIndex]], { header: 1, defval: '', raw: true });
+  const ajudanteRows = ajudanteIndex === -1
+    ? []
+    : xlsx.utils.sheet_to_json(workbook.Sheets[sheetNames[ajudanteIndex]], { header: 1, defval: '', raw: true });
   const codeNameMap = buildCodeNameMap(onePagerRows);
-  const competencia = trim(rowValue((motoristaRows[1] || []), 4)) || trim(rowValue((ajudanteRows[1] || []), 4));
+  const competencia = findCompetencia(motoristaRows, ajudanteRows);
 
   return [
-    ...tableRowsToImportRows(motoristaRows, { funcaoRv: 'motorista', codeNameMap, competencia }),
-    ...tableRowsToImportRows(ajudanteRows, { funcaoRv: 'ajudante', codeNameMap, competencia })
+    ...(motoristaRows.length ? tableRowsToImportRows(motoristaRows, { funcaoRv: 'motorista', codeNameMap, competencia }) : []),
+    ...(ajudanteRows.length ? tableRowsToImportRows(ajudanteRows, { funcaoRv: 'ajudante', codeNameMap, competencia }) : [])
   ];
 }
 
