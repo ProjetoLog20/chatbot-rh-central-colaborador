@@ -1,0 +1,35 @@
+Importacao RV concluida.
+Arquivo: C:\Users\ArT\Desktop\PREMIO DE PRODUTIVDADE ROTA.xlsm
+Importacao ID: 14
+Total de linhas lidas: 44
+Importados: 4
+Atualizados: 36
+Ignorados: 4
+Erros: 0
+Valor total Premio de Produtividade: 24288.58
+Registros com baixa confianca: 0
+Registros sem matricula: 4
+Matriculas nao encontradas: 0
+Alertas de periodo 21 a 20: 0
+Sem matricula: [
+  {
+    "linha": 20,
+    "codigo_rv": "513",
+    "nome": "MARCELO AP DOS SANTOS"
+  },
+  {
+    "linha": 21,
+    "codigo_rv": "512",
+    "nome": "VALMIR CORREIA"
+  },
+  {
+    "linha": 32,
+    "codigo_rv": "460",
+    "nome": "FLAVIO MARCELO VAZ"
+  },
+  {
+    "linha": 45,
+    "codigo_rv": "275",
+    "nome": "BRENDO IBERT"
+  }
+]
