@@ -464,10 +464,12 @@ async function loadNameMap() {
 }
 
 function buildPayload(row, colaborador, importacaoId) {
-  const premioProdutividade = firstNumber(row, ['premio_produtividade', 'valor_total_previsto', 'rv_nova', 'nova_rv']);
   const confianca = parseNumber(cell(row, 'confianca_cruzamento'));
   const statusAuditoria = confianca > 0 && confianca < LOW_CONFIDENCE_LIMIT ? 'revisar_cruzamento' : 'ok';
   const bateuDevolucao = parseBoolean(cell(row, 'bateu_devolucao'));
+  const bonus = normalizeBonusDevolucao(cell(row, 'bonus'), bateuDevolucao);
+  const premioInformado = firstNumber(row, ['premio_produtividade', 'valor_total_previsto', 'rv_nova', 'nova_rv']);
+  const premioProdutividade = premioInformado || bonus;
 
   return {
     importacao_id: importacaoId,
@@ -499,7 +501,7 @@ function buildPayload(row, colaborador, importacaoId) {
     ftr0_c_jorn: parseNumber(cell(row, 'ftr0_c_jorn')),
     ftr0_s_jorn: parseNumber(cell(row, 'ftr0_s_jorn')),
     valor_recarga: parseNumber(cell(row, 'valor_recarga')),
-    bonus: normalizeBonusDevolucao(cell(row, 'bonus'), bateuDevolucao),
+    bonus,
     antiga_rv: 0,
     nova_rv: premioProdutividade,
     rv_antiga: 0,
