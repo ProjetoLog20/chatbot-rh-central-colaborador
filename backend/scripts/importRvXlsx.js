@@ -215,6 +215,15 @@ function normalizeCompetencia(value) {
   return text;
 }
 
+function nextCompetenciaFromReferenceMonth(value) {
+  const month = Number(trim(value));
+  if (!Number.isInteger(month) || month < 1 || month > 12) return '';
+  const referenceYear = new Date().getFullYear();
+  const competenceMonth = month === 12 ? 1 : month + 1;
+  const competenceYear = month === 12 ? referenceYear + 1 : referenceYear;
+  return `${String(competenceMonth).padStart(2, '0')}/${competenceYear}`;
+}
+
 function parseBoolean(value) {
   if (value === true || value === false) return value;
   const normalized = stripAccents(value).trim().toLowerCase();
@@ -318,7 +327,7 @@ function findCompetencia(...tables) {
 
       const nearbyValues = row.slice(labelIndex + 1, labelIndex + 5);
       const month = nearbyValues.find((value) => /^\d{1,2}$/.test(trim(value)));
-      if (month) return normalizeCompetencia(month);
+      if (month) return nextCompetenciaFromReferenceMonth(month);
     }
   }
   return '';
@@ -349,7 +358,12 @@ function tableRowsToImportRows(rows, { funcaoRv, codeNameMap, competencia }) {
     .map((row) => {
       const codigoRv = trim(rowValue(row, codeIndex));
       const premio = parseNumber(rowValue(row, premioIndex));
-      if (!codigoRv || !/^\d+$/.test(codigoRv) || !premio) return null;
+      const caixas = parseNumber(rowValue(row, caixasIndex));
+      const entregas = parseNumber(rowValue(row, entregasIndex));
+      const recargas = parseNumber(rowValue(row, recargasIndex));
+      const mapas = parseNumber(rowValue(row, mapasIndex));
+      const hasActivity = [caixas, entregas, recargas, mapas].some((value) => value > 0);
+      if (!codigoRv || !/^\d+$/.test(codigoRv) || (!premio && !hasActivity)) return null;
       const rvAntiga = parseNumber(rowValue(row, antigaIndex));
       const nomeRv = codeNameMap.get(codigoRv) || '';
       const normalizedCompetencia = normalizeCompetencia(competencia);
