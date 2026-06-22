@@ -4263,6 +4263,49 @@ tr:not(:last-child) td {
   }
 }
 
+/* Resultados da Pesquisa de Engajamento H1 2026 */
+.engagement-results { --engagement-blue: #0b4f78; color: #193247; margin-bottom: 32px; }
+.engagement-results__header { align-items: flex-end; background: linear-gradient(135deg, #eef6fa, #fff7ee); border: 1px solid #dbe7ed; border-radius: 16px; display: flex; gap: 24px; justify-content: space-between; padding: 24px; }
+.engagement-results__eyebrow { color: #e87522; display: block; font-size: 12px; font-weight: 800; letter-spacing: .08em; margin-bottom: 6px; text-transform: uppercase; }
+.engagement-results h1, .engagement-results h2, .engagement-results p { margin: 0; }
+.engagement-results h1 { color: var(--engagement-blue); font-size: 28px; }
+.engagement-results p { color: #607080; margin-top: 5px; }
+.engagement-results__filter { color: #466176; display: grid; flex: 0 0 210px; font-size: 12px; font-weight: 700; gap: 6px; }
+.engagement-results__filter select { background: #fff; border: 1px solid #cbdbe3; border-radius: 8px; color: #193247; font: inherit; font-size: 14px; padding: 10px 12px; }
+.engagement-results__metrics { display: grid; gap: 16px; grid-template-columns: repeat(3, 1fr); margin-top: 16px; }
+.engagement-results__metrics article, .engagement-results__polarization, .engagement-results__history { background: #fff; border: 1px solid #dbe7ed; border-radius: 14px; box-shadow: 0 6px 20px rgba(11, 79, 120, .06); }
+.engagement-results__metrics article { padding: 20px; }
+.engagement-results__metrics span { color: #607080; display: block; font-size: 13px; font-weight: 700; }
+.engagement-results__metrics strong { color: var(--engagement-blue); display: block; font-size: 34px; line-height: 1.15; margin: 8px 0 4px; }
+.engagement-results__metrics article:nth-child(3) strong { color: #c94343; }
+.engagement-results__metrics small { color: #8294a2; }
+.engagement-results__details { display: grid; gap: 16px; margin-top: 16px; }
+.engagement-results__polarization { align-items: center; display: grid; gap: 18px; grid-template-columns: auto 1fr auto; padding: 22px; }
+.engagement-results__polarization > div:last-child { text-align: right; }
+.engagement-results__polarization span { color: #607080; display: block; font-size: 12px; font-weight: 700; }
+.engagement-results__polarization strong { color: var(--engagement-blue); font-size: 22px; }
+.engagement-results__scale { background: linear-gradient(90deg, #e9342f, #ffc927 48%, #26ce3f 75%, #08722c); border-radius: 999px; height: 14px; position: relative; }
+.engagement-results__scale i { background: #fff; border: 4px solid #147332; border-radius: 50%; box-shadow: 0 2px 6px #40515b66; height: 24px; position: absolute; top: 50%; transform: translate(-50%, -50%); width: 24px; }
+.engagement-results__history { padding: 22px; }
+.engagement-results__history h2 { color: var(--engagement-blue); font-size: 17px; text-align: center; }
+.engagement-results__bars { align-items: end; display: grid; gap: 18px; grid-template-columns: repeat(4, 1fr); height: 190px; margin-top: 14px; }
+.engagement-results__bar-item { display: grid; grid-template-rows: 20px 130px 20px; height: 100%; text-align: center; }
+.engagement-results__bar-item > span { color: #466176; font-size: 12px; font-weight: 700; }
+.engagement-results__bar-item > div { align-items: end; display: flex; justify-content: center; }
+.engagement-results__bar-item i { background: linear-gradient(#2c80c8, #0b4f78); border-radius: 5px 5px 0 0; display: block; max-width: 90px; width: 75%; }
+.engagement-results__bar-item small { color: #607080; padding-top: 5px; }
+
+@media (max-width: 700px) {
+  .engagement-results__header { align-items: stretch; flex-direction: column; }
+  .engagement-results__filter { flex-basis: auto; }
+  .engagement-results__metrics { grid-template-columns: 1fr; }
+  .engagement-results__polarization { grid-template-columns: 1fr; }
+  .engagement-results__polarization > div { text-align: left !important; }
+  .engagement-results__scale { order: 3; }
+  .engagement-results__bars { gap: 6px; }
+  .engagement-results__bar-item i { width: 85%; }
+}
+
 @keyframes panelIn {
   from {
     opacity: 0;
