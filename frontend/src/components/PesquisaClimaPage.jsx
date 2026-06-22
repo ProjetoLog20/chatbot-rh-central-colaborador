@@ -417,7 +417,8 @@ export default function PesquisaClimaPage() {
   }
 
   return (
-    <div style={{ padding: '24px', maxWidth: '900px', margin: '0 auto' }}>
+    <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
+      <EngagementResults />
       <div style={{ marginBottom: '32px' }}>
         <h1 style={{ color: '#003B68', marginBottom: '8px' }}>Pesquisa de Clima</h1>
         <p style={{ color: '#666', marginBottom: '24px' }}>
