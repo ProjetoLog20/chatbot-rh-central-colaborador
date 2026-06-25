@@ -171,15 +171,6 @@ export async function getAdminProdutividadeResumo(filters = {}) {
   return request(`/produtividade/admin/resumo${query ? `?${query}` : ''}`);
 }
 
-export async function getAdminProdutividadeMsim(filters = {}) {
-  const params = new URLSearchParams();
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value) params.set(key, value);
-  });
-  const query = params.toString();
-  return request(`/produtividade/admin/msim${query ? `?${query}` : ''}`);
-}
-
 export async function getAdminProdutividadeDetail(colaboradorId) {
   return request(`/produtividade/admin/${colaboradorId}`);
 }
