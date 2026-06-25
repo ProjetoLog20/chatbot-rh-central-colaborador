@@ -180,12 +180,17 @@ function officialPeriodForCompetencia(competencia) {
 
   const month = Number(match[1]);
   const year = Number(match[2]);
-  const startMonth = month === 1 ? 12 : month - 1;
-  const startYear = month === 1 ? year - 1 : year;
+  const endDate = new Date(Date.UTC(year, month - 2, 20));
+  const startDate = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth() - 1, 21));
+  const format = (date) => [
+    date.getUTCFullYear(),
+    String(date.getUTCMonth() + 1).padStart(2, '0'),
+    String(date.getUTCDate()).padStart(2, '0')
+  ].join('-');
 
   return {
-    inicio: `${startYear}-${String(startMonth).padStart(2, '0')}-21`,
-    fim: `${year}-${String(month).padStart(2, '0')}-20`
+    inicio: format(startDate),
+    fim: format(endDate)
   };
 }
 
