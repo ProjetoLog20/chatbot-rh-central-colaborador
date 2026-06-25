@@ -150,6 +150,36 @@ function normalizeBonusDevolucao(value, bateuDevolucao = false) {
   return bonus === 90 ? 200 : bonus;
 }
 
+function fallbackPremioRota(row, funcaoRv, indexes, bonus) {
+  const premio = parseNumber(rowValue(row, indexes.premio));
+  if (premio > 0) return premio;
+
+  const caixas = parseNumber(rowValue(row, indexes.caixas));
+  const entregas = parseNumber(rowValue(row, indexes.entregas));
+  const recargas = parseNumber(rowValue(row, indexes.recargas));
+  const mapas = parseNumber(rowValue(row, indexes.mapas));
+  const hasActivity = [caixas, entregas, recargas, mapas].some((value) => value > 0);
+  if (!hasActivity) return 0;
+
+  const caixaRate = funcaoRv === 'motorista' ? 0.12 : 0.08;
+  const entregaRate = funcaoRv === 'motorista' ? 1 : 0.7;
+  const recargaRate = funcaoRv === 'motorista' ? 200 : 140;
+  const ftrAmount = [
+    indexes.ftr2CJorn,
+    indexes.ftr2SJorn,
+    indexes.ftr1CJorn,
+    indexes.ftr1SJorn,
+    indexes.ftr0CJorn,
+    indexes.ftr0SJorn
+  ].reduce((sum, index) => sum + (index === -1 ? 0 : parseNumber(rowValue(row, index))), 0);
+
+  const recargaAmount = indexes.recargaValor === -1
+    ? recargas * recargaRate
+    : parseNumber(rowValue(row, indexes.recargaValor)) || recargas * recargaRate;
+  const base = caixas * caixaRate + entregas * entregaRate + ftrAmount + recargaAmount;
+  return Number((base + bonus).toFixed(4));
+}
+
 function parseDate(value) {
   if (!value) return null;
   if (value instanceof Date) return value.toISOString().slice(0, 10);
@@ -354,6 +384,13 @@ function tableRowsToImportRows(rows, { funcaoRv, codeNameMap, competencia }) {
   const devolucaoIndex = indexOf('% DEV');
   const recargasIndex = indexOf('Recargas', 'Rec DOL', 'REC DOL', 'Recarga DOL');
   const mapasIndex = indexOf('Mapas');
+  const ftr2CJornIndex = indexOf('Ftr 2 C/Jorn.');
+  const ftr2SJornIndex = indexOf('Ftr 2 S/Jorn.');
+  const ftr1CJornIndex = indexOf('Ftr 1 C/Jorn.');
+  const ftr1SJornIndex = indexOf('Ftr 1 S/Jorn.');
+  const ftr0CJornIndex = indexOf('Ftr 0 C/Jorn.');
+  const ftr0SJornIndex = indexOf('Ftr 0 S/Jorn.');
+  const recargaValorIndex = indexOf('Rec');
   const bonusIndex = indexOf('BNS');
   const antigaIndex = indexOf('Antiga RV');
   const premioIndex = indexOf('Nova RV');
@@ -362,18 +399,33 @@ function tableRowsToImportRows(rows, { funcaoRv, codeNameMap, competencia }) {
   return rows.slice(headerIndex + 1)
     .map((row) => {
       const codigoRv = trim(rowValue(row, codeIndex));
-      const premio = parseNumber(rowValue(row, premioIndex));
+      const premioInformado = parseNumber(rowValue(row, premioIndex));
       const caixas = parseNumber(rowValue(row, caixasIndex));
       const entregas = parseNumber(rowValue(row, entregasIndex));
       const recargas = parseNumber(rowValue(row, recargasIndex));
       const mapas = parseNumber(rowValue(row, mapasIndex));
       const hasActivity = [caixas, entregas, recargas, mapas].some((value) => value > 0);
-      if (!codigoRv || !/^\d+$/.test(codigoRv) || (!premio && !hasActivity)) return null;
+      if (!codigoRv || !/^\d+$/.test(codigoRv) || (!premioInformado && !hasActivity)) return null;
       const rvAntiga = parseNumber(rowValue(row, antigaIndex));
       const nomeRv = codeNameMap.get(codigoRv) || '';
       const normalizedCompetencia = normalizeCompetencia(competencia);
       const period = officialPeriodForCompetencia(normalizedCompetencia);
       const bateuDevolucao = parsePercent(rowValue(row, devolucaoIndex)) <= 3.5;
+      const bonus = normalizeBonusDevolucao(rowValue(row, bonusIndex), bateuDevolucao);
+      const premio = fallbackPremioRota(row, funcaoRv, {
+        premio: premioIndex,
+        caixas: caixasIndex,
+        entregas: entregasIndex,
+        recargas: recargasIndex,
+        mapas: mapasIndex,
+        ftr2CJorn: ftr2CJornIndex,
+        ftr2SJorn: ftr2SJornIndex,
+        ftr1CJorn: ftr1CJornIndex,
+        ftr1SJorn: ftr1SJornIndex,
+        ftr0CJorn: ftr0CJornIndex,
+        ftr0SJorn: ftr0SJornIndex,
+        recargaValor: recargaValorIndex
+      }, bonus);
       return normalizeRow({
         competencia: normalizedCompetencia,
         periodo_inicio: period.inicio,
@@ -391,8 +443,8 @@ function tableRowsToImportRows(rows, { funcaoRv, codeNameMap, competencia }) {
         bateu_devolucao: bateuDevolucao ? 'sim' : 'nao',
         recargas: rowValue(row, recargasIndex),
         mapas: rowValue(row, mapasIndex),
-        valor_recarga: 0,
-        bonus: normalizeBonusDevolucao(rowValue(row, bonusIndex), bateuDevolucao),
+        valor_recarga: rowValue(row, recargaValorIndex),
+        bonus,
         premio_produtividade: premio,
         rv_antiga: rvAntiga,
         rv_nova: premio,
