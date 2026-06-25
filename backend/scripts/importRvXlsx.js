@@ -352,7 +352,7 @@ function tableRowsToImportRows(rows, { funcaoRv, codeNameMap, competencia }) {
   const caixasIndex = indexOf('Caixas');
   const entregasIndex = indexOf('Entregas');
   const devolucaoIndex = indexOf('% DEV');
-  const recargasIndex = indexOf('Recargas');
+  const recargasIndex = indexOf('Recargas', 'Rec DOL', 'REC DOL', 'Recarga DOL');
   const mapasIndex = indexOf('Mapas');
   const bonusIndex = indexOf('BNS');
   const antigaIndex = indexOf('Antiga RV');
