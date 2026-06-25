@@ -249,20 +249,6 @@ export async function getAdminProdutividadeArmazemDetail(colaboradorId) {
   return request(`/produtividade-armazem/admin/${colaboradorId}`);
 }
 
-export async function importProdutividadeArmazemFile(file) {
-  const token = localStorage.getItem('token');
-  const formData = new FormData();
-  formData.append('file', file);
-  const res = await fetch(`${API_BASE}/produtividade-armazem/importar`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: formData
-  });
-  const body = await res.json().catch(() => null);
-  if (!res.ok) throw body || { error: 'Erro na importacao de RV Armazem' };
-  return body;
-}
-
 export async function exportAdminProdutividadeArmazem(filters = {}) {
   const token = localStorage.getItem('token');
   const params = new URLSearchParams();

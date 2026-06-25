@@ -11,7 +11,6 @@ import {
   getAdminProdutividadeResumo,
   getMeuProdutividade,
   getMeuProdutividadeArmazem,
-  importProdutividadeArmazemFile,
   importProdutividadeFile
 } from '../api.js';
 
@@ -657,17 +656,6 @@ function AdminArmazemPanel() {
     });
   }
 
-  async function handleImport(files) {
-    if (!files.length) return;
-    try {
-      const result = await importProdutividadeArmazemFile(files[0]);
-      setMessage(`Importacao RV Armazem: ${result.created} novos, ${result.updated} atualizados, ${result.ignored} ignorados, ${result.errors.length} erros.`);
-      await refresh();
-    } catch (err) {
-      setMessage(err.error || 'Erro ao importar RV Armazem');
-    }
-  }
-
   const summaryCards = [
     ['Colaboradores com RV', summary.total_colaboradores_com_rv, 'number'],
     ['Ajudantes', summary.total_ajudantes, 'number'],
@@ -683,7 +671,6 @@ function AdminArmazemPanel() {
     <>
       <div className="prod-actions">
         <button onClick={() => exportAdminProdutividadeArmazem(filters)}>Exportar relatorio</button>
-        <label>Importar RV Armazem<input type="file" accept=".xlsx" onChange={(event) => handleImport(event.target.files)} /></label>
       </div>
       {message ? <div className="import-message">{message}</div> : null}
       {detail ? (

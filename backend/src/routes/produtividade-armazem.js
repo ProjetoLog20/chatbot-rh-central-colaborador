@@ -1,33 +1,9 @@
 const express = require('express');
-const multer = require('multer');
 const db = require('../db');
 const { authenticateToken, authorizeRoles } = require('../authMiddleware');
 const { ensureModuleAvailable, maintenancePayload } = require('../moduleConfig');
-const { importWorkbook } = require('../../scripts/importRvArmazemXlsx');
 
 const router = express.Router();
-
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 20 * 1024 * 1024 },
-  fileFilter(req, file, callback) {
-    const ext = file.originalname.split('.').pop().toLowerCase();
-    if (!['xlsx'].includes(ext)) {
-      return callback(new Error('Apenas arquivos .xlsx sao permitidos'));
-    }
-    return callback(null, true);
-  }
-});
-
-function uploadError(err, req, res, next) {
-  if (!err) return next();
-  if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(400).json({ error: 'Arquivo excede o limite de 20 MB' });
-  }
-  return res.status(400).json({ error: err.message || 'Erro no upload do arquivo' });
-}
-
-const uploadSingleFile = [upload.single('file'), uploadError];
 
 const selectArmazem = `
   SELECT
@@ -241,19 +217,10 @@ router.get('/admin/:colaboradorId', authenticateToken, authorizeRoles('admin'), 
   }
 });
 
-router.post('/importar', authenticateToken, authorizeRoles('admin'), uploadSingleFile, async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'Arquivo nao enviado' });
-
-  try {
-    const result = await importWorkbook({
-      buffer: req.file.buffer,
-      originalName: req.file.originalname,
-      criadoPor: req.user.id
-    });
-    return res.json(result);
-  } catch (error) {
-    return res.status(400).json({ error: error.message || 'Erro ao importar RV Armazem' });
-  }
+router.post('/importar', authenticateToken, authorizeRoles('admin'), (req, res) => {
+  return res.status(410).json({
+    error: 'Importacao da RV do Armazem desativada. Preencha a variavel manualmente.'
+  });
 });
 
 module.exports = router;
