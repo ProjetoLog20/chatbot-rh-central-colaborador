@@ -1,0 +1,22 @@
+{
+  "backup": "logs\\backup_rv_antes_2026-06-25_recarga_bruno_oliveira_072026.xlsx",
+  "antes": [
+    {
+      "id": 82,
+      "recargas": "0.00",
+      "valor_recarga": "0.00",
+      "valor_total_previsto": "1044.11"
+    }
+  ],
+  "depois": {
+    "id": 82,
+    "matricula": "19244",
+    "nome_completo": "BRUNO DE OLIVEIRA",
+    "competencia": "07/2026",
+    "recargas": "1.00",
+    "valor_recarga": "0.00",
+    "bonus": "200.00",
+    "rv_nova": "1044.11",
+    "valor_total_previsto": "1044.11"
+  }
+}

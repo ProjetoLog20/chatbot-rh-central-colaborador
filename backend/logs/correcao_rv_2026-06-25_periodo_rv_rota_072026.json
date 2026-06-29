@@ -1,0 +1,26 @@
+{
+  "backup": "logs\\backup_rv_antes_2026-06-25_periodo_rv_rota_072026.xlsx",
+  "competencia": "07/2026",
+  "periodo_corrigido": {
+    "periodo_inicio": "2026-05-21",
+    "periodo_fim": "2026-06-20"
+  },
+  "registros_encontrados": 42,
+  "registros_atualizados": 42,
+  "validacao": [
+    {
+      "competencia": "07/2026",
+      "periodo_inicio": "2026-05-21T03:00:00.000Z",
+      "periodo_fim": "2026-06-20T03:00:00.000Z",
+      "funcao_rv": "ajudante",
+      "total": "22"
+    },
+    {
+      "competencia": "07/2026",
+      "periodo_inicio": "2026-05-21T03:00:00.000Z",
+      "periodo_fim": "2026-06-20T03:00:00.000Z",
+      "funcao_rv": "motorista",
+      "total": "20"
+    }
+  ]
+}

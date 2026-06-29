@@ -1,0 +1,26 @@
+{
+  "arquivo": "C:/Users/ArT/Desktop/HISTORICO24_06_2026_09_31_47.xlsx",
+  "aba": "HISTORICO",
+  "linhas_planilha": 70,
+  "criados": 20,
+  "atualizados": 50,
+  "nao_encontrados": [],
+  "conflitos": [],
+  "resolvidos_por_cargo": [
+    {
+      "linha": 3,
+      "nome": "ALEXANDER RAFAEL OLIMPIO AVILES",
+      "matricula": "19237",
+      "cargo": "AJUDANTE ARMAZéM"
+    }
+  ],
+  "cores": {
+    "verde": 53,
+    "amarelo": 13,
+    "vermelho": 4,
+    "sem_faixa": 0
+  },
+  "backup": "logs\\backup_prontuarios_antes_2026-06-24_historico.xlsx",
+  "total_prontuarios_antes": 53,
+  "total_prontuarios_depois": 73
+}

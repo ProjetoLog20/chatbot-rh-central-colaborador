@@ -1,0 +1,41 @@
+{
+  "data": "2026-06-25T12:36:19.360Z",
+  "before": {
+    "id": 119,
+    "matricula": "19345",
+    "nome_completo": "AIRTON EVANDRO NUNES",
+    "competencia": "07/2026",
+    "codigo_rv": "505",
+    "caixas": "0.00",
+    "entregas": "0.00",
+    "percentual_devolucao": null,
+    "mapas": "0.00",
+    "bonus": "0.00",
+    "rv_nova": "0.00",
+    "valor_total_previsto": "0.00",
+    "status_produtividade": "Sem premio"
+  },
+  "after": {
+    "id": 119,
+    "matricula": "19345",
+    "nome_completo": "AIRTON EVANDRO NUNES",
+    "competencia": "07/2026",
+    "periodo_inicio": "2026-05-21T03:00:00.000Z",
+    "periodo_fim": "2026-06-20T03:00:00.000Z",
+    "funcao_rv": "motorista",
+    "codigo_rv": "505",
+    "caixas": "4666.00",
+    "entregas": "356.00",
+    "percentual_devolucao": "3.2900",
+    "meta_devolucao": "3.5000",
+    "bateu_devolucao": true,
+    "recargas": "0.00",
+    "mapas": "27.00",
+    "bonus": "200.00",
+    "rv_nova": "1060.48",
+    "valor_total_previsto": "1060.48",
+    "status_produtividade": "Elegivel",
+    "status_auditoria": "manual_rh",
+    "metodo_cruzamento": "codigo_rv_manual"
+  }
+}

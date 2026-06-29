@@ -1,0 +1,63 @@
+{
+  "backup": "logs\\backup_rv_antes_2026-06-25_premio_zerado_daniel_rafael_072026.xlsx",
+  "alteracoes": [
+    {
+      "id": 115,
+      "matricula": "19347",
+      "nome_completo": "DANIEL FRERES DA SILVA",
+      "codigo_rv": "506",
+      "antes": {
+        "bonus": 0,
+        "rv_nova": 0,
+        "valor_total_previsto": 0,
+        "status_produtividade": "Sem premio"
+      },
+      "depois": {
+        "bonus": 0,
+        "rv_nova": 531.37,
+        "valor_total_previsto": 531.37,
+        "status_produtividade": "Elegivel"
+      }
+    },
+    {
+      "id": 116,
+      "matricula": "19366",
+      "nome_completo": "RAFAEL DE ALMEIDA OLIVEIRA",
+      "codigo_rv": "511",
+      "antes": {
+        "bonus": 200,
+        "rv_nova": 200,
+        "valor_total_previsto": 200,
+        "status_produtividade": "Sem premio"
+      },
+      "depois": {
+        "bonus": 200,
+        "rv_nova": 726.98,
+        "valor_total_previsto": 726.98,
+        "status_produtividade": "Elegivel"
+      }
+    }
+  ],
+  "validacao": [
+    {
+      "matricula": "19347",
+      "nome_completo": "DANIEL FRERES DA SILVA",
+      "codigo_rv": "506",
+      "competencia": "07/2026",
+      "bonus": "0.00",
+      "rv_nova": "531.37",
+      "valor_total_previsto": "531.37",
+      "status_produtividade": "Elegivel"
+    },
+    {
+      "matricula": "19366",
+      "nome_completo": "RAFAEL DE ALMEIDA OLIVEIRA",
+      "codigo_rv": "511",
+      "competencia": "07/2026",
+      "bonus": "200.00",
+      "rv_nova": "726.98",
+      "valor_total_previsto": "726.98",
+      "status_produtividade": "Elegivel"
+    }
+  ]
+}

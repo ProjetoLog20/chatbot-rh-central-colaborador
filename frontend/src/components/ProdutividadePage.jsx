@@ -14,12 +14,12 @@ import {
 } from '../api.js';
 
 const rotaMetricFields = [
-  ['valor_total_previsto', 'Valor a receber', 'money'],
-  ['entregas', 'Entregas', 'number'],
+  ['competencia', 'Periodo', ''],
+  ['valor_total_previsto', 'Valor', 'money'],
+  ['mapas', 'Qnt Mapas', 'number'],
   ['caixas', 'Caixas', 'number'],
-  ['percentual_devolucao', 'Devolucao', 'percent'],
-  ['recargas', 'Recargas', 'number'],
-  ['bonus', 'Bonus', 'money']
+  ['recargas', 'Rec', 'number'],
+  ['percentual_devolucao', '% Dev', 'percent']
 ];
 
 const rotaDetailFields = [

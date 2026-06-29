@@ -1,0 +1,47 @@
+{
+  "data": "2026-06-25T12:52:22.107Z",
+  "changes": [
+    {
+      "action": "inserted",
+      "before": null,
+      "after": {
+        "id": 120,
+        "matricula": "19369",
+        "nome_completo": "MARCELO APARECIDO DOS SANTOS",
+        "competencia": "07/2026",
+        "funcao_rv": "motorista",
+        "codigo_rv": "513",
+        "caixas": "2289.30",
+        "entregas": "182.00",
+        "percentual_devolucao": "3.7433",
+        "recargas": "0.00",
+        "mapas": "16.00",
+        "bonus": "0.00",
+        "rv_nova": "456.72",
+        "valor_total_previsto": "456.72",
+        "status_produtividade": "Elegivel"
+      }
+    },
+    {
+      "action": "inserted",
+      "before": null,
+      "after": {
+        "id": 121,
+        "matricula": "19359",
+        "nome_completo": "SAULO MAIKE CASTILHO",
+        "competencia": "07/2026",
+        "funcao_rv": "motorista",
+        "codigo_rv": "509",
+        "caixas": "0.00",
+        "entregas": "0.00",
+        "percentual_devolucao": null,
+        "recargas": "0.00",
+        "mapas": "0.00",
+        "bonus": "0.00",
+        "rv_nova": "0.00",
+        "valor_total_previsto": "0.00",
+        "status_produtividade": "Sem premio"
+      }
+    }
+  ]
+}

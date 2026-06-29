@@ -1,0 +1,37 @@
+{
+  "data": "2026-06-25T12:54:22.547Z",
+  "before": {
+    "id": 121,
+    "matricula": "19359",
+    "nome_completo": "SAULO MAIKE CASTILHO",
+    "competencia": "07/2026",
+    "codigo_rv": "509",
+    "caixas": "0.00",
+    "entregas": "0.00",
+    "percentual_devolucao": null,
+    "recargas": "0.00",
+    "mapas": "0.00",
+    "bonus": "0.00",
+    "rv_nova": "0.00",
+    "valor_total_previsto": "0.00",
+    "status_produtividade": "Sem premio"
+  },
+  "after": {
+    "id": 121,
+    "matricula": "19359",
+    "nome_completo": "SAULO MAIKE CASTILHO",
+    "competencia": "07/2026",
+    "funcao_rv": "motorista",
+    "codigo_rv": "509",
+    "caixas": "3601.00",
+    "entregas": "234.00",
+    "percentual_devolucao": "3.3200",
+    "recargas": "1.00",
+    "mapas": "19.00",
+    "bonus": "200.00",
+    "valor_recarga": "200.00",
+    "rv_nova": "1006.75",
+    "valor_total_previsto": "1006.75",
+    "status_produtividade": "Elegivel"
+  }
+}

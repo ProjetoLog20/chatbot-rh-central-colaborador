@@ -1,0 +1,75 @@
+{
+  "backup": "logs\\backup_rv_antes_2026-06-24_bonus_rv_bruno_vladimir.xlsx",
+  "alteracoes": [
+    {
+      "id": 82,
+      "matricula": "19244",
+      "nome_completo": "BRUNO DE OLIVEIRA",
+      "competencia": "07/2026",
+      "funcao_rv": "motorista",
+      "bonus_adicionado_ao_total": 200,
+      "antes": {
+        "bonus": 200,
+        "nova_rv": 844.11,
+        "rv_nova": 844.11,
+        "valor_total_previsto": 844.11,
+        "diferenca_rv": 0
+      },
+      "depois": {
+        "bonus": 200,
+        "nova_rv": 1044.11,
+        "rv_nova": 1044.11,
+        "valor_total_previsto": 1044.11,
+        "diferenca_rv": 200
+      }
+    },
+    {
+      "id": 104,
+      "matricula": "19318",
+      "nome_completo": "VLADIMIR DA SILVA DAMASIO",
+      "competencia": "07/2026",
+      "funcao_rv": "ajudante",
+      "bonus_adicionado_ao_total": 200,
+      "antes": {
+        "bonus": 200,
+        "nova_rv": 663.16,
+        "rv_nova": 663.16,
+        "valor_total_previsto": 663.16,
+        "diferenca_rv": 0
+      },
+      "depois": {
+        "bonus": 200,
+        "nova_rv": 863.16,
+        "rv_nova": 863.16,
+        "valor_total_previsto": 863.16,
+        "diferenca_rv": 200
+      }
+    }
+  ],
+  "validacao": [
+    {
+      "matricula": "19244",
+      "nome_completo": "BRUNO DE OLIVEIRA",
+      "competencia": "07/2026",
+      "funcao_rv": "motorista",
+      "bonus": "200.00",
+      "nova_rv": "1044.11",
+      "rv_nova": "1044.11",
+      "diferenca_rv": "200.00",
+      "valor_total_previsto": "1044.11",
+      "mensagem_rh": "Valor corrigido com bonus de devolucao de R$ 200,00."
+    },
+    {
+      "matricula": "19318",
+      "nome_completo": "VLADIMIR DA SILVA DAMASIO",
+      "competencia": "07/2026",
+      "funcao_rv": "ajudante",
+      "bonus": "200.00",
+      "nova_rv": "863.16",
+      "rv_nova": "863.16",
+      "diferenca_rv": "200.00",
+      "valor_total_previsto": "863.16",
+      "mensagem_rh": "Valor corrigido com bonus de devolucao de R$ 200,00."
+    }
+  ]
+}

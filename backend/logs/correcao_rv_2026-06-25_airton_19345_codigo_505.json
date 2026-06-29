@@ -1,0 +1,35 @@
+{
+  "data": "2026-06-25T12:31:47.682Z",
+  "action": "inserted",
+  "colaborador": {
+    "id": 97,
+    "matricula": "19345",
+    "nome_completo": "AIRTON EVANDRO NUNES",
+    "cpf": "01081163950",
+    "cargo": "Motorista Caminhão Distribuição",
+    "setor": "DISTRIBUIÇÃO URBANA",
+    "tipo_colaborador": "motorista",
+    "perfil": "motorista"
+  },
+  "after": {
+    "id": 119,
+    "colaborador_id": 97,
+    "matricula": "19345",
+    "nome_completo": "AIRTON EVANDRO NUNES",
+    "competencia": "07/2026",
+    "periodo_inicio": "2026-05-21T03:00:00.000Z",
+    "periodo_fim": "2026-06-20T03:00:00.000Z",
+    "funcao_rv": "motorista",
+    "codigo_rv": "505",
+    "caixas": "0.00",
+    "entregas": "0.00",
+    "recargas": "0.00",
+    "mapas": "0.00",
+    "bonus": "0.00",
+    "rv_nova": "0.00",
+    "valor_total_previsto": "0.00",
+    "status_produtividade": "Sem premio",
+    "status_auditoria": "manual_rh",
+    "metodo_cruzamento": "codigo_rv_manual"
+  }
+}
