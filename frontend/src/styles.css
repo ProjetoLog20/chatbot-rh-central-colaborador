@@ -4211,6 +4211,7 @@ tr:not(:last-child) td {
 
 /* Resultados da Pesquisa de Engajamento H1 2026 */
 .engagement-results { --engagement-blue: #0b4f78; color: #193247; margin-bottom: 32px; }
+.security-results { --engagement-blue: #0b4f78; border-top: 4px solid #E87522; }
 .engagement-results__header { align-items: flex-end; background: linear-gradient(135deg, #eef6fa, #fff7ee); border: 1px solid #dbe7ed; border-radius: 16px; display: flex; gap: 24px; justify-content: space-between; padding: 24px; }
 .engagement-results__eyebrow { color: #e87522; display: block; font-size: 12px; font-weight: 800; letter-spacing: .08em; margin-bottom: 6px; text-transform: uppercase; }
 .engagement-results h1, .engagement-results h2, .engagement-results p { margin: 0; }

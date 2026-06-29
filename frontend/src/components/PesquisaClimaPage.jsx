@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getUser } from '../auth';
 import AdminPesquisaClimaForm from './AdminPesquisaClimaForm';
 import EngagementResults from './EngagementResults';
+import PesquisaSegurancaCard from './PesquisaSegurancaCard';
 
 export default function PesquisaClimaPage() {
   const user = getUser();
@@ -169,6 +170,7 @@ export default function PesquisaClimaPage() {
       return (
         <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
           <EngagementResults />
+          <PesquisaSegurancaCard />
         </div>
       );
     }
@@ -177,6 +179,7 @@ export default function PesquisaClimaPage() {
       return (
         <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
           <EngagementResults />
+          <PesquisaSegurancaCard />
           <p style={{ fontSize: '16px' }}>
             ✓ Você já respondeu esta pesquisa. Obrigado pela participação!
           </p>
@@ -187,6 +190,7 @@ export default function PesquisaClimaPage() {
     return (
       <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
         <EngagementResults />
+        <PesquisaSegurancaCard />
         <div style={{ maxWidth: '600px', margin: '0 auto' }}>
         <h2 style={{ color: '#003B68', marginBottom: '12px' }}>{pesquisaAtiva.titulo}</h2>
         <p style={{ color: '#666', marginBottom: '24px' }}>{pesquisaAtiva.descricao}</p>
@@ -419,6 +423,7 @@ export default function PesquisaClimaPage() {
   return (
     <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto' }}>
       <EngagementResults />
+      <PesquisaSegurancaCard />
       <div style={{ marginBottom: '32px' }}>
         <h1 style={{ color: '#003B68', marginBottom: '8px' }}>Pesquisa de Clima</h1>
         <p style={{ color: '#666', marginBottom: '24px' }}>
