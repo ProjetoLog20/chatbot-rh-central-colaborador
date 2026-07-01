@@ -77,6 +77,62 @@ const armazemDetailFields = [
   ['mensagem_rh', 'Mensagem RH']
 ];
 
+const armazemGoalGroups = [
+  {
+    title: 'RV AJUDANTES - TURNO A',
+    goals: [
+      { code: 'EC', label: 'EFICIENCIA DE CARREGAMENTO', meta: '98%', value: 'R$ 50.00', accumulated: 'R$ 0.00' },
+      { code: 'TM', label: 'TMA', meta: '02:16', value: 'R$ 100.00', accumulated: 'R$ 0.00' }
+    ],
+    items: [
+      ['@', 'Amarracao', 'R$ 1.25'],
+      ['↻', 'Retrabalho', 'R$ 2.00'],
+      ['▣', 'Repack', 'R$ 0.30'],
+      ['▥', 'Ressuprimento', 'R$ 0.20'],
+      ['/', 'Remonte', 'R$ 0.10'],
+      ['!', 'Refugo', 'R$ 1.00'],
+      ['▤', 'Tarefa Op.', 'R$ 0.10'],
+      ['U', 'Separar Chopp', 'R$ 1.00'],
+      ['V', 'Carregamento Van', 'R$ 1.25'],
+      ['▰', 'Descarga', 'R$ 2.80'],
+      ['*', 'Colocar fitilho', 'R$ 0.50'],
+      ['+', 'Demais Atividades', 'R$ 1.00']
+    ]
+  },
+  {
+    title: 'RV AJUDANTES - TURNO B',
+    goals: [
+      { code: 'RE', label: 'RESSUPRIMENTO', meta: '90%', value: 'R$ 50.00', accumulated: 'R$ 0.00' },
+      { code: 'TM', label: 'TMA', meta: '02:16', value: 'R$ 100.00', accumulated: 'R$ 0.00' }
+    ],
+    items: [
+      ['@', 'Amarracao', 'R$ 1.25'],
+      ['↻', 'Retrabalho', 'R$ 2.00'],
+      ['▣', 'Repack', 'R$ 0.30'],
+      ['▥', 'Ressuprimento', 'R$ 0.20'],
+      ['/', 'Remonte', 'R$ 0.10'],
+      ['!', 'Refugo', 'R$ 1.00'],
+      ['▤', 'Tarefa Op.', 'R$ 0.10'],
+      ['U', 'Separar Chopp', 'R$ 1.00'],
+      ['V', 'Carregamento Van', 'R$ 1.25'],
+      ['▰', 'Descarga', 'R$ 2.80'],
+      ['*', 'Colocar fitilho', 'R$ 0.50'],
+      ['+', 'Demais Atividades', 'R$ 1.00']
+    ]
+  },
+  {
+    title: 'RV OPERADORES',
+    goals: [
+      { code: 'EC', label: 'EFICIENCIA DE CARREGAMENTO', meta: '98%', value: 'R$ 50.00', accumulated: 'R$ 0.00' },
+      { code: 'TM', label: 'TMA', meta: '02:16', value: 'R$ 100.00', accumulated: 'R$ 0.00' },
+      { code: 'ED', label: 'EFICIENCIA DE DESCARGA', meta: '90%', value: 'R$ 50.00', accumulated: 'R$ 0.00' }
+    ],
+    items: [
+      ['T', 'Tarefa Operacional', 'R$ 0.10']
+    ]
+  }
+];
+
 const emptyRotaSummary = {
   total_colaboradores: 0,
   total_motoristas: 0,
@@ -248,6 +304,45 @@ function ProdutividadeDetail({ registro, variant = 'rota' }) {
   );
 }
 
+function ArmazemGoalsCard() {
+  return (
+    <section className="prod-armazem-goals" aria-label="Metas Armazem">
+      <div className="prod-armazem-goals-heading">
+        <h2>Metas Armazem</h2>
+      </div>
+      <div className="prod-goal-groups">
+        {armazemGoalGroups.map((group) => (
+          <article className="prod-goal-group" key={group.title}>
+            <h3>{group.title}</h3>
+            <div className="prod-goal-metrics" style={{ '--goal-count': group.goals.length }}>
+              {group.goals.map((goal) => (
+                <div className="prod-goal-metric" key={`${group.title}-${goal.code}`}>
+                  <div className="prod-goal-code">{goal.code}</div>
+                  <div className="prod-goal-label">{goal.label}</div>
+                  <div className="prod-goal-copy">
+                    <strong>Meta {goal.meta}</strong>
+                    <span>Valor {goal.value}</span>
+                    <b>Acumulado: {goal.accumulated}</b>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="prod-goal-items">
+              {group.items.map(([icon, label, value]) => (
+                <div className="prod-goal-item" key={`${group.title}-${label}`}>
+                  <span className="prod-goal-item-icon" aria-hidden="true">{icon}</span>
+                  <strong>{label}</strong>
+                  <b>{value}</b>
+                </div>
+              ))}
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 const rotaManualFields = [
   ['valor_total_previsto', 'Premio de Produtividade', 'number'],
   ['rv_nova', 'RV nova', 'number'],
@@ -399,6 +494,7 @@ function ColaboradorArmazemPanel({ rows }) {
 
   return (
     <>
+      <ArmazemGoalsCard />
       <div className="prod-info-note">Seu premio do armazem e calculado com base nos dados importados da apuracao oficial da RV.</div>
       {rows.length ? (
         <>
@@ -759,6 +855,7 @@ function AdminArmazemPanel() {
         </section>
       ) : (
         <>
+      <ArmazemGoalsCard />
       <section className="prod-summary-grid">
         {summaryCards.map(([label, value, type]) => <div key={label}><span>{label}</span><strong>{formatValue(value, type)}</strong></div>)}
       </section>
