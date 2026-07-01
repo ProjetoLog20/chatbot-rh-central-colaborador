@@ -11,6 +11,8 @@
     "import:prontuario": "node scripts/importProntuarioXls.js",
     "import:rv": "node scripts/importRvXlsx.js",
     "import:rv-armazem": "node scripts/importRvArmazemXlsx.js",
+    "import:logipay": "node scripts/importLogipayBase44Json.js",
+    "import:ondemand": "node scripts/importOnDemandArmazemCsv.js",
     "import:rotograma": "node scripts/importRotogramaXlsx.js"
   },
   "dependencies": {
