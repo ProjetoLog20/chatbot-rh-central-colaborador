@@ -175,6 +175,13 @@ export async function getAdminProdutividadeDetail(colaboradorId) {
   return request(`/produtividade/admin/${colaboradorId}`);
 }
 
+export async function updateAdminProdutividadeRegistro(id, payload) {
+  return request(`/produtividade/admin/registro/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+}
+
 export async function importProdutividadeFile(file) {
   const token = localStorage.getItem('token');
   const formData = new FormData();
@@ -238,6 +245,20 @@ export async function getAdminProdutividadeArmazemResumo(filters = {}) {
 
 export async function getAdminProdutividadeArmazemDetail(colaboradorId) {
   return request(`/produtividade-armazem/admin/${colaboradorId}`);
+}
+
+export async function createAdminProdutividadeArmazemManual(payload) {
+  return request('/produtividade-armazem/admin/manual', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function updateAdminProdutividadeArmazemRegistro(id, payload) {
+  return request(`/produtividade-armazem/admin/registro/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
 }
 
 export async function exportAdminProdutividadeArmazem(filters = {}) {

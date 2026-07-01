@@ -87,6 +87,22 @@ function numberValue(value) {
   return Number.isFinite(number) ? number : 0;
 }
 
+function parseManualNumber(value) {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  let text = String(value).trim().replace(/\s/g, '').replace('R$', '').replace('%', '');
+  if (!text) return null;
+  const hasComma = text.includes(',');
+  const hasDot = text.includes('.');
+  if (hasComma && hasDot) {
+    text = text.lastIndexOf(',') > text.lastIndexOf('.') ? text.replace(/\./g, '').replace(',', '.') : text.replace(/,/g, '');
+  } else if (hasComma) {
+    text = text.replace(',', '.');
+  }
+  const number = Number(text);
+  return Number.isFinite(number) ? Number(number.toFixed(2)) : null;
+}
+
 function buildAdminFilters(query) {
   const { busca, competencia, funcao_rv, status_produtividade, bateu_devolucao, status_auditoria } = query;
   const filters = [];
@@ -246,6 +262,44 @@ router.get('/admin/:colaboradorId', authenticateToken, authorizeRoles('admin'), 
     return res.json({ colaborador: rows[0], registros: rows });
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao abrir produtividade' });
+  }
+});
+
+router.put('/admin/registro/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const existing = await db.get('SELECT * FROM produtividade_colaboradores WHERE id = ?', [id]);
+    if (!existing) return res.status(404).json({ error: 'Registro de produtividade nao encontrado' });
+
+    const valorTotal = parseManualNumber(req.body.valor_total_previsto);
+    const rvNova = parseManualNumber(req.body.rv_nova ?? req.body.nova_rv);
+    const bonus = parseManualNumber(req.body.bonus);
+    const valorRecarga = parseManualNumber(req.body.valor_recarga);
+    const extra = parseManualNumber(req.body.extra);
+
+    const nextValorTotal = valorTotal ?? numberValue(existing.valor_total_previsto);
+    const nextRvNova = rvNova ?? nextValorTotal;
+    const nextBonus = bonus ?? numberValue(existing.bonus);
+    const nextValorRecarga = valorRecarga ?? numberValue(existing.valor_recarga);
+    const nextExtra = extra ?? numberValue(existing.extra);
+    const nextStatus = String(req.body.status_produtividade || existing.status_produtividade || (nextValorTotal > 0 ? 'Elegivel' : 'Sem premio')).trim();
+    const mensagemRh = req.body.mensagem_rh !== undefined ? String(req.body.mensagem_rh || '') : existing.mensagem_rh;
+
+    await db.run(
+      `UPDATE produtividade_colaboradores
+       SET valor_total_previsto = ?, rv_nova = ?, nova_rv = ?, bonus = ?, valor_recarga = ?, extra = ?,
+           status_produtividade = ?, mensagem_rh = ?, status_auditoria = 'ok',
+           metodo_cruzamento = COALESCE(metodo_cruzamento, 'edicao_manual_rh'),
+           confianca_cruzamento = 1,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [nextValorTotal, nextRvNova, nextRvNova, nextBonus, nextValorRecarga, nextExtra, nextStatus, mensagemRh, id]
+    );
+
+    const updated = await db.get(`${selectProdutividade} WHERE p.id = ?`, [id]);
+    return res.json({ message: 'Premio de produtividade atualizado manualmente.', registro: updated });
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao atualizar premio de produtividade' });
   }
 });
 

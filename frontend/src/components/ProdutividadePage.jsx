@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  createAdminProdutividadeArmazemManual,
   exportAdminProdutividade,
   exportAdminProdutividadeArmazem,
   getAdminProdutividade,
@@ -10,7 +11,9 @@ import {
   getAdminProdutividadeResumo,
   getMeuProdutividade,
   getMeuProdutividadeArmazem,
-  importProdutividadeFile
+  importProdutividadeFile,
+  updateAdminProdutividadeArmazemRegistro,
+  updateAdminProdutividadeRegistro
 } from '../api.js';
 
 const rotaMetricFields = [
@@ -245,6 +248,104 @@ function ProdutividadeDetail({ registro, variant = 'rota' }) {
   );
 }
 
+const rotaManualFields = [
+  ['valor_total_previsto', 'Premio de Produtividade', 'number'],
+  ['rv_nova', 'RV nova', 'number'],
+  ['bonus', 'Bonus', 'number'],
+  ['valor_recarga', 'Valor recarga', 'number'],
+  ['extra', 'Extra', 'number'],
+  ['status_produtividade', 'Status', 'text']
+];
+
+const armazemManualFields = [
+  ['matricula', 'Matricula', 'text'],
+  ['competencia', 'Competencia', 'text'],
+  ['periodo_inicio', 'Periodo inicial', 'date'],
+  ['periodo_fim', 'Periodo final', 'date'],
+  ['funcao_armazem', 'Funcao no armazem', 'select'],
+  ['pontos', 'Pontos', 'number'],
+  ['faixa', 'Faixa', 'text'],
+  ['rv_antiga', 'RV antiga', 'number'],
+  ['rv_nova', 'RV nova', 'number'],
+  ['erros', 'Erros', 'number'],
+  ['valor_total_previsto', 'Valor total previsto', 'number'],
+  ['status_produtividade', 'Status', 'text'],
+  ['usuario_wms', 'Usuario WMS', 'text'],
+  ['codigo_operacional', 'Codigo operacional', 'text']
+];
+
+function buildManualState(registro = {}, variant = 'rota') {
+  const fields = variant === 'armazem' ? armazemManualFields : rotaManualFields;
+  return fields.reduce((acc, [key]) => {
+    acc[key] = registro?.[key] ?? '';
+    return acc;
+  }, { mensagem_rh: registro?.mensagem_rh ?? '' });
+}
+
+function ManualProdutividadeForm({ registro, variant = 'rota', onSubmit, onCancel }) {
+  const isArmazem = variant === 'armazem';
+  const fields = isArmazem ? armazemManualFields : rotaManualFields;
+  const [form, setForm] = useState(() => buildManualState(registro, variant));
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setForm(buildManualState(registro, variant));
+  }, [registro, variant]);
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      await onSubmit(form);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form className="prod-manual-form" onSubmit={handleSubmit}>
+      <div className="prod-manual-form-heading">
+        <div>
+          <h3>{isArmazem ? 'Lancamento manual do armazem' : 'Editar premio de rota'}</h3>
+          <p>{isArmazem ? 'Preencha os dados que serao exibidos ao colaborador.' : 'Ajuste manualmente os valores do premio para motoristas e ajudantes.'}</p>
+        </div>
+        {onCancel ? <button type="button" className="detail-action-button secondary" onClick={onCancel}>Cancelar</button> : null}
+      </div>
+      <div className="prod-manual-grid">
+        {fields.map(([key, label, type]) => (
+          <label key={key}>
+            {label}
+            {type === 'select' ? (
+              <select value={form[key] || ''} onChange={(event) => setForm({ ...form, [key]: event.target.value })} required={['funcao_armazem'].includes(key)}>
+                <option value="">Selecione</option>
+                <option value="Ajudante">Ajudante</option>
+                <option value="Operador de Empilhadeira">Operador de Empilhadeira</option>
+                <option value="Amarrador">Amarrador</option>
+              </select>
+            ) : (
+              <input
+                type={type}
+                step={type === 'number' ? '0.01' : undefined}
+                value={form[key] || ''}
+                disabled={Boolean(registro?.id) && key === 'matricula'}
+                required={isArmazem && ['matricula', 'competencia'].includes(key)}
+                onChange={(event) => setForm({ ...form, [key]: event.target.value })}
+              />
+            )}
+          </label>
+        ))}
+        <label className="prod-manual-wide">
+          Mensagem RH
+          <textarea value={form.mensagem_rh || ''} onChange={(event) => setForm({ ...form, mensagem_rh: event.target.value })} rows={3} />
+        </label>
+      </div>
+      <div className="prod-manual-actions">
+        <button type="submit" disabled={saving}>{saving ? 'Salvando...' : 'Salvar manualmente'}</button>
+      </div>
+    </form>
+  );
+}
+
 function ColaboradorRotaPanel({ rows }) {
   const [selectedId, setSelectedId] = useState('');
 
@@ -399,6 +500,7 @@ function AdminRotaPanel() {
   const [rows, setRows] = useState([]);
   const [summary, setSummary] = useState(emptyRotaSummary);
   const [detail, setDetail] = useState(null);
+  const [editing, setEditing] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -433,10 +535,11 @@ function AdminRotaPanel() {
     }
   }
 
-  async function openDetail(colaboradorId) {
+  async function openDetail(row) {
     try {
-      const result = await getAdminProdutividadeDetail(colaboradorId);
-      setDetail(result.registros?.[0] || result.colaborador || null);
+      const result = await getAdminProdutividadeDetail(row.colaborador_id);
+      setDetail(result.registros?.find((item) => item.id === row.id) || result.registros?.[0] || result.colaborador || null);
+      setEditing(false);
       window.requestAnimationFrame(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
@@ -447,9 +550,22 @@ function AdminRotaPanel() {
 
   function closeDetail() {
     setDetail(null);
+    setEditing(false);
     window.requestAnimationFrame(() => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
+  }
+
+  async function saveManual(payload) {
+    try {
+      const result = await updateAdminProdutividadeRegistro(detail.id, payload);
+      setDetail(result.registro);
+      setEditing(false);
+      await refresh();
+      setMessage(result.message || 'Premio atualizado manualmente.');
+    } catch (err) {
+      setMessage(err.error || 'Erro ao salvar premio manual');
+    }
   }
 
   async function handleImport(files) {
@@ -488,7 +604,9 @@ function AdminRotaPanel() {
             <button type="button" className="detail-back-button" onClick={closeDetail}>
               <span aria-hidden="true">&larr;</span> Retornar
             </button>
+            <button type="button" className="detail-action-button" onClick={() => setEditing(true)}>Editar premio</button>
           </div>
+          {editing ? <ManualProdutividadeForm registro={detail} onSubmit={saveManual} onCancel={() => setEditing(false)} /> : null}
           <ProdutividadeDetail registro={detail} />
         </section>
       ) : (
@@ -514,7 +632,7 @@ function AdminRotaPanel() {
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id}>
-                  <td>{row.matricula}</td><td>{row.nome_completo}</td><td>{row.cpf}</td><td>{row.competencia}</td><td>{formatRotaFuncao(row.funcao_rv)}</td><td>{formatNumber(row.caixas)}</td><td>{formatNumber(row.entregas)}</td><td>{formatPercent(row.percentual_devolucao)}</td><td><StatusBadge type="devolucao" value={row.bateu_devolucao} /></td><td>{formatNumber(row.recargas)}</td><td>{formatNumber(row.mapas)}</td><td>{formatMoney(row.valor_total_previsto)}</td><td><StatusBadge type="status" value={row.status_produtividade} /></td><td><StatusBadge type="auditoria" value={row.status_auditoria} /></td><td><button className="detail-action-button" onClick={() => openDetail(row.colaborador_id)}>Ver detalhes</button></td>
+                  <td>{row.matricula}</td><td>{row.nome_completo}</td><td>{row.cpf}</td><td>{row.competencia}</td><td>{formatRotaFuncao(row.funcao_rv)}</td><td>{formatNumber(row.caixas)}</td><td>{formatNumber(row.entregas)}</td><td>{formatPercent(row.percentual_devolucao)}</td><td><StatusBadge type="devolucao" value={row.bateu_devolucao} /></td><td>{formatNumber(row.recargas)}</td><td>{formatNumber(row.mapas)}</td><td>{formatMoney(row.valor_total_previsto)}</td><td><StatusBadge type="status" value={row.status_produtividade} /></td><td><StatusBadge type="auditoria" value={row.status_auditoria} /></td><td><button className="detail-action-button" onClick={() => openDetail(row)}>Ver detalhes</button></td>
                 </tr>
               ))}
             </tbody>
@@ -532,6 +650,8 @@ function AdminArmazemPanel() {
   const [rows, setRows] = useState([]);
   const [summary, setSummary] = useState(emptyArmazemSummary);
   const [detail, setDetail] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -564,10 +684,12 @@ function AdminArmazemPanel() {
     }
   }
 
-  async function openDetail(colaboradorId) {
+  async function openDetail(row) {
     try {
-      const result = await getAdminProdutividadeArmazemDetail(colaboradorId);
-      setDetail(result.registros?.[0] || result.colaborador || null);
+      const result = await getAdminProdutividadeArmazemDetail(row.colaborador_id);
+      setDetail(result.registros?.find((item) => item.id === row.id) || result.registros?.[0] || result.colaborador || null);
+      setEditing(false);
+      setCreating(false);
       window.requestAnimationFrame(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
@@ -578,9 +700,25 @@ function AdminArmazemPanel() {
 
   function closeDetail() {
     setDetail(null);
+    setEditing(false);
     window.requestAnimationFrame(() => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
+  }
+
+  async function saveManual(payload) {
+    try {
+      const result = detail?.id
+        ? await updateAdminProdutividadeArmazemRegistro(detail.id, payload)
+        : await createAdminProdutividadeArmazemManual(payload);
+      setDetail(result.registro);
+      setEditing(false);
+      setCreating(false);
+      await refresh();
+      setMessage(result.message || 'Lancamento manual do armazem salvo.');
+    } catch (err) {
+      setMessage(err.error || 'Erro ao salvar lancamento manual do armazem');
+    }
   }
 
   const summaryCards = [
@@ -597,16 +735,26 @@ function AdminArmazemPanel() {
   return (
     <>
       <div className="prod-actions">
+        <button type="button" onClick={() => { setDetail(null); setEditing(false); setCreating(true); }}>Novo lancamento manual</button>
         <button onClick={() => exportAdminProdutividadeArmazem(filters)}>Exportar relatorio</button>
       </div>
       {message ? <div className="import-message">{message}</div> : null}
+      {creating ? (
+        <ManualProdutividadeForm
+          variant="armazem"
+          onSubmit={saveManual}
+          onCancel={() => setCreating(false)}
+        />
+      ) : null}
       {detail ? (
         <section className="detail-view-panel">
           <div className="detail-view-toolbar">
             <button type="button" className="detail-back-button" onClick={closeDetail}>
               <span aria-hidden="true">&larr;</span> Retornar
             </button>
+            <button type="button" className="detail-action-button" onClick={() => setEditing(true)}>Editar lancamento</button>
           </div>
+          {editing ? <ManualProdutividadeForm registro={detail} variant="armazem" onSubmit={saveManual} onCancel={() => setEditing(false)} /> : null}
           <ProdutividadeDetail registro={detail} variant="armazem" />
         </section>
       ) : (
@@ -632,7 +780,7 @@ function AdminArmazemPanel() {
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id}>
-                  <td>{row.matricula}</td><td>{row.nome_completo}</td><td>{formatArmazemFuncao(row.funcao_armazem)}</td><td>{row.competencia}</td><td>{formatNumber(row.pontos)}</td><td>{row.faixa || '-'}</td><td>{formatMoney(row.rv_antiga)}</td><td>{formatMoney(row.rv_nova)}</td><td>{formatNumber(row.erros)}</td><td>{formatMoney(row.valor_total_previsto)}</td><td><StatusBadge type="status" value={row.status_produtividade} /></td><td><StatusBadge type="auditoria" value={row.status_auditoria} /></td><td><button className="detail-action-button" onClick={() => openDetail(row.colaborador_id)}>Ver detalhes</button></td>
+                  <td>{row.matricula}</td><td>{row.nome_completo}</td><td>{formatArmazemFuncao(row.funcao_armazem)}</td><td>{row.competencia}</td><td>{formatNumber(row.pontos)}</td><td>{row.faixa || '-'}</td><td>{formatMoney(row.rv_antiga)}</td><td>{formatMoney(row.rv_nova)}</td><td>{formatNumber(row.erros)}</td><td>{formatMoney(row.valor_total_previsto)}</td><td><StatusBadge type="status" value={row.status_produtividade} /></td><td><StatusBadge type="auditoria" value={row.status_auditoria} /></td><td><button className="detail-action-button" onClick={() => openDetail(row)}>Ver detalhes</button></td>
                 </tr>
               ))}
             </tbody>

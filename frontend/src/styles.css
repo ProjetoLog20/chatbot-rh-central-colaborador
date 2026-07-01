@@ -2955,6 +2955,85 @@ tr:not(:last-child) td {
   gap: 1rem;
 }
 
+.prod-manual-form {
+  border: 1px solid #DCE5EC;
+  border-radius: 8px;
+  background: #FFFFFF;
+  padding: 1rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.prod-manual-form-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.prod-manual-form-heading h3,
+.prod-manual-form-heading p {
+  margin: 0;
+}
+
+.prod-manual-form-heading p {
+  margin-top: 0.35rem;
+  color: #6B7280;
+}
+
+.prod-manual-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.85rem;
+}
+
+.prod-manual-grid label {
+  display: grid;
+  gap: 0.45rem;
+  color: #374151;
+  font-weight: 800;
+}
+
+.prod-manual-grid input,
+.prod-manual-grid select,
+.prod-manual-grid textarea {
+  width: 100%;
+  border: 1px solid #C9D7E2;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0.72rem 0.82rem;
+  color: #1F2933;
+}
+
+.prod-manual-grid input:disabled {
+  background: #F3F4F6;
+  color: #6B7280;
+}
+
+.prod-manual-wide {
+  grid-column: 1 / -1;
+}
+
+.prod-manual-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.prod-manual-actions button,
+.detail-action-button.secondary {
+  border: 1px solid #DCE5EC;
+  border-radius: 8px;
+  background: #003B68;
+  color: #fff;
+  padding: 0.7rem 0.95rem;
+  font-weight: 900;
+}
+
+.detail-action-button.secondary {
+  background: #fff;
+  color: #003B68;
+}
+
 .prod-detail-heading {
   display: flex;
   align-items: flex-start;

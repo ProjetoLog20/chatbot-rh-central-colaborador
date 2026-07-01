@@ -49,6 +49,101 @@ function numberValue(value) {
   return Number.isFinite(number) ? number : 0;
 }
 
+function parseManualNumber(value) {
+  if (value === undefined || value === null || value === '') return 0;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  let text = String(value).trim().replace(/\s/g, '').replace('R$', '').replace('%', '');
+  if (!text) return 0;
+  const hasComma = text.includes(',');
+  const hasDot = text.includes('.');
+  if (hasComma && hasDot) {
+    text = text.lastIndexOf(',') > text.lastIndexOf('.') ? text.replace(/\./g, '').replace(',', '.') : text.replace(/,/g, '');
+  } else if (hasComma) {
+    text = text.replace(',', '.');
+  }
+  const number = Number(text);
+  return Number.isFinite(number) ? Number(number.toFixed(2)) : 0;
+}
+
+function trim(value) {
+  return String(value ?? '').trim();
+}
+
+function manualPayload(body, colaborador, existing = {}) {
+  const valorTotal = parseManualNumber(body.valor_total_previsto ?? existing.valor_total_previsto);
+  const rvNova = parseManualNumber(body.rv_nova ?? existing.rv_nova ?? valorTotal);
+  const rvAntiga = parseManualNumber(body.rv_antiga ?? existing.rv_antiga);
+  const status = trim(body.status_produtividade ?? existing.status_produtividade) || (valorTotal > 0 ? 'Elegivel' : 'Sem premio');
+
+  return {
+    colaborador_id: colaborador.id,
+    competencia: trim(body.competencia ?? existing.competencia),
+    periodo_inicio: trim(body.periodo_inicio ?? existing.periodo_inicio) || null,
+    periodo_fim: trim(body.periodo_fim ?? existing.periodo_fim) || null,
+    matricula: trim(colaborador.matricula),
+    nome_completo: trim(colaborador.nome_completo),
+    cpf: trim(colaborador.cpf),
+    funcao_armazem: trim(body.funcao_armazem ?? existing.funcao_armazem),
+    cargo: trim(body.cargo ?? existing.cargo ?? colaborador.cargo),
+    setor: trim(body.setor ?? existing.setor ?? colaborador.setor),
+    tipo_colaborador: trim(body.tipo_colaborador ?? existing.tipo_colaborador ?? colaborador.tipo_colaborador),
+    perfil: trim(body.perfil ?? existing.perfil ?? colaborador.perfil),
+    usuario_wms: trim(body.usuario_wms ?? existing.usuario_wms),
+    codigo_operacional: trim(body.codigo_operacional ?? existing.codigo_operacional),
+    pontos: parseManualNumber(body.pontos ?? existing.pontos),
+    faixa: trim(body.faixa ?? existing.faixa),
+    rv_antiga: rvAntiga,
+    rv_nova: rvNova,
+    erros: parseManualNumber(body.erros ?? existing.erros),
+    valor_total_previsto: valorTotal,
+    indicador_1: trim(body.indicador_1 ?? existing.indicador_1),
+    indicador_2: trim(body.indicador_2 ?? existing.indicador_2),
+    indicador_3: trim(body.indicador_3 ?? existing.indicador_3),
+    status_produtividade: status,
+    origem_calculo: trim(body.origem_calculo ?? existing.origem_calculo) || 'manual_rh',
+    status_auditoria: 'ok',
+    metodo_cruzamento: 'manual_rh',
+    confianca_cruzamento: 1,
+    observacao_cruzamento: trim(body.observacao_cruzamento ?? existing.observacao_cruzamento),
+    mensagem_rh: trim(body.mensagem_rh ?? existing.mensagem_rh),
+    dados_originais_json: JSON.stringify({ origem: 'manual_rh', atualizado_em: new Date().toISOString() })
+  };
+}
+
+const manualColumns = [
+  'colaborador_id',
+  'competencia',
+  'periodo_inicio',
+  'periodo_fim',
+  'matricula',
+  'nome_completo',
+  'cpf',
+  'funcao_armazem',
+  'cargo',
+  'setor',
+  'tipo_colaborador',
+  'perfil',
+  'usuario_wms',
+  'codigo_operacional',
+  'pontos',
+  'faixa',
+  'rv_antiga',
+  'rv_nova',
+  'erros',
+  'valor_total_previsto',
+  'indicador_1',
+  'indicador_2',
+  'indicador_3',
+  'status_produtividade',
+  'origem_calculo',
+  'status_auditoria',
+  'metodo_cruzamento',
+  'confianca_cruzamento',
+  'observacao_cruzamento',
+  'mensagem_rh',
+  'dados_originais_json'
+];
+
 function buildAdminFilters(query) {
   const { busca, competencia, funcao_armazem, status_produtividade, status_auditoria, origem_calculo } = query;
   const filters = [];
@@ -214,6 +309,78 @@ router.get('/admin/:colaboradorId', authenticateToken, authorizeRoles('admin'), 
     return res.json({ colaborador: rows[0], registros: rows });
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao abrir produtividade do armazem' });
+  }
+});
+
+router.post('/admin/manual', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const matricula = trim(req.body.matricula);
+    if (!matricula || !trim(req.body.competencia) || !trim(req.body.funcao_armazem)) {
+      return res.status(400).json({ error: 'Matricula, competencia e funcao do armazem sao obrigatorias' });
+    }
+
+    const colaborador = await db.get('SELECT * FROM colaboradores WHERE matricula = ?', [matricula]);
+    if (!colaborador) return res.status(404).json({ error: 'Colaborador nao encontrado pela matricula informada' });
+
+    const existing = await db.get(
+      'SELECT * FROM produtividade_armazem_colaboradores WHERE colaborador_id = ? AND competencia = ? AND funcao_armazem = ?',
+      [colaborador.id, trim(req.body.competencia), trim(req.body.funcao_armazem)]
+    );
+    const payload = manualPayload(req.body, colaborador, existing || {});
+
+    if (existing) {
+      const assignments = manualColumns.filter((column) => column !== 'colaborador_id').map((column) => `${column} = ?`);
+      await db.run(
+        `UPDATE produtividade_armazem_colaboradores
+         SET ${assignments.join(', ')}, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [...manualColumns.filter((column) => column !== 'colaborador_id').map((column) => payload[column]), existing.id]
+      );
+      const updated = await db.get(`${selectArmazem} WHERE p.id = ?`, [existing.id]);
+      return res.json({ message: 'Lancamento manual do armazem atualizado.', registro: updated });
+    }
+
+    const columns = ['importacao_id', ...manualColumns];
+    const result = await db.run(
+      `INSERT INTO produtividade_armazem_colaboradores (${columns.join(', ')})
+       VALUES (${columns.map(() => '?').join(', ')})`,
+      [null, ...manualColumns.map((column) => payload[column])]
+    );
+    const insertedId = result.lastID;
+    const inserted = insertedId
+      ? await db.get(`${selectArmazem} WHERE p.id = ?`, [insertedId])
+      : await db.get(
+        `${selectArmazem} WHERE p.colaborador_id = ? AND p.competencia = ? AND p.funcao_armazem = ?`,
+        [payload.colaborador_id, payload.competencia, payload.funcao_armazem]
+      );
+    return res.json({ message: 'Lancamento manual do armazem criado.', registro: inserted });
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao salvar lancamento manual do armazem' });
+  }
+});
+
+router.put('/admin/registro/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const existing = await db.get('SELECT * FROM produtividade_armazem_colaboradores WHERE id = ?', [id]);
+    if (!existing) return res.status(404).json({ error: 'Registro de produtividade do armazem nao encontrado' });
+
+    const colaborador = await db.get('SELECT * FROM colaboradores WHERE id = ?', [existing.colaborador_id]);
+    if (!colaborador) return res.status(404).json({ error: 'Colaborador vinculado nao encontrado' });
+
+    const payload = manualPayload(req.body, colaborador, existing);
+    const assignments = manualColumns.filter((column) => column !== 'colaborador_id').map((column) => `${column} = ?`);
+    await db.run(
+      `UPDATE produtividade_armazem_colaboradores
+       SET ${assignments.join(', ')}, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [...manualColumns.filter((column) => column !== 'colaborador_id').map((column) => payload[column]), id]
+    );
+
+    const updated = await db.get(`${selectArmazem} WHERE p.id = ?`, [id]);
+    return res.json({ message: 'Produtividade do armazem atualizada manualmente.', registro: updated });
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao atualizar produtividade do armazem' });
   }
 });
 
