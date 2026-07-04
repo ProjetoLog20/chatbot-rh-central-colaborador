@@ -14,7 +14,8 @@ import {
   deleteAcao,
   resetCollaboratorPassword,
   getAdminModulos,
-  updateAdminModulo
+  updateAdminModulo,
+  getAdminAccessMetrics
 } from '../api.js';
 import AdminCampeoesSeguranca from './AdminCampeoesSeguranca.jsx';
 
@@ -62,6 +63,35 @@ const importOptions = [
     path: '/import/respostas_chatbot'
   }
 ];
+
+function AccessChart({ history = [] }) {
+  const values = history.map((item) => Number(item.total || 0));
+  const maxValue = Math.max(...values, 1);
+
+  if (!history.length) {
+    return <p>Nenhum dado de acesso registrado ainda.</p>;
+  }
+
+  return (
+    <div style={{ marginTop: '0.75rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: '0.6rem', alignItems: 'end' }}>
+        {history.slice(-7).map((item) => {
+          const height = Math.max(10, (Number(item.total || 0) / maxValue) * 100);
+          return (
+            <div key={item.data} style={{ textAlign: 'center' }}>
+              <div style={{ height: '90px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                <div style={{ width: '100%', maxWidth: '36px', height: `${height}%`, background: '#2563eb', borderRadius: '6px 6px 0 0' }} />
+              </div>
+              <div style={{ fontSize: '0.75rem', marginTop: '0.35rem', color: '#475569' }}>{item.data}</div>
+              <div style={{ fontWeight: 600 }}>{item.total}</div>
+            </div>
+          );
+        })}
+      </div>
+      <p style={{ marginTop: '0.6rem', color: '#64748b', fontSize: '0.9rem' }}>Histórico retroativo a partir do momento em que o contador passou a ser registrado.</p>
+    </div>
+  );
+}
 
 function ModuleConfigItem({ modulo, onSave }) {
   const [form, setForm] = useState({
@@ -159,6 +189,7 @@ export default function AdminPage() {
   const [respostas, setRespostas] = useState([]);
   const [acoes, setAcoes] = useState([]);
   const [modulos, setModulos] = useState([]);
+  const [accessMetrics, setAccessMetrics] = useState(null);
   const [message, setMessage] = useState('');
   const [importErrors, setImportErrors] = useState(null);
   const [respostaText, setRespostaText] = useState({ pergunta: '', resposta: '', categoria: '', ativo: true });
@@ -194,12 +225,13 @@ export default function AdminPage() {
   }, []);
 
   async function refresh() {
-    const [col, pr, resp, acoesData, modulosData] = await Promise.allSettled([
+    const [col, pr, resp, acoesData, modulosData, accessData] = await Promise.allSettled([
       getCollaborators(),
       getProntuarios(),
       getRespostas(),
       getAdminAcoes(),
-      getAdminModulos()
+      getAdminModulos(),
+      getAdminAccessMetrics()
     ]);
 
     if (col.status === 'fulfilled') setColaboradores(col.value);
@@ -207,13 +239,15 @@ export default function AdminPage() {
     if (resp.status === 'fulfilled') setRespostas(resp.value);
     if (acoesData.status === 'fulfilled') setAcoes(acoesData.value);
     if (modulosData.status === 'fulfilled') setModulos(modulosData.value);
+    if (accessData.status === 'fulfilled') setAccessMetrics(accessData.value);
 
     const failed = [
       col.status === 'rejected' ? 'colaboradores' : null,
       pr.status === 'rejected' ? 'prontuarios' : null,
       resp.status === 'rejected' ? 'chatbot' : null,
       acoesData.status === 'rejected' ? 'acoes' : null,
-      modulosData.status === 'rejected' ? 'modulos' : null
+      modulosData.status === 'rejected' ? 'modulos' : null,
+      accessData.status === 'rejected' ? 'contador de acessos' : null
     ].filter(Boolean);
 
     if (failed.length) {
@@ -405,6 +439,26 @@ export default function AdminPage() {
           <p>Baixe modelos Excel, preencha os dados e envie para atualizar a Central do Colaborador.</p>
         </div>
       </div>
+
+      <section className="admin-section">
+        <h2>Contador de acessos</h2>
+        <p>Dados de uso do aplicativo disponíveis somente para administradores.</p>
+        <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+          <div style={{ border: '1px solid #e5e7eb', borderRadius: '10px', padding: '0.9rem' }}>
+            <strong>Total de acessos</strong>
+            <div style={{ fontSize: '1.5rem', marginTop: '0.3rem' }}>{accessMetrics?.total_acessos ?? 0}</div>
+          </div>
+          <div style={{ border: '1px solid #e5e7eb', borderRadius: '10px', padding: '0.9rem' }}>
+            <strong>Acessos hoje</strong>
+            <div style={{ fontSize: '1.5rem', marginTop: '0.3rem' }}>{accessMetrics?.total_acessos_hoje ?? 0}</div>
+          </div>
+          <div style={{ border: '1px solid #e5e7eb', borderRadius: '10px', padding: '0.9rem' }}>
+            <strong>Última atualização</strong>
+            <div style={{ fontSize: '1rem', marginTop: '0.3rem' }}>{accessMetrics?.ultima_data ? accessMetrics.ultima_data : 'Sem dados'}</div>
+          </div>
+        </div>
+        <AccessChart history={accessMetrics?.history || []} />
+      </section>
 
       <div className="admin-tabs" role="tablist" aria-label="Areas administrativas">
         <button className={activeTab === 'excel' ? 'active' : ''} onClick={() => setActiveTab('excel')}>Exportar para a pagina via Excel</button>

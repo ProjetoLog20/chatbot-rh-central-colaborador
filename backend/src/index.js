@@ -20,6 +20,8 @@ const produtividadeArmazemRoutes = require('./routes/produtividade-armazem');
 const modulosRoutes = require('./routes/modulos');
 const campeoesSegurancaRoutes = require('./routes/campeoes-seguranca');
 const rotogramasRoutes = require('./routes/rotogramas');
+const { incrementAccessCounter, getAccessMetrics } = require('./accessCounter');
+const { authenticateToken, authorizeRoles } = require('./authMiddleware');
 const errorHandler = require('./errorHandler');
 
 const app = express();
@@ -52,6 +54,25 @@ app.use('/api', cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+app.use(async (req, res, next) => {
+  const isAdminMetricsRoute = req.path === '/admin/acessos' || req.path.startsWith('/admin/acessos');
+  const isAssetRequest = /\.(css|js|png|jpg|jpeg|svg|ico|webp|woff2?|ttf|map)$/i.test(req.path);
+  if (!isAdminMetricsRoute && !isAssetRequest) {
+    incrementAccessCounter(req).catch(() => {});
+  }
+  next();
+});
+
+app.get('/api/admin/acessos', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const metrics = await getAccessMetrics();
+    res.json(metrics);
+  } catch (error) {
+    console.error('Erro ao consultar acessos:', error);
+    res.status(500).json({ error: 'Erro ao consultar contador de acessos' });
+  }
+});
 
 // API routes
 app.use('/api/auth', authRoutes);

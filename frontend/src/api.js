@@ -317,6 +317,10 @@ export async function getAdminAcoes() {
   return request('/admin/acoes-encontros');
 }
 
+export async function getAdminAccessMetrics() {
+  return request('/admin/acessos');
+}
+
 export async function getCampeoesSegurancaPublicos() {
   return request('/campeoes-seguranca/publicos');
 }
