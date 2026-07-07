@@ -1,0 +1,25 @@
+Importacao RV concluida.
+Arquivo: C:\Users\ArT\Desktop\NovaRV_ Cascavel_08.xlsm
+Importacao ID: 16
+Total de linhas lidas: 42
+Importados: 40
+Atualizados: 0
+Ignorados: 2
+Erros: 0
+Valor total Premio de Produtividade: 9618.52
+Registros com baixa confianca: 0
+Registros sem matricula: 2
+Matriculas nao encontradas: 0
+Alertas de periodo 21 a 20: 0
+Sem matricula: [
+  {
+    "linha": 30,
+    "codigo_rv": "460",
+    "nome": "FLAVIO MARCELO VAZ"
+  },
+  {
+    "linha": 43,
+    "codigo_rv": "275",
+    "nome": "BRENDO IBERT"
+  }
+]

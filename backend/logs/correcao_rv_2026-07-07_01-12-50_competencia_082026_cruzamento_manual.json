@@ -1,0 +1,40 @@
+{
+  "importacao_id": 16,
+  "competencia": "08/2026",
+  "periodo": {
+    "inicio": "2026-06-21",
+    "fim": "2026-07-20"
+  },
+  "correcoes": [
+    {
+      "action": "created",
+      "matricula": "19125",
+      "nome": "FLAVIO MARCELO VAZ DA CUNHA",
+      "codigo_rv": "460",
+      "valor_total_previsto": 260.476
+    },
+    {
+      "action": "created",
+      "matricula": "19370",
+      "nome": "BRENDO IBER SINTZ",
+      "codigo_rv": "275",
+      "valor_total_previsto": 402.5856
+    }
+  ],
+  "resumo": {
+    "qtd": "42",
+    "total": "10281.59"
+  },
+  "por_funcao": [
+    {
+      "funcao_rv": "ajudante",
+      "qtd": "23",
+      "total": "5014.57"
+    },
+    {
+      "funcao_rv": "motorista",
+      "qtd": "19",
+      "total": "5267.02"
+    }
+  ]
+}
