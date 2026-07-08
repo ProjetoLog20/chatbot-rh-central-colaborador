@@ -129,6 +129,10 @@ function firstNumber(row, keys) {
   return 0;
 }
 
+function firstNumberAlias(row, ...keys) {
+  return firstNumber(row, keys);
+}
+
 function firstText(row, keys) {
   for (const key of keys) {
     const value = trim(cell(row, key));
@@ -210,7 +214,7 @@ function officialPeriodForCompetencia(competencia) {
 
   const month = Number(match[1]);
   const year = Number(match[2]);
-  const endDate = new Date(Date.UTC(year, month - 2, 20));
+  const endDate = new Date(Date.UTC(year, month - 1, 20));
   const startDate = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth() - 1, 21));
   const format = (date) => [
     date.getUTCFullYear(),
@@ -250,13 +254,10 @@ function normalizeCompetencia(value) {
   return text;
 }
 
-function nextCompetenciaFromReferenceMonth(value) {
+function competenciaFromReferenceMonth(value) {
   const month = Number(trim(value));
   if (!Number.isInteger(month) || month < 1 || month > 12) return '';
-  const referenceYear = new Date().getFullYear();
-  const competenceMonth = month === 12 ? 1 : month + 1;
-  const competenceYear = month === 12 ? referenceYear + 1 : referenceYear;
-  return `${String(competenceMonth).padStart(2, '0')}/${competenceYear}`;
+  return `${String(month).padStart(2, '0')}/${new Date().getFullYear()}`;
 }
 
 function parseBoolean(value) {
@@ -362,7 +363,7 @@ function findCompetencia(...tables) {
 
       const nearbyValues = row.slice(labelIndex + 1, labelIndex + 5);
       const month = nearbyValues.find((value) => /^\d{1,2}$/.test(trim(value)));
-      if (month) return nextCompetenciaFromReferenceMonth(month);
+      if (month) return competenciaFromReferenceMonth(month);
     }
   }
   return '';
@@ -443,6 +444,12 @@ function tableRowsToImportRows(rows, { funcaoRv, codeNameMap, competencia }) {
         bateu_devolucao: bateuDevolucao ? 'sim' : 'nao',
         recargas: rowValue(row, recargasIndex),
         mapas: rowValue(row, mapasIndex),
+        ftr2_c_jorn: rowValue(row, ftr2CJornIndex),
+        ftr2_s_jorn: rowValue(row, ftr2SJornIndex),
+        ftr1_c_jorn: rowValue(row, ftr1CJornIndex),
+        ftr1_s_jorn: rowValue(row, ftr1SJornIndex),
+        ftr0_c_jorn: rowValue(row, ftr0CJornIndex),
+        ftr0_s_jorn: rowValue(row, ftr0SJornIndex),
         valor_recarga: rowValue(row, recargaValorIndex),
         bonus,
         premio_produtividade: premio,
@@ -565,12 +572,12 @@ function buildPayload(row, colaborador, importacaoId) {
     bateu_devolucao: bateuDevolucao,
     recargas: parseNumber(cell(row, 'recargas')),
     mapas: parseNumber(cell(row, 'mapas')),
-    ftr2_c_jorn: parseNumber(cell(row, 'ftr2_c_jorn')),
-    ftr2_s_jorn: parseNumber(cell(row, 'ftr2_s_jorn')),
-    ftr1_c_jorn: parseNumber(cell(row, 'ftr1_c_jorn')),
-    ftr1_s_jorn: parseNumber(cell(row, 'ftr1_s_jorn')),
-    ftr0_c_jorn: parseNumber(cell(row, 'ftr0_c_jorn')),
-    ftr0_s_jorn: parseNumber(cell(row, 'ftr0_s_jorn')),
+    ftr2_c_jorn: firstNumberAlias(row, 'ftr2_c_jorn', 'ftr_2_c_jorn', 'Ftr 2 C/Jorn.'),
+    ftr2_s_jorn: firstNumberAlias(row, 'ftr2_s_jorn', 'ftr_2_s_jorn', 'Ftr 2 S/Jorn.'),
+    ftr1_c_jorn: firstNumberAlias(row, 'ftr1_c_jorn', 'ftr_1_c_jorn', 'Ftr 1 C/Jorn.'),
+    ftr1_s_jorn: firstNumberAlias(row, 'ftr1_s_jorn', 'ftr_1_s_jorn', 'Ftr 1 S/Jorn.'),
+    ftr0_c_jorn: firstNumberAlias(row, 'ftr0_c_jorn', 'ftr_0_c_jorn', 'Ftr 0 C/Jorn.'),
+    ftr0_s_jorn: firstNumberAlias(row, 'ftr0_s_jorn', 'ftr_0_s_jorn', 'Ftr 0 S/Jorn.'),
     valor_recarga: parseNumber(cell(row, 'valor_recarga')),
     bonus,
     antiga_rv: 0,
