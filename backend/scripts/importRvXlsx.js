@@ -10,7 +10,8 @@ const SHEET_NAME = 'IMPORTACAO_RV';
 const LOW_CONFIDENCE_LIMIT = 0.7;
 const MOTORISTA_CAIXA_FATOR_1_RATE = 0.12;
 const MOTORISTA_CAIXA_FATOR_2_RATE = 0.08;
-const AJUDANTE_CAIXA_RATE = 0.08;
+const AJUDANTE_CAIXA_FATOR_1_RATE = 0.08;
+const AJUDANTE_CAIXA_FATOR_2_RATE = 0.04;
 const requiredColumns = [
   'competencia',
   'periodo_inicio',
@@ -158,7 +159,8 @@ function normalizeBonusDevolucao(value, bateuDevolucao = false) {
 }
 
 function calculateCaixasAmount(row, funcaoRv, indexes, caixas) {
-  if (funcaoRv !== 'motorista') return caixas * AJUDANTE_CAIXA_RATE;
+  const factor1Rate = funcaoRv === 'motorista' ? MOTORISTA_CAIXA_FATOR_1_RATE : AJUDANTE_CAIXA_FATOR_1_RATE;
+  const factor2Rate = funcaoRv === 'motorista' ? MOTORISTA_CAIXA_FATOR_2_RATE : AJUDANTE_CAIXA_FATOR_2_RATE;
 
   const ftr2Boxes = [indexes.ftr2CJorn, indexes.ftr2SJorn]
     .reduce((sum, index) => sum + (index === -1 ? 0 : parseNumber(rowValue(row, index))), 0);
@@ -166,7 +168,7 @@ function calculateCaixasAmount(row, funcaoRv, indexes, caixas) {
     .reduce((sum, index) => sum + (index === -1 ? 0 : parseNumber(rowValue(row, index))), 0);
 
   if (ftr1Boxes || ftr2Boxes) {
-    return (ftr1Boxes * MOTORISTA_CAIXA_FATOR_1_RATE) + (ftr2Boxes * MOTORISTA_CAIXA_FATOR_2_RATE);
+    return (ftr1Boxes * factor1Rate) + (ftr2Boxes * factor2Rate);
   }
 
   const hasFatorColumns = [
@@ -175,7 +177,7 @@ function calculateCaixasAmount(row, funcaoRv, indexes, caixas) {
     indexes.ftr1CJorn,
     indexes.ftr1SJorn
   ].some((index) => index !== -1);
-  const fallbackRate = hasFatorColumns ? MOTORISTA_CAIXA_FATOR_1_RATE : MOTORISTA_CAIXA_FATOR_2_RATE;
+  const fallbackRate = hasFatorColumns ? factor1Rate : factor2Rate;
   return caixas * fallbackRate;
 }
 
