@@ -8,6 +8,9 @@ const db = require('../src/db');
 const DEFAULT_FILE = path.join(__dirname, '../data/rv_log20_importacao_pronta.xlsx');
 const SHEET_NAME = 'IMPORTACAO_RV';
 const LOW_CONFIDENCE_LIMIT = 0.7;
+const MOTORISTA_CAIXA_FATOR_1_RATE = 0.12;
+const MOTORISTA_CAIXA_FATOR_2_RATE = 0.08;
+const AJUDANTE_CAIXA_RATE = 0.08;
 const requiredColumns = [
   'competencia',
   'periodo_inicio',
@@ -154,6 +157,28 @@ function normalizeBonusDevolucao(value, bateuDevolucao = false) {
   return bonus === 90 ? 200 : bonus;
 }
 
+function calculateCaixasAmount(row, funcaoRv, indexes, caixas) {
+  if (funcaoRv !== 'motorista') return caixas * AJUDANTE_CAIXA_RATE;
+
+  const ftr2Boxes = [indexes.ftr2CJorn, indexes.ftr2SJorn]
+    .reduce((sum, index) => sum + (index === -1 ? 0 : parseNumber(rowValue(row, index))), 0);
+  const ftr1Boxes = [indexes.ftr1CJorn, indexes.ftr1SJorn]
+    .reduce((sum, index) => sum + (index === -1 ? 0 : parseNumber(rowValue(row, index))), 0);
+
+  if (ftr1Boxes || ftr2Boxes) {
+    return (ftr1Boxes * MOTORISTA_CAIXA_FATOR_1_RATE) + (ftr2Boxes * MOTORISTA_CAIXA_FATOR_2_RATE);
+  }
+
+  const hasFatorColumns = [
+    indexes.ftr2CJorn,
+    indexes.ftr2SJorn,
+    indexes.ftr1CJorn,
+    indexes.ftr1SJorn
+  ].some((index) => index !== -1);
+  const fallbackRate = hasFatorColumns ? MOTORISTA_CAIXA_FATOR_1_RATE : MOTORISTA_CAIXA_FATOR_2_RATE;
+  return caixas * fallbackRate;
+}
+
 function fallbackPremioRota(row, funcaoRv, indexes, bonus) {
   const premio = parseNumber(rowValue(row, indexes.premio));
   if (premio > 0) return premio;
@@ -165,22 +190,14 @@ function fallbackPremioRota(row, funcaoRv, indexes, bonus) {
   const hasActivity = [caixas, entregas, recargas, mapas].some((value) => value > 0);
   if (!hasActivity) return 0;
 
-  const caixaRate = funcaoRv === 'motorista' ? 0.12 : 0.08;
   const entregaRate = funcaoRv === 'motorista' ? 1 : 0.7;
   const recargaRate = funcaoRv === 'motorista' ? 200 : 140;
-  const ftrAmount = [
-    indexes.ftr2CJorn,
-    indexes.ftr2SJorn,
-    indexes.ftr1CJorn,
-    indexes.ftr1SJorn,
-    indexes.ftr0CJorn,
-    indexes.ftr0SJorn
-  ].reduce((sum, index) => sum + (index === -1 ? 0 : parseNumber(rowValue(row, index))), 0);
+  const caixasAmount = calculateCaixasAmount(row, funcaoRv, indexes, caixas);
 
   const recargaAmount = indexes.recargaValor === -1
     ? recargas * recargaRate
     : parseNumber(rowValue(row, indexes.recargaValor)) || recargas * recargaRate;
-  const base = caixas * caixaRate + entregas * entregaRate + ftrAmount + recargaAmount;
+  const base = caixasAmount + entregas * entregaRate + recargaAmount;
   return Number((base + bonus).toFixed(4));
 }
 
