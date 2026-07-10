@@ -125,6 +125,19 @@ function rowSelect() {
     ativo, ativo AS publicado`;
 }
 
+function actionForResponse(row) {
+  if (!row) return row;
+
+  // Imagens antigas e novas ficam armazenadas como data URL. Nao envie o
+  // Base64 junto com cada listagem: isso fazia a resposta publica ultrapassar
+  // varios megabytes e falhar em proxies/hospedagens com limite de payload.
+  if (row.imagem_url?.startsWith('data:')) {
+    return { ...row, imagem_url: `/api/acoes-encontros/${row.id}/imagem` };
+  }
+
+  return row;
+}
+
 async function listPublicActions(req, res) {
   try {
     await ensureActionsSchema();
@@ -142,7 +155,7 @@ async function listPublicActions(req, res) {
        ORDER BY COALESCE(data_evento, criado_em) DESC, id DESC`,
       params
     );
-    res.json(rows);
+    res.json(rows.map(actionForResponse));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao listar acoes' });
   }
@@ -165,13 +178,33 @@ async function listAdminActions(req, res) {
        ORDER BY COALESCE(data_evento, criado_em) DESC, id DESC`,
       params
     );
-    res.json(rows);
+    res.json(rows.map(actionForResponse));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao listar acoes' });
   }
 }
 
 router.get('/publicas', listPublicActions);
+
+router.get('/:id/imagem', async (req, res) => {
+  try {
+    const row = await getDb('SELECT imagem_url FROM acoes_comunicacao WHERE id = ?', [Number(req.params.id)]);
+    if (!row?.imagem_url) return res.status(404).end();
+
+    if (!row.imagem_url.startsWith('data:')) {
+      return res.redirect(row.imagem_url);
+    }
+
+    const match = row.imagem_url.match(/^data:([^;,]+);base64,(.+)$/s);
+    if (!match) return res.status(404).end();
+
+    res.set('Content-Type', match[1]);
+    res.set('Cache-Control', 'public, max-age=86400');
+    return res.send(Buffer.from(match[2], 'base64'));
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao carregar imagem da acao' });
+  }
+});
 
 function ensureAdmin(req, res, next) {
   authenticateToken(req, res, (err) => {
