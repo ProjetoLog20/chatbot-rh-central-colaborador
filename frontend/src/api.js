@@ -295,7 +295,7 @@ export async function getChatbotSuggestions() {
 }
 
 export async function getPublicAcoes() {
-  return request('/acoes-encontros');
+  return request('/acoes-encontros/publicas');
 }
 
 export async function getModulos() {

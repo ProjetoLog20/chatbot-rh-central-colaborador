@@ -171,18 +171,21 @@ async function listAdminActions(req, res) {
   }
 }
 
-router.get('/publicas', authenticateToken, listPublicActions);
+router.get('/publicas', listPublicActions);
 
-router.get('/', authenticateToken, async (req, res) => {
+function ensureAdmin(req, res, next) {
+  authenticateToken(req, res, (err) => {
+    if (err) return;
+    authorizeRoles('admin')(req, res, next);
+  });
+}
+
+router.get('/', async (req, res) => {
   if (req.baseUrl.endsWith('/acoes-encontros') && !req.baseUrl.includes('/admin/')) {
     return listPublicActions(req, res);
   }
 
-  if (String(req.user?.perfil || '').trim().toLowerCase() !== 'admin') {
-    return res.status(403).json({ error: 'Acesso negado' });
-  }
-
-  return listAdminActions(req, res);
+  return ensureAdmin(req, res, () => listAdminActions(req, res));
 });
 
 router.get('/admin', authenticateToken, authorizeRoles('admin'), async (req, res) => {
