@@ -13,6 +13,15 @@ async function request(path, options = {}) {
     headers: getHeaders(token)
   });
   const body = await res.json().catch(() => null);
+
+  if (res.status === 401 && token) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    sessionStorage.removeItem('firstAccess');
+    if (window.location.pathname !== '/login') {
+      window.location.assign('/login');
+    }
+  }
   if (!res.ok) throw body || { error: 'Erro de requisição' };
   return body;
 }
