@@ -895,16 +895,33 @@ function AdminProdutividadeResumo() {
     rota: emptyRotaSummary,
     armazem: emptyArmazemSummary
   });
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     Promise.allSettled([getAdminProdutividadeResumo(), getAdminProdutividadeArmazemResumo()])
       .then(([rotaResult, armazemResult]) => {
+        const failed = [rotaResult, armazemResult].filter((result) => result.status === 'rejected');
         setSummary({
           rota: rotaResult.status === 'fulfilled' ? rotaResult.value : emptyRotaSummary,
           armazem: armazemResult.status === 'fulfilled' ? armazemResult.value : emptyArmazemSummary
         });
-      });
+        if (failed.length === 2) {
+          setLoadError('Nao foi possivel carregar o resumo. Atualize a pagina ou entre novamente.');
+        } else if (failed.length === 1) {
+          setLoadError('Uma parte do resumo nao foi carregada. Atualize a pagina para tentar novamente.');
+        }
+      })
+      .finally(() => setLoading(false));
   }, []);
+
+  if (loading) {
+    return <p className="prod-summary-status">Carregando resumo de produtividade...</p>;
+  }
+
+  if (loadError && summary.rota === emptyRotaSummary && summary.armazem === emptyArmazemSummary) {
+    return <div className="prod-warning">{loadError}</div>;
+  }
 
   const cards = [
     ['Total Premio Rota', summary.rota.valor_total_previsto ?? summary.rota.valor_total_nova_rv, 'money'],
@@ -917,14 +934,17 @@ function AdminProdutividadeResumo() {
   ];
 
   return (
-    <section className="prod-summary-grid prod-admin-overview" aria-label="Resumo geral de produtividade">
-      {cards.map(([label, value, type]) => (
-        <div key={label}>
-          <span>{label}</span>
-          <strong>{formatValue(value, type)}</strong>
-        </div>
-      ))}
-    </section>
+    <>
+      {loadError ? <div className="prod-summary-status">{loadError}</div> : null}
+      <section className="prod-summary-grid prod-admin-overview" aria-label="Resumo geral de produtividade">
+        {cards.map(([label, value, type]) => (
+          <div key={label}>
+            <span>{label}</span>
+            <strong>{formatValue(value, type)}</strong>
+          </div>
+        ))}
+      </section>
+    </>
   );
 }
 
