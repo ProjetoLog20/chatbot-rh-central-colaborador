@@ -8,6 +8,7 @@ const { authenticateToken, authorizeRoles } = require('../authMiddleware');
 const router = express.Router();
 const uploadDir = path.join(__dirname, '../../uploads/acoes');
 const allowedExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp']);
+const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
 let schemaReady = null;
 
 if (!fs.existsSync(uploadDir)) {
@@ -19,7 +20,7 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter(req, file, callback) {
     const ext = path.extname(file.originalname).toLowerCase();
-    if (!allowedExtensions.has(ext)) {
+    if (!allowedExtensions.has(ext) || !allowedMimeTypes.has(file.mimetype)) {
       return callback(new Error('Apenas imagens .jpg, .jpeg, .png ou .webp sao permitidas'));
     }
     return callback(null, true);

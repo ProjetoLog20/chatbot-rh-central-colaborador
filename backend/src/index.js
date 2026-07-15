@@ -23,9 +23,19 @@ const rotogramasRoutes = require('./routes/rotogramas');
 const { incrementAccessCounter, getAccessMetrics } = require('./accessCounter');
 const { authenticateToken, authorizeRoles } = require('./authMiddleware');
 const errorHandler = require('./errorHandler');
+const { firstAccessLimiter, loginLimiter, preventSensitiveCaching, requestId, securityHeaders } = require('./security');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+
+if (process.env.NODE_ENV === 'production') {
+  // O Render encaminha o IP original no primeiro proxy confiavel.
+  app.set('trust proxy', 1);
+}
+
+app.disable('x-powered-by');
+app.use(requestId);
+app.use(securityHeaders());
 
 const corsOptions = {
   origin(origin, callback) {
@@ -51,17 +61,29 @@ const corsOptions = {
 };
 
 app.use('/api', cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.use(async (req, res, next) => {
   const isAdminMetricsRoute = req.path === '/admin/acessos' || req.path.startsWith('/admin/acessos');
+  const isHealthRoute = req.path === '/api/health';
   const isAssetRequest = /\.(css|js|png|jpg|jpeg|svg|ico|webp|woff2?|ttf|map)$/i.test(req.path);
-  if (!isAdminMetricsRoute && !isAssetRequest) {
+  if (process.env.ACCESS_COUNTER_ENABLED !== 'false' && !isAdminMetricsRoute && !isHealthRoute && !isAssetRequest) {
     incrementAccessCounter(req).catch(() => {});
   }
   next();
+});
+
+app.get('/api/health', async (req, res) => {
+  try {
+    await db.get('SELECT 1 AS ok');
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ status: 'ok', database: 'ok' });
+  } catch (error) {
+    console.error(`[${req.requestId}] Falha no health check:`, error);
+    return res.status(503).json({ status: 'degraded', database: 'error' });
+  }
 });
 
 app.get('/api/admin/acessos', authenticateToken, authorizeRoles('admin'), async (req, res) => {
@@ -75,6 +97,9 @@ app.get('/api/admin/acessos', authenticateToken, authorizeRoles('admin'), async 
 });
 
 // API routes
+app.use('/api/auth', preventSensitiveCaching);
+app.use('/api/auth/login', loginLimiter);
+app.use('/api/auth/primeiro-acesso', firstAccessLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/colaboradores', colaboradoresRoutes);
 app.use('/api/prontuario', prontuarioRoutes);
@@ -106,7 +131,11 @@ app.get(/^\/(?!api).*/, (req, res) => {
 
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`Backend rodando em http://localhost:${PORT}`);
-  console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Backend rodando em http://localhost:${PORT}`);
+    console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+  });
+}
+
+module.exports = app;
