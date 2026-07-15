@@ -776,9 +776,15 @@ function run(sql, params = [], callback) {
     if (result.command === 'INSERT') {
       if (result.rows?.[0]?.id !== undefined) {
         ctx.lastID = result.rows[0].id;
-      } else {
-        const last = await pool.query('SELECT LASTVAL() AS id');
-        ctx.lastID = last.rows?.[0]?.id || null;
+      } else if (result.rowCount > 0) {
+        try {
+          const last = await pool.query('SELECT LASTVAL() AS id');
+          ctx.lastID = last.rows?.[0]?.id || null;
+        } catch (error) {
+          // INSERTs sem sequence (ou com id explicito) nao possuem LASTVAL.
+          // A operacao foi concluida; apenas nao ha lastID para retornar.
+          if (error.code !== '55000') throw error;
+        }
       }
     }
 
