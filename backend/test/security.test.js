@@ -100,3 +100,81 @@ test('importacao administrativa continua proibida para colaborador comum', async
     .attach('file', Buffer.from('conteudo-invalido'), 'arquivo.xlsx')
     .expect(403);
 });
+
+test('notificacao percorre publicacao, entrega, leitura e metrica sem vazar entre perfis', async () => {
+  const suffix = Date.now();
+  const adminMatricula = `admin-notif-${suffix}`;
+  const colaboradorMatricula = `colab-notif-${suffix}`;
+
+  await db.run(
+    `INSERT INTO colaboradores (matricula, nome_completo, senha_hash, perfil, status, primeiro_acesso, senha_temporaria)
+     VALUES (?, ?, ?, 'admin', 'Ativo', 0, 0)`,
+    [adminMatricula, 'Admin Notificacoes', 'hash-nao-utilizado']
+  );
+  await db.run(
+    `INSERT INTO colaboradores (matricula, nome_completo, senha_hash, perfil, status, primeiro_acesso, senha_temporaria)
+     VALUES (?, ?, ?, 'colaborador', 'Ativo', 0, 0)`,
+    [colaboradorMatricula, 'Colaborador Notificacoes', 'hash-nao-utilizado']
+  );
+
+  const admin = await db.get('SELECT id FROM colaboradores WHERE matricula = ?', [adminMatricula]);
+  const colaborador = await db.get('SELECT id FROM colaboradores WHERE matricula = ?', [colaboradorMatricula]);
+  const adminToken = jwt.sign({ id: admin.id, matricula: adminMatricula, perfil: 'admin' }, process.env.JWT_SECRET, { expiresIn: '5m' });
+  const colaboradorToken = jwt.sign({ id: colaborador.id, matricula: colaboradorMatricula, perfil: 'colaborador' }, process.env.JWT_SECRET, { expiresIn: '5m' });
+
+  const created = await request(app)
+    .post('/api/notificacoes/admin')
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({
+      titulo: 'Atualizacao de teste do Yuri',
+      mensagem: 'Mensagem exibida apenas durante o teste automatizado.',
+      categoria: 'novidade',
+      prioridade: 'importante',
+      status: 'publicado',
+      para_todos: false,
+      para_colaborador: true,
+      link_url: '/produtividade',
+      link_texto: 'Ver detalhes'
+    })
+    .expect(201);
+
+  const notificationId = created.body.id;
+  assert.ok(notificationId);
+
+  const inbox = await request(app)
+    .get('/api/notificacoes')
+    .set('Authorization', `Bearer ${colaboradorToken}`)
+    .expect(200);
+  assert.equal(inbox.body.nao_lidas, 1);
+  assert.equal(inbox.body.notificacoes[0].id, notificationId);
+
+  await request(app)
+    .post(`/api/notificacoes/${notificationId}/ler`)
+    .set('Authorization', `Bearer ${colaboradorToken}`)
+    .expect(200);
+
+  const readInbox = await request(app)
+    .get('/api/notificacoes')
+    .set('Authorization', `Bearer ${colaboradorToken}`)
+    .expect(200);
+  assert.equal(readInbox.body.nao_lidas, 0);
+
+  const adminInbox = await request(app)
+    .get('/api/notificacoes')
+    .set('Authorization', `Bearer ${adminToken}`)
+    .expect(200);
+  assert.equal(adminInbox.body.notificacoes.some((item) => item.id === notificationId), false);
+
+  const metrics = await request(app)
+    .get('/api/notificacoes/admin')
+    .set('Authorization', `Bearer ${adminToken}`)
+    .expect(200);
+  const metric = metrics.body.find((item) => item.id === notificationId);
+  assert.equal(Number(metric.total_leituras), 1);
+
+  await request(app)
+    .delete(`/api/notificacoes/admin/${notificationId}`)
+    .set('Authorization', `Bearer ${adminToken}`)
+    .expect(200);
+  await db.run('DELETE FROM colaboradores WHERE id IN (?, ?)', [admin.id, colaborador.id]);
+});

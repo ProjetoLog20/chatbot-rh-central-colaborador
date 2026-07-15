@@ -17,6 +17,7 @@ import ProdutividadePage from './components/ProdutividadePage.jsx';
 import CampeaoSegurancaPage from './components/CampeaoSegurancaPage.jsx';
 import IndicadoresRotaPage from './components/IndicadoresRotaPage.jsx';
 import RotogramaSeguroPage from './components/RotogramaSeguroPage.jsx';
+import NotificationBell from './components/NotificationBell.jsx';
 
 function normalizePerfil(perfil) {
   return String(perfil || '').trim().toLowerCase();
@@ -86,6 +87,7 @@ function App() {
             </nav>
           ) : null}
           {user && !isFirstAccessRoute ? <span>{user.nome_preferido || user.nome_completo} ({user.perfil})</span> : null}
+          {user && !isFirstAccessRoute ? <NotificationBell /> : null}
           {user ? <button onClick={handleLogout}>Sair</button> : null}
         </div>
       </header>
