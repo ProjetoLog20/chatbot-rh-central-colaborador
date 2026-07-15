@@ -924,7 +924,7 @@ function AdminProdutividadeResumo() {
   }
 
   const cards = [
-    ['Total Premio Rota', summary.rota.valor_total_previsto ?? summary.rota.valor_total_nova_rv, 'money'],
+    [`Total Premio Rota${summary.rota.competencia_selecionada ? ` (${summary.rota.competencia_selecionada})` : ''}`, summary.rota.valor_total_previsto ?? summary.rota.valor_total_nova_rv, 'money'],
     ['Total RV Armazém', summary.armazem.valor_total_previsto, 'money'],
     ['Total Motoristas', summary.rota.total_motoristas, 'number'],
     ['Total Ajudantes de Motorista', summary.rota.total_ajudantes, 'number'],
