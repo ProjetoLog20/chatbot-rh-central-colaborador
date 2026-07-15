@@ -18,6 +18,7 @@ import {
   getAdminAccessMetrics
 } from '../api.js';
 import AdminCampeoesSeguranca from './AdminCampeoesSeguranca.jsx';
+import AdminNotifications from './AdminNotifications.jsx';
 
 const actionCategories = [
   ['cipa', 'CIPA'],
@@ -467,6 +468,7 @@ export default function AdminPage() {
         <button className={activeTab === 'campeoes' ? 'active' : ''} onClick={() => setActiveTab('campeoes')}>Campeao Segurança</button>
         <button className={activeTab === 'modulos' ? 'active' : ''} onClick={() => setActiveTab('modulos')}>Configuração de Módulos</button>
         <button className={activeTab === 'chatbot' ? 'active' : ''} onClick={() => setActiveTab('chatbot')}>Yuri</button>
+        <button className={activeTab === 'notificacoes' ? 'active' : ''} onClick={() => setActiveTab('notificacoes')}>Notificacoes do Yuri</button>
       </div>
 
       {message && <div className="import-message">{message}</div>}
@@ -626,6 +628,8 @@ export default function AdminPage() {
       ) : null}
 
       {activeTab === 'campeoes' ? <AdminCampeoesSeguranca /> : null}
+
+      {activeTab === 'notificacoes' ? <AdminNotifications /> : null}
 
       {activeTab === 'acoes' ? (
         <section className="admin-section">

@@ -411,6 +411,40 @@ function connectSqlite() {
       FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE CASCADE
     )`);
 
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS notificacoes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      titulo TEXT NOT NULL,
+      mensagem TEXT NOT NULL,
+      categoria TEXT NOT NULL DEFAULT 'comunicado',
+      prioridade TEXT NOT NULL DEFAULT 'normal',
+      status TEXT NOT NULL DEFAULT 'rascunho',
+      para_todos INTEGER NOT NULL DEFAULT 1,
+      para_admin INTEGER NOT NULL DEFAULT 0,
+      para_motorista INTEGER NOT NULL DEFAULT 0,
+      para_colaborador INTEGER NOT NULL DEFAULT 0,
+      link_url TEXT,
+      link_texto TEXT,
+      inicio_em TEXT,
+      fim_em TEXT,
+      criado_por INTEGER,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (criado_por) REFERENCES colaboradores(id) ON DELETE SET NULL
+    )`);
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS notificacoes_leituras (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      notificacao_id INTEGER NOT NULL,
+      colaborador_id INTEGER NOT NULL,
+      lida_em TEXT DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (notificacao_id, colaborador_id),
+      FOREIGN KEY (notificacao_id) REFERENCES notificacoes(id) ON DELETE CASCADE,
+      FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE CASCADE
+    )`);
+
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_notificacoes_status_periodo ON notificacoes(status, inicio_em, fim_em)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_notificacoes_leituras_colaborador ON notificacoes_leituras(colaborador_id, notificacao_id)');
+
     sqliteDb.run(`CREATE TABLE IF NOT EXISTS acoes_comunicacao (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       categoria TEXT NOT NULL,

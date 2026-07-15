@@ -20,6 +20,7 @@ const produtividadeArmazemRoutes = require('./routes/produtividade-armazem');
 const modulosRoutes = require('./routes/modulos');
 const campeoesSegurancaRoutes = require('./routes/campeoes-seguranca');
 const rotogramasRoutes = require('./routes/rotogramas');
+const notificacoesRoutes = require('./routes/notificacoes');
 const { incrementAccessCounter, getAccessMetrics } = require('./accessCounter');
 const { authenticateToken, authorizeRoles } = require('./authMiddleware');
 const errorHandler = require('./errorHandler');
@@ -68,8 +69,9 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use(async (req, res, next) => {
   const isAdminMetricsRoute = req.path === '/admin/acessos' || req.path.startsWith('/admin/acessos');
   const isHealthRoute = req.path === '/api/health';
+  const isNotificationPoll = req.method === 'GET' && req.path === '/api/notificacoes';
   const isAssetRequest = /\.(css|js|png|jpg|jpeg|svg|ico|webp|woff2?|ttf|map)$/i.test(req.path);
-  if (process.env.ACCESS_COUNTER_ENABLED !== 'false' && !isAdminMetricsRoute && !isHealthRoute && !isAssetRequest) {
+  if (process.env.ACCESS_COUNTER_ENABLED !== 'false' && !isAdminMetricsRoute && !isHealthRoute && !isNotificationPoll && !isAssetRequest) {
     incrementAccessCounter(req).catch(() => {});
   }
   next();
@@ -119,6 +121,7 @@ app.use('/api/produtividade-armazem', produtividadeArmazemRoutes);
 app.use('/api', modulosRoutes);
 app.use('/api/campeoes-seguranca', campeoesSegurancaRoutes);
 app.use('/api/rotogramas', rotogramasRoutes);
+app.use('/api/notificacoes', notificacoesRoutes);
 
 // Serve static files from frontend dist
 const frontendDist = path.resolve(__dirname, "../../frontend/dist");

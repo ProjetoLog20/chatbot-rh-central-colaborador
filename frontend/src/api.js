@@ -330,6 +330,40 @@ export async function getAdminAccessMetrics() {
   return request('/admin/acessos');
 }
 
+export async function getNotifications() {
+  return request('/notificacoes');
+}
+
+export async function markNotificationRead(id) {
+  return request(`/notificacoes/${id}/ler`, { method: 'POST' });
+}
+
+export async function markAllNotificationsRead() {
+  return request('/notificacoes/ler-todas', { method: 'POST' });
+}
+
+export async function getAdminNotifications() {
+  return request('/notificacoes/admin');
+}
+
+export async function createNotification(payload) {
+  return request('/notificacoes/admin', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function updateNotification(id, payload) {
+  return request(`/notificacoes/admin/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function deleteNotification(id) {
+  return request(`/notificacoes/admin/${id}`, { method: 'DELETE' });
+}
+
 export async function getCampeoesSegurancaPublicos() {
   return request('/campeoes-seguranca/publicos');
 }
