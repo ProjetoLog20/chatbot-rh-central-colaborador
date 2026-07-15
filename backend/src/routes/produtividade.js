@@ -199,6 +199,24 @@ async function getAdminRows(query) {
   return db.all(`${selectProdutividade} ${where} ORDER BY p.competencia DESC, p.nome_completo`, params);
 }
 
+async function getAdminSummaryRows(query) {
+  const summaryQuery = { ...query };
+
+  if (!summaryQuery.competencia) {
+    const latest = await db.get(
+      `SELECT competencia
+       FROM produtividade_colaboradores
+       WHERE COALESCE(competencia, '') <> ''
+       ORDER BY periodo_fim DESC NULLS LAST, updated_at DESC
+       LIMIT 1`
+    );
+    if (latest?.competencia) summaryQuery.competencia = latest.competencia;
+  }
+
+  const rows = await getAdminRows(summaryQuery);
+  return { rows, competencia: summaryQuery.competencia || null };
+}
+
 router.get('/meu', authenticateToken, async (req, res) => {
   try {
     const { available, modulo } = await ensureModuleAvailable('premio_produtividade', req.user);
@@ -218,8 +236,8 @@ router.get('/meu', authenticateToken, async (req, res) => {
 
 router.get('/admin/resumo', authenticateToken, authorizeRoles('admin'), async (req, res) => {
   try {
-    const rows = await getAdminRows(req.query);
-    return res.json(summarize(rows));
+    const { rows, competencia } = await getAdminSummaryRows(req.query);
+    return res.json({ ...summarize(rows), competencia_selecionada: competencia });
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao carregar resumo de produtividade' });
   }
