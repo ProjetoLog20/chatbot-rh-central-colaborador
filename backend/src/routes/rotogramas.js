@@ -8,8 +8,23 @@ const { importWorkbook } = require('../../scripts/importRotogramaXlsx');
 const router = express.Router();
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 25 * 1024 * 1024 }
+  limits: { fileSize: 25 * 1024 * 1024 },
+  fileFilter(req, file, callback) {
+    const ext = file.originalname.split('.').pop().toLowerCase();
+    if (ext !== 'xlsx') {
+      return callback(new Error('Apenas arquivos .xlsx sao permitidos'));
+    }
+    return callback(null, true);
+  }
 });
+
+function uploadError(err, req, res, next) {
+  if (!err) return next();
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({ error: 'Arquivo excede o limite de 25 MB' });
+  }
+  return res.status(400).json({ error: err.message || 'Erro no upload do arquivo' });
+}
 
 async function ensureRotogramaAvailable(req, res, next) {
   try {
@@ -240,7 +255,7 @@ router.get('/admin/importacoes', authenticateToken, authorizeRoles('admin'), asy
   }
 });
 
-router.post('/importar', authenticateToken, authorizeRoles('admin'), upload.single('file'), async (req, res) => {
+router.post('/importar', authenticateToken, authorizeRoles('admin'), upload.single('file'), uploadError, async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Arquivo nao enviado' });
   try {
     const result = await importWorkbook({ buffer: req.file.buffer });

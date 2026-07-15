@@ -10,6 +10,20 @@ O principal defeito encontrado estava no adaptador PostgreSQL: insercoes sem seq
 
 Classificacao geral atual: **funcional, com riscos de seguranca e observabilidade que devem ser priorizados antes de ampliar o uso**.
 
+## Protecoes aplicadas apos a auditoria
+
+- Rate limiting no login e no primeiro acesso: ate 10 falhas por IP em 15 minutos, sem penalizar autenticacoes bem-sucedidas.
+- Cabecalhos HTTP com Helmet, incluindo CSP, bloqueio de MIME sniffing, politica de referencia e HSTS em producao.
+- Remocao do cabecalho que identifica Express.
+- Limite de 1 MB para payloads JSON e formularios comuns, com resposta controlada `413`.
+- `X-Request-Id` para rastrear erros sem expor detalhes internos ao usuario.
+- Respostas de autenticacao marcadas com `Cache-Control: no-store`.
+- Endpoint `/api/health` para verificar aplicacao e banco sem consumir o contador de acessos.
+- Validacao adicional de tipo/extensao nos uploads de imagens, SKAP e Rotograma.
+- Atualizacao compativel do React Router; auditoria das dependencias de producao do frontend ficou sem vulnerabilidades conhecidas.
+- Suite automatizada cobrindo saude, cabecalhos, CSP, forca bruta, payload excessivo e autorizacao de importacoes.
+- O formato atual de login, JWT e APIs foi preservado para evitar quebra da plataforma em operacao.
+
 ## Arquitetura
 
 - Frontend: React 18, React Router e Vite.
@@ -66,16 +80,14 @@ Esses numeros nao equivalem a 36 pessoas. O middleware atual incrementa o contad
 ### Prioridade critica
 
 1. **Contador de acessos falhava no PostgreSQL.** Corrigido neste ciclo. Depois do deploy, validar o painel administrativo e acompanhar se o historico diario volta a crescer.
-2. **Ausencia de protecao contra tentativas repetidas de login.** Adicionar rate limiting por IP e matricula, atraso progressivo e registro de tentativas suspeitas.
-3. **Dependencia `xlsx` com vulnerabilidades conhecidas e sem correcao publicada no pacote atual.** Avaliar migracao para uma biblioteca mantida ou executar a leitura em processo isolado, com limites de tempo, memoria, tamanho e quantidade de linhas.
+2. **Dependencia `xlsx` com vulnerabilidades conhecidas e sem correcao publicada no pacote atual.** Os uploads permanecem restritos a administradores, extensoes esperadas e limites de tamanho. Como solucao definitiva, avaliar migracao para uma biblioteca mantida ou executar a leitura em processo isolado, com limites de tempo, memoria e quantidade de linhas.
 
 ### Prioridade alta
 
 1. **Token JWT armazenado em `localStorage`.** Um XSS pode capturar o token. Preferir cookie `HttpOnly`, `Secure` e `SameSite`, acompanhado de protecao CSRF.
-2. **Cabecalhos de seguranca nao configurados.** Adicionar Helmet e uma Content Security Policy adequada.
-3. **Dependencias vulneraveis.** A auditoria encontrou vulnerabilidades altas no backend (incluindo `tar` e `xlsx`) e vulnerabilidade moderada no React Router. Atualizar as dependencias com testes de regressao.
+2. **Dependencias residuais no backend.** `xlsx` continua sem correcao publicada no pacote usado; `tar` e `node-pre-gyp` chegam pela cadeia nativa do bcrypt. Nao foi aplicado upgrade maior automatico para evitar risco no login e no build do Render.
 4. **Uploads e imagens no disco do Render.** O filesystem do servico pode ser efemero. Usar armazenamento persistente externo, como Supabase Storage ou S3 compativel.
-5. **Sem suite automatizada de testes.** Criar testes de autenticacao, autorizacao, importacao, calculo da RV, isolamento de dados por colaborador e smoke tests do deploy.
+5. **Cobertura automatizada ainda parcial.** A suite de seguranca foi criada; ampliar para calculo da RV, isolamento de dados por colaborador e importacoes completas.
 
 ### Prioridade media
 
@@ -103,4 +115,3 @@ Esses numeros nao equivalem a 36 pessoas. O middleware atual incrementa o contad
 3. Corrigir a definicao de metrica para diferenciar eventos, sessoes e usuarios unicos.
 4. Implementar rate limiting e cabecalhos de seguranca.
 5. Atualizar dependencias e criar testes automatizados para os fluxos de maior risco.
-
