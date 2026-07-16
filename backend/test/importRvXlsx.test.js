@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const xlsx = require('xlsx');
 
-const { previewOfficialWorkbook } = require('../scripts/importRvXlsx');
+const { previewOfficialWorkbook, buildPayload } = require('../scripts/importRvXlsx');
 
 function workbookBuffer(onePagerRows, tableRows) {
   const workbook = xlsx.utils.book_new();
@@ -52,4 +52,39 @@ test('leitor principal preserva o valor oficial de Nova RV', () => {
   assert.equal(rows.length, 1);
   assert.equal(rows[0].premio_produtividade, 321.45);
   assert.equal(rows[0].metodo_cruzamento, 'one_pager_codigo_rv');
+});
+
+test('leitor principal respeita Nova RV oficial zerada mesmo quando existe atividade', () => {
+  const buffer = workbookBuffer(
+    [
+      ['COD', 'MOTORISTA'],
+      ['506', 'MOTORISTA SEM PREMIO']
+    ],
+    [
+      ['Mês', 7],
+      ['Motorista', 'Caixas', 'Entregas', '% DEV', 'Mapas', 'Ftr 1 C/Jorn.', 'Nova RV'],
+      [506, 2000, 100, 0.02, 10, 2000, 0]
+    ]
+  );
+
+  const rows = previewOfficialWorkbook({ buffer });
+
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].premio_produtividade, 0);
+  assert.equal(rows[0].status_produtividade, 'Sem premio');
+});
+
+test('gravação não transforma prêmio oficial zero em bônus', () => {
+  const payload = buildPayload({
+    competencia: '07/2026',
+    funcao_rv: 'motorista',
+    premio_produtividade: 0,
+    bonus: 200,
+    bateu_devolucao: 'sim',
+    status_produtividade: 'Sem premio'
+  }, { id: 1, matricula: '1', nome_completo: 'Teste', cpf: '' }, 99);
+
+  assert.equal(payload.bonus, 200);
+  assert.equal(payload.valor_total_previsto, 0);
+  assert.equal(payload.nova_rv, 0);
 });

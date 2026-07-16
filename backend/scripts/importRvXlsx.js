@@ -139,6 +139,16 @@ function firstNumberAlias(row, ...keys) {
   return firstNumber(row, keys);
 }
 
+function firstDefinedNumber(row, keys) {
+  for (const key of keys) {
+    const normalized = normalizeKey(key);
+    if (Object.prototype.hasOwnProperty.call(row, normalized) && trim(row[normalized]) !== '') {
+      return { found: true, value: parseNumber(row[normalized]) };
+    }
+  }
+  return { found: false, value: 0 };
+}
+
 function firstText(row, keys) {
   for (const key of keys) {
     const value = trim(cell(row, key));
@@ -184,8 +194,10 @@ function calculateCaixasAmount(row, funcaoRv, indexes, caixas) {
 }
 
 function fallbackPremioRota(row, funcaoRv, indexes, bonus) {
-  const premio = parseNumber(rowValue(row, indexes.premio));
-  if (premio > 0) return premio;
+  // Quando a planilha oficial possui a coluna Nova RV, inclusive o valor zero
+  // é uma decisão do cálculo e deve ser respeitado. O fallback só existe para
+  // formatos legados que não trazem essa coluna.
+  if (indexes.premio !== -1) return parseNumber(rowValue(row, indexes.premio));
 
   const caixas = parseNumber(rowValue(row, indexes.caixas));
   const entregas = parseNumber(rowValue(row, indexes.entregas));
@@ -584,8 +596,8 @@ function buildPayload(row, colaborador, importacaoId) {
   const statusAuditoria = confianca > 0 && confianca < LOW_CONFIDENCE_LIMIT ? 'revisar_cruzamento' : 'ok';
   const bateuDevolucao = parseBoolean(cell(row, 'bateu_devolucao'));
   const bonus = normalizeBonusDevolucao(cell(row, 'bonus'), bateuDevolucao);
-  const premioInformado = firstNumber(row, ['premio_produtividade', 'valor_total_previsto', 'rv_nova', 'nova_rv']);
-  const premioProdutividade = premioInformado || bonus;
+  const premioInformado = firstDefinedNumber(row, ['premio_produtividade', 'valor_total_previsto', 'rv_nova', 'nova_rv']);
+  const premioProdutividade = premioInformado.found ? premioInformado.value : bonus;
 
   return {
     importacao_id: importacaoId,
@@ -898,6 +910,7 @@ if (require.main === module) {
 module.exports = {
   importWorkbook,
   previewOfficialWorkbook,
+  buildPayload,
   parseNumber,
   parsePercent,
   parseDate,
