@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getNotifications, markAllNotificationsRead, markNotificationRead } from '../api.js';
+import {
+  getNotifications,
+  getPushConfig,
+  markAllNotificationsRead,
+  markNotificationRead,
+  subscribePush,
+  unsubscribePush
+} from '../api.js';
 
 const categoryLabels = {
   novidade: 'Novidades do Yuri',
@@ -27,11 +34,21 @@ function formatDate(value) {
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value));
 }
 
+function urlBase64ToUint8Array(value) {
+  const padding = '='.repeat((4 - (value.length % 4)) % 4);
+  const base64 = (value + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = window.atob(base64);
+  return Uint8Array.from([...raw].map((character) => character.charCodeAt(0)));
+}
+
 export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [pushStatus, setPushStatus] = useState('loading');
+  const [pushMessage, setPushMessage] = useState('');
+  const [pushConfig, setPushConfig] = useState(null);
   const panelRef = useRef(null);
 
   async function refresh() {
@@ -50,6 +67,41 @@ export default function NotificationBell() {
     refresh();
     const interval = window.setInterval(refresh, 60000);
     return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    async function initializePush() {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+        if (active) setPushStatus('unsupported');
+        return;
+      }
+      try {
+        const config = await getPushConfig();
+        if (!active) return;
+        setPushConfig(config);
+        if (!config.enabled || !config.public_key) {
+          setPushStatus('unavailable');
+          return;
+        }
+        const registration = await navigator.serviceWorker.register('/sw.js');
+        const existing = await registration.pushManager.getSubscription();
+        if (!active) return;
+        if (existing && Notification.permission === 'granted') {
+          await subscribePush(existing.toJSON());
+          if (active) setPushStatus('enabled');
+        } else if (Notification.permission === 'denied') {
+          setPushStatus('denied');
+        } else {
+          setPushStatus('disabled');
+        }
+      } catch (error) {
+        console.error('Falha ao preparar Push:', error);
+        if (active) setPushStatus('unavailable');
+      }
+    }
+    initializePush();
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
@@ -89,6 +141,53 @@ export default function NotificationBell() {
     }
   }
 
+  async function enablePush() {
+    setPushMessage('');
+    setPushStatus('loading');
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        setPushStatus(permission === 'denied' ? 'denied' : 'disabled');
+        setPushMessage(permission === 'denied' ? 'Permissao bloqueada no navegador.' : 'Ativacao cancelada.');
+        return;
+      }
+      const registration = await navigator.serviceWorker.register('/sw.js');
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(pushConfig.public_key)
+        });
+      }
+      await subscribePush(subscription.toJSON());
+      setPushStatus('enabled');
+      setPushMessage('Push ativado neste dispositivo.');
+    } catch (error) {
+      console.error('Falha ao ativar Push:', error);
+      setPushStatus('disabled');
+      setPushMessage('Nao foi possivel ativar neste dispositivo.');
+    }
+  }
+
+  async function disablePush() {
+    setPushMessage('');
+    setPushStatus('loading');
+    try {
+      const registration = await navigator.serviceWorker.getRegistration('/');
+      const subscription = await registration?.pushManager.getSubscription();
+      if (subscription) {
+        await unsubscribePush(subscription.endpoint);
+        await subscription.unsubscribe();
+      }
+      setPushStatus('disabled');
+      setPushMessage('Push desativado neste dispositivo.');
+    } catch (error) {
+      console.error('Falha ao desativar Push:', error);
+      setPushStatus('enabled');
+      setPushMessage('Nao foi possivel desativar agora.');
+    }
+  }
+
   function actionFor(item) {
     if (!item.link_url) return null;
     const label = item.link_texto || 'Ver detalhes';
@@ -125,6 +224,20 @@ export default function NotificationBell() {
             <span>{unread ? `${unread} nao lida${unread === 1 ? '' : 's'}` : 'Tudo em dia'}</span>
             {unread ? <button type="button" onClick={markAllRead}>Marcar todas como lidas</button> : null}
           </div>
+
+          {pushStatus !== 'unsupported' && pushStatus !== 'unavailable' ? (
+            <div className={`push-preference push-${pushStatus}`}>
+              <div>
+                <strong>{pushStatus === 'enabled' ? 'Push ativado' : 'Receber avisos fora do Yuri'}</strong>
+                <span>{pushStatus === 'enabled' ? 'Este dispositivo recebera os avisos escolhidos pelo RH.' : 'Ative para receber novidades mesmo com o site fechado.'}</span>
+                {pushMessage ? <small>{pushMessage}</small> : null}
+                {pushStatus === 'denied' ? <small>Libere as notificacoes nas configuracoes do navegador.</small> : null}
+              </div>
+              {pushStatus === 'enabled'
+                ? <button type="button" onClick={disablePush}>Desativar</button>
+                : <button type="button" disabled={pushStatus === 'loading' || pushStatus === 'denied'} onClick={enablePush}>{pushStatus === 'loading' ? 'Aguarde...' : 'Ativar Push'}</button>}
+            </div>
+          ) : null}
 
           <div className="notification-list">
             {loading ? <p className="notification-empty">Carregando avisos...</p> : null}

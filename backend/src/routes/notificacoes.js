@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { authenticateToken, authorizeRoles } = require('../authMiddleware');
+const { getPushConfig, sendPushForNotification } = require('../services/pushService');
 
 const router = express.Router();
 const categories = new Set(['novidade', 'comunicado', 'premio', 'manutencao', 'seguranca', 'prazo', 'reconhecimento']);
@@ -56,6 +57,7 @@ function normalizePayload(body = {}) {
     link_texto: text(body.link_texto, 80) || null,
     inicio_em: optionalDate(body.inicio_em),
     fim_em: optionalDate(body.fim_em)
+    ,enviar_push: flag(body.enviar_push)
   };
 }
 
@@ -89,6 +91,64 @@ router.get('/', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Erro ao listar notificacoes:', error);
     return res.status(500).json({ error: 'Erro ao listar notificacoes' });
+  }
+});
+
+router.get('/push/config', authenticateToken, async (req, res) => {
+  try {
+    const config = await getPushConfig();
+    return res.json({ enabled: true, public_key: config.publicKey });
+  } catch (error) {
+    console.error('Erro ao carregar configuracao Push:', error);
+    return res.status(503).json({ enabled: false, public_key: null });
+  }
+});
+
+router.post('/push/subscribe', authenticateToken, async (req, res) => {
+  const subscription = req.body?.subscription || req.body;
+  const endpoint = text(subscription?.endpoint, 2000);
+  const p256dh = text(subscription?.keys?.p256dh, 500);
+  const auth = text(subscription?.keys?.auth, 500);
+
+  if (!endpoint.startsWith('https://') || !p256dh || !auth) {
+    return res.status(400).json({ error: 'Inscricao Push invalida' });
+  }
+
+  try {
+    await getPushConfig();
+    await db.run(
+      `INSERT INTO push_inscricoes
+       (colaborador_id, endpoint, p256dh, auth, user_agent, ativo, ultimo_erro, updated_at)
+       VALUES (?, ?, ?, ?, ?, 1, NULL, CURRENT_TIMESTAMP)
+       ON CONFLICT(endpoint) DO UPDATE SET
+         colaborador_id = EXCLUDED.colaborador_id,
+         p256dh = EXCLUDED.p256dh,
+         auth = EXCLUDED.auth,
+         user_agent = EXCLUDED.user_agent,
+         ativo = 1,
+         ultimo_erro = NULL,
+         updated_at = CURRENT_TIMESTAMP`,
+      [req.user.id, endpoint, p256dh, auth, text(req.get('user-agent'), 500)]
+    );
+    return res.status(201).json({ subscribed: true });
+  } catch (error) {
+    console.error('Erro ao salvar inscricao Push:', error);
+    return res.status(500).json({ error: 'Erro ao ativar notificacoes Push' });
+  }
+});
+
+router.post('/push/unsubscribe', authenticateToken, async (req, res) => {
+  const endpoint = text(req.body?.endpoint, 2000);
+  if (!endpoint) return res.status(400).json({ error: 'Endpoint obrigatorio' });
+  try {
+    await db.run(
+      `UPDATE push_inscricoes SET ativo = 0, updated_at = CURRENT_TIMESTAMP
+       WHERE endpoint = ? AND colaborador_id = ?`,
+      [endpoint, req.user.id]
+    );
+    return res.json({ subscribed: false });
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao desativar notificacoes Push' });
   }
 });
 
@@ -166,14 +226,21 @@ router.post('/admin', authenticateToken, authorizeRoles('admin'), async (req, re
     const result = await db.run(
       `INSERT INTO notificacoes
        (titulo, mensagem, categoria, prioridade, status, para_todos, para_admin,
-        para_motorista, para_colaborador, link_url, link_texto, inicio_em, fim_em, criado_por)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        para_motorista, para_colaborador, link_url, link_texto, inicio_em, fim_em, criado_por, enviar_push)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [payload.titulo, payload.mensagem, payload.categoria, payload.prioridade, payload.status,
         payload.para_todos, payload.para_admin, payload.para_motorista, payload.para_colaborador,
-        payload.link_url, payload.link_texto, payload.inicio_em, payload.fim_em, req.user.id]
+        payload.link_url, payload.link_texto, payload.inicio_em, payload.fim_em, req.user.id, payload.enviar_push]
     );
     const created = await db.get('SELECT * FROM notificacoes WHERE id = ?', [result.lastID]);
-    return res.status(201).json(created);
+    let pushResult = null;
+    if (payload.status === 'publicado' && payload.enviar_push) {
+      pushResult = await sendPushForNotification(created);
+      if (pushResult.configured) {
+        await db.run('UPDATE notificacoes SET push_enviado_em = CURRENT_TIMESTAMP WHERE id = ?', [created.id]);
+      }
+    }
+    return res.status(201).json({ ...created, push_result: pushResult });
   } catch (error) {
     console.error('Erro ao criar notificacao:', error);
     return res.status(500).json({ error: 'Erro ao criar notificacao' });
@@ -187,19 +254,28 @@ router.put('/admin/:id', authenticateToken, authorizeRoles('admin'), async (req,
   }
 
   try {
-    const existing = await db.get('SELECT id FROM notificacoes WHERE id = ?', [req.params.id]);
+    const existing = await db.get('SELECT * FROM notificacoes WHERE id = ?', [req.params.id]);
     if (!existing) return res.status(404).json({ error: 'Notificacao nao encontrada' });
     await db.run(
       `UPDATE notificacoes SET
        titulo = ?, mensagem = ?, categoria = ?, prioridade = ?, status = ?,
        para_todos = ?, para_admin = ?, para_motorista = ?, para_colaborador = ?,
-       link_url = ?, link_texto = ?, inicio_em = ?, fim_em = ?, updated_at = CURRENT_TIMESTAMP
+       link_url = ?, link_texto = ?, inicio_em = ?, fim_em = ?, enviar_push = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
       [payload.titulo, payload.mensagem, payload.categoria, payload.prioridade, payload.status,
         payload.para_todos, payload.para_admin, payload.para_motorista, payload.para_colaborador,
-        payload.link_url, payload.link_texto, payload.inicio_em, payload.fim_em, req.params.id]
+        payload.link_url, payload.link_texto, payload.inicio_em, payload.fim_em, payload.enviar_push, req.params.id]
     );
-    return res.json(await db.get('SELECT * FROM notificacoes WHERE id = ?', [req.params.id]));
+    let updated = await db.get('SELECT * FROM notificacoes WHERE id = ?', [req.params.id]);
+    let pushResult = null;
+    if (payload.status === 'publicado' && payload.enviar_push && !existing.push_enviado_em) {
+      pushResult = await sendPushForNotification(updated);
+      if (pushResult.configured) {
+        await db.run('UPDATE notificacoes SET push_enviado_em = CURRENT_TIMESTAMP WHERE id = ?', [updated.id]);
+        updated = await db.get('SELECT * FROM notificacoes WHERE id = ?', [req.params.id]);
+      }
+    }
+    return res.json({ ...updated, push_result: pushResult });
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao atualizar notificacao' });
   }

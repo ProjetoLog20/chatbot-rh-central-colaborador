@@ -14,7 +14,8 @@ const emptyForm = {
   link_url: '',
   link_texto: '',
   inicio_em: '',
-  fim_em: ''
+  fim_em: '',
+  enviar_push: false
 };
 
 const categories = [
@@ -82,11 +83,13 @@ export default function AdminNotifications() {
     setMessage('');
     try {
       if (editingId) {
-        await updateNotification(editingId, form);
-        setMessage('Notificacao atualizada.');
+        const result = await updateNotification(editingId, form);
+        const push = result.push_result;
+        setMessage(push ? `Notificacao atualizada. Push enviado para ${push.sent} dispositivo(s).` : 'Notificacao atualizada.');
       } else {
-        await createNotification(form);
-        setMessage(form.status === 'publicado' ? 'Notificacao publicada.' : 'Rascunho salvo.');
+        const result = await createNotification(form);
+        const push = result.push_result;
+        setMessage(push ? `Notificacao publicada. Push enviado para ${push.sent} dispositivo(s).` : form.status === 'publicado' ? 'Notificacao publicada.' : 'Rascunho salvo.');
       }
       resetForm();
       refresh();
@@ -110,7 +113,8 @@ export default function AdminNotifications() {
       link_url: item.link_url || '',
       link_texto: item.link_texto || '',
       inicio_em: toLocalDateTime(item.inicio_em),
-      fim_em: toLocalDateTime(item.fim_em)
+      fim_em: toLocalDateTime(item.fim_em),
+      enviar_push: Boolean(Number(item.enviar_push))
     });
     setMessage('Editando notificacao selecionada.');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -198,6 +202,18 @@ export default function AdminNotifications() {
           <label><input type="checkbox" checked={form.para_colaborador} onChange={(event) => setAudience('para_colaborador', event.target.checked)} /> Colaboradores</label>
         </fieldset>
 
+        <label className="notification-push-option">
+          <input
+            type="checkbox"
+            checked={form.enviar_push}
+            onChange={(event) => setForm({ ...form, enviar_push: event.target.checked })}
+          />
+          <span>
+            <strong>Enviar tambem como Push</strong>
+            <small>O aviso aparecera fora da plataforma para quem ativou a permissao. Evite dados pessoais ou valores sensiveis no texto.</small>
+          </span>
+        </label>
+
         <div className="notification-form-actions">
           <button type="submit">{editingId ? 'Salvar alteracoes' : form.status === 'publicado' ? 'Publicar notificacao' : 'Salvar notificacao'}</button>
           {editingId ? <button type="button" className="secondary" onClick={resetForm}>Cancelar edicao</button> : null}
@@ -218,6 +234,7 @@ export default function AdminNotifications() {
             <h4>{item.titulo}</h4>
             <p>{item.mensagem}</p>
             <small>Publico: {audienceLabel(item)} · Leituras: {Number(item.total_leituras || 0)}</small>
+            {Number(item.enviar_push) ? <small className="push-admin-status"> · Push: {item.push_enviado_em ? 'enviado' : 'aguardando publicacao/configuracao'}</small> : null}
             <footer>
               <button type="button" onClick={() => startEdit(item)}>Editar</button>
               <button type="button" className="danger" onClick={() => remove(item)}>Excluir</button>

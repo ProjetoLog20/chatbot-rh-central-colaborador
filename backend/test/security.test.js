@@ -2,11 +2,16 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
+const webpush = require('web-push');
 
 process.env.DATABASE_URL = '';
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'segredo-exclusivo-para-testes-automatizados';
 process.env.ACCESS_COUNTER_ENABLED = 'false';
+const testVapidKeys = webpush.generateVAPIDKeys();
+process.env.VAPID_PUBLIC_KEY = testVapidKeys.publicKey;
+process.env.VAPID_PRIVATE_KEY = testVapidKeys.privateKey;
+process.env.VAPID_SUBJECT = 'https://www.log20.com.br';
 
 const app = require('../src/index');
 const db = require('../src/db');
@@ -134,12 +139,39 @@ test('notificacao percorre publicacao, entrega, leitura e metrica sem vazar entr
       para_todos: false,
       para_colaborador: true,
       link_url: '/produtividade',
-      link_texto: 'Ver detalhes'
+      link_texto: 'Ver detalhes',
+      enviar_push: true
     })
     .expect(201);
 
   const notificationId = created.body.id;
   assert.ok(notificationId);
+  assert.equal(created.body.push_result.configured, true);
+  assert.equal(created.body.push_result.targeted, 0);
+
+  const config = await request(app)
+    .get('/api/notificacoes/push/config')
+    .set('Authorization', `Bearer ${colaboradorToken}`)
+    .expect(200);
+  assert.equal(config.body.enabled, true);
+  assert.equal(config.body.public_key, testVapidKeys.publicKey);
+
+  const fakeEndpoint = `https://push.example.test/subscription/${suffix}`;
+  await request(app)
+    .post('/api/notificacoes/push/subscribe')
+    .set('Authorization', `Bearer ${colaboradorToken}`)
+    .send({ subscription: { endpoint: fakeEndpoint, keys: { p256dh: 'p256dh-teste', auth: 'auth-teste' } } })
+    .expect(201);
+  const storedSubscription = await db.get('SELECT ativo FROM push_inscricoes WHERE endpoint = ?', [fakeEndpoint]);
+  assert.equal(Number(storedSubscription.ativo), 1);
+
+  await request(app)
+    .post('/api/notificacoes/push/unsubscribe')
+    .set('Authorization', `Bearer ${colaboradorToken}`)
+    .send({ endpoint: fakeEndpoint })
+    .expect(200);
+  const inactiveSubscription = await db.get('SELECT ativo FROM push_inscricoes WHERE endpoint = ?', [fakeEndpoint]);
+  assert.equal(Number(inactiveSubscription.ativo), 0);
 
   const inbox = await request(app)
     .get('/api/notificacoes')

@@ -4524,6 +4524,8 @@ tr:not(:last-child) td {
   border-radius: 18px;
   box-shadow: 0 24px 70px rgba(0, 35, 66, 0.28);
   color: #24313d;
+  display: flex;
+  flex-direction: column;
   max-height: min(720px, calc(100vh - 92px));
   overflow: hidden;
   position: absolute;
@@ -4584,6 +4586,64 @@ tr:not(:last-child) td {
   font-weight: 700;
 }
 
+.push-preference {
+  align-items: center;
+  background: #fff9f2;
+  border-bottom: 1px solid #f2ddc8;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px 16px;
+}
+
+.push-preference > div {
+  display: grid;
+  gap: 2px;
+}
+
+.push-preference strong {
+  color: #29475c;
+  font-size: 13px;
+}
+
+.push-preference span,
+.push-preference small {
+  color: #6e7e89;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.push-preference small {
+  color: #a64b1b;
+  font-weight: 700;
+}
+
+.push-preference.push-enabled {
+  background: #eff9f3;
+  border-bottom-color: #cde8d7;
+}
+
+.header-actions .push-preference button {
+  background: #e87522;
+  border: 0;
+  border-radius: 9px;
+  color: #fff;
+  flex: 0 0 auto;
+  font-size: 12px;
+  padding: 8px 11px;
+}
+
+.header-actions .push-preference.push-enabled button {
+  background: transparent;
+  border: 1px solid #a9cdb7;
+  color: #326448;
+}
+
+.header-actions .push-preference button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .header-actions .notification-toolbar button {
   background: transparent;
   border: 0;
@@ -4593,7 +4653,8 @@ tr:not(:last-child) td {
 }
 
 .notification-list {
-  max-height: calc(min(720px, 100vh - 92px) - 132px);
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -4779,6 +4840,37 @@ tr:not(:last-child) td {
   gap: 10px;
 }
 
+.notification-push-option {
+  align-items: flex-start;
+  background: #fff8ef;
+  border: 1px solid #f0d4b8;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 13px 15px;
+}
+
+.notification-push-option input {
+  margin-top: 3px;
+}
+
+.notification-push-option span {
+  display: grid;
+  gap: 3px;
+}
+
+.notification-push-option strong {
+  color: #82451f;
+}
+
+.notification-push-option small,
+.push-admin-status {
+  color: #765f50;
+  line-height: 1.4;
+}
+
 .notification-form-actions .secondary {
   background: #e6edf2;
   color: #29475c;
@@ -4861,7 +4953,7 @@ tr:not(:last-child) td {
   }
 
   .notification-list {
-    max-height: calc(100dvh - 132px);
+    max-height: none;
   }
 
   .notification-admin-heading {
