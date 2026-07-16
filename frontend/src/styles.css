@@ -4585,6 +4585,7 @@ tr:not(:last-child) td {
   .chat-assistant.open {
     bottom: 0;
     right: 0;
+    z-index: 1600;
   }
 
   .chat-assistant.open .chat-window {

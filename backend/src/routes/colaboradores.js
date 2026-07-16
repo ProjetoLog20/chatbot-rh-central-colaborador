@@ -52,11 +52,20 @@ router.post('/', authenticateToken, authorizeRoles('admin'), async (req, res) =>
 
 router.put('/:id', authenticateToken, (req, res) => {
   const id = Number(req.params.id);
-  if (req.user.perfil !== 'admin' && req.user.id !== id) {
+  const isAdmin = String(req.user.perfil || '').trim().toLowerCase() === 'admin';
+  if (!isAdmin && req.user.id !== id) {
     return res.status(403).json({ error: 'Acesso negado' });
   }
 
-  const { nome_completo, cpf, telefone_whatsapp, email, cargo, setor, unidade, tipo_colaborador, status, data_admissao, senha, perfil, resetarSenha } = req.body;
+  const selfServiceFields = new Set(['nome_preferido', 'telefone_whatsapp', 'email']);
+  if (!isAdmin) {
+    const forbiddenFields = Object.keys(req.body || {}).filter((field) => !selfServiceFields.has(field));
+    if (forbiddenFields.length) {
+      return res.status(403).json({ error: 'Somente nome preferido, telefone e email podem ser alterados pelo colaborador' });
+    }
+  }
+
+  const { nome_completo, nome_preferido, cpf, telefone_whatsapp, email, cargo, setor, unidade, tipo_colaborador, status, data_admissao, senha, perfil, resetarSenha } = req.body;
   db.get('SELECT * FROM colaboradores WHERE id = ?', [id], async (err, user) => {
     if (err) return res.status(500).json({ error: 'Erro no banco de dados' });
     if (!user) return res.status(404).json({ error: 'Colaborador nao encontrado' });
@@ -66,31 +75,32 @@ router.put('/:id', authenticateToken, (req, res) => {
     let senha_temporaria = user.senha_temporaria;
     let data_ultima_troca_senha = user.data_ultima_troca_senha;
 
-    if (req.user.perfil === 'admin' && resetarSenha) {
+    if (isAdmin && resetarSenha) {
       senha_hash = await bcrypt.hash('log20', 10);
       primeiro_acesso = true;
       senha_temporaria = true;
       data_ultima_troca_senha = null;
-    } else if (senha) {
+    } else if (isAdmin && senha) {
       senha_hash = await bcrypt.hash(senha, 10);
       primeiro_acesso = false;
       senha_temporaria = false;
       data_ultima_troca_senha = new Date().toISOString();
     }
 
-    const nextStatus = req.user.perfil === 'admin' ? (status || user.status) : user.status;
-    const nextPerfil = req.user.perfil === 'admin' ? (perfil || user.perfil) : user.perfil;
+    const nextStatus = isAdmin ? (status || user.status) : user.status;
+    const nextPerfil = isAdmin ? (perfil || user.perfil) : user.perfil;
     const stmt = `UPDATE colaboradores
-      SET nome_completo = ?, cpf = ?, telefone_whatsapp = ?, email = ?, cargo = ?, setor = ?,
+      SET nome_completo = ?, nome_preferido = ?, cpf = ?, telefone_whatsapp = ?, email = ?, cargo = ?, setor = ?,
           unidade = ?, tipo_colaborador = ?, status = ?, data_admissao = ?, senha_hash = ?,
           perfil = ?, primeiro_acesso = ?, senha_temporaria = ?, data_ultima_troca_senha = ?
       WHERE id = ?`;
 
     db.run(stmt, [
       nome_completo || user.nome_completo,
+      nome_preferido !== undefined ? nome_preferido : user.nome_preferido,
       cpf || user.cpf,
-      telefone_whatsapp || user.telefone_whatsapp,
-      email || user.email,
+      telefone_whatsapp !== undefined ? telefone_whatsapp : user.telefone_whatsapp,
+      email !== undefined ? email : user.email,
       cargo || user.cargo,
       setor || user.setor,
       unidade || user.unidade,

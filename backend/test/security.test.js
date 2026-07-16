@@ -106,6 +106,92 @@ test('importacao administrativa continua proibida para colaborador comum', async
     .expect(403);
 });
 
+test('colaborador nao consegue alterar cargo ou outros dados operacionais', async () => {
+  const suffix = Date.now();
+  const matricula = `self-service-${suffix}`;
+  await db.run(
+    `INSERT INTO colaboradores
+     (matricula, nome_completo, email, cargo, setor, senha_hash, perfil, status, primeiro_acesso, senha_temporaria)
+     VALUES (?, 'Usuario Self Service', 'original@teste.local', 'Motorista', 'Distribuicao', 'hash', 'colaborador', 'Ativo', 0, 0)`,
+    [matricula]
+  );
+  const usuario = await db.get('SELECT id FROM colaboradores WHERE matricula = ?', [matricula]);
+  const token = jwt.sign({ id: usuario.id, matricula, perfil: 'colaborador' }, process.env.JWT_SECRET, { expiresIn: '5m' });
+
+  const blocked = await request(app)
+    .put(`/api/colaboradores/${usuario.id}`)
+    .set('Authorization', `Bearer ${token}`)
+    .send({ cargo: 'Administrador', setor: 'RH' })
+    .expect(403);
+  assert.match(blocked.body.error, /Somente nome preferido/);
+
+  await request(app)
+    .put(`/api/colaboradores/${usuario.id}`)
+    .set('Authorization', `Bearer ${token}`)
+    .send({ nome_preferido: 'Usuario', email: 'novo@teste.local' })
+    .expect(200);
+
+  const after = await db.get('SELECT nome_preferido, email, cargo, setor FROM colaboradores WHERE id = ?', [usuario.id]);
+  assert.equal(after.nome_preferido, 'Usuario');
+  assert.equal(after.email, 'novo@teste.local');
+  assert.equal(after.cargo, 'Motorista');
+  assert.equal(after.setor, 'Distribuicao');
+  await db.run('DELETE FROM colaboradores WHERE id = ?', [usuario.id]);
+});
+
+test('falha no Push nao marca notificacao como enviada e permite nova tentativa', async () => {
+  const suffix = Date.now();
+  const adminMatricula = `admin-push-fail-${suffix}`;
+  const colaboradorMatricula = `colab-push-fail-${suffix}`;
+  await db.run(
+    `INSERT INTO colaboradores (matricula, nome_completo, senha_hash, perfil, status, primeiro_acesso, senha_temporaria)
+     VALUES (?, 'Admin Push Fail', 'hash', 'admin', 'Ativo', 0, 0)`,
+    [adminMatricula]
+  );
+  await db.run(
+    `INSERT INTO colaboradores (matricula, nome_completo, senha_hash, perfil, status, primeiro_acesso, senha_temporaria)
+     VALUES (?, 'Colaborador Push Fail', 'hash', 'colaborador', 'Ativo', 0, 0)`,
+    [colaboradorMatricula]
+  );
+  const admin = await db.get('SELECT id FROM colaboradores WHERE matricula = ?', [adminMatricula]);
+  const colaborador = await db.get('SELECT id FROM colaboradores WHERE matricula = ?', [colaboradorMatricula]);
+  await db.run(
+    `INSERT INTO push_inscricoes (colaborador_id, endpoint, p256dh, auth, ativo)
+     VALUES (?, ?, 'p256dh', 'auth', 1)`,
+    [colaborador.id, `https://push.example.test/failure/${suffix}`]
+  );
+  const adminToken = jwt.sign({ id: admin.id, matricula: adminMatricula, perfil: 'admin' }, process.env.JWT_SECRET, { expiresIn: '5m' });
+  const originalSendNotification = webpush.sendNotification;
+  webpush.sendNotification = async () => {
+    const error = new Error('Falha simulada do provedor Push');
+    error.statusCode = 500;
+    throw error;
+  };
+
+  try {
+    const response = await request(app)
+      .post('/api/notificacoes/admin')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        titulo: 'Push com falha simulada',
+        mensagem: 'Esta notificacao valida o mecanismo de nova tentativa.',
+        status: 'publicado',
+        para_colaborador: true,
+        enviar_push: true
+      })
+      .expect(201);
+    assert.equal(response.body.push_result.failed, 1);
+    assert.equal(response.body.push_result.sent, 0);
+    const stored = await db.get('SELECT push_enviado_em FROM notificacoes WHERE id = ?', [response.body.id]);
+    assert.equal(stored.push_enviado_em, null);
+    await db.run('DELETE FROM notificacoes WHERE id = ?', [response.body.id]);
+  } finally {
+    webpush.sendNotification = originalSendNotification;
+    await db.run('DELETE FROM push_inscricoes WHERE colaborador_id = ?', [colaborador.id]);
+    await db.run('DELETE FROM colaboradores WHERE id IN (?, ?)', [admin.id, colaborador.id]);
+  }
+});
+
 test('notificacao percorre publicacao, entrega, leitura e metrica sem vazar entre perfis', async () => {
   const suffix = Date.now();
   const adminMatricula = `admin-notif-${suffix}`;
