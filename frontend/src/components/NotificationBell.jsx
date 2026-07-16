@@ -34,6 +34,8 @@ function formatDate(value) {
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value));
 }
 
+const PUSH_ONBOARDING_KEY = 'yuri-push-onboarding-julho-2026';
+
 function urlBase64ToUint8Array(value) {
   const padding = '='.repeat((4 - (value.length % 4)) % 4);
   const base64 = (value + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -49,6 +51,7 @@ export default function NotificationBell() {
   const [pushStatus, setPushStatus] = useState('loading');
   const [pushMessage, setPushMessage] = useState('');
   const [pushConfig, setPushConfig] = useState(null);
+  const [showPushOnboarding, setShowPushOnboarding] = useState(false);
   const panelRef = useRef(null);
 
   async function refresh() {
@@ -103,6 +106,13 @@ export default function NotificationBell() {
     initializePush();
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (pushStatus === 'loading' || pushStatus === 'enabled') return;
+    if (window.localStorage.getItem(PUSH_ONBOARDING_KEY) !== 'dismissed') {
+      setShowPushOnboarding(true);
+    }
+  }, [pushStatus]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -162,6 +172,8 @@ export default function NotificationBell() {
       await subscribePush(subscription.toJSON());
       setPushStatus('enabled');
       setPushMessage('Push ativado neste dispositivo.');
+      window.localStorage.setItem(PUSH_ONBOARDING_KEY, 'enabled');
+      setShowPushOnboarding(false);
     } catch (error) {
       console.error('Falha ao ativar Push:', error);
       setPushStatus('disabled');
@@ -188,6 +200,12 @@ export default function NotificationBell() {
     }
   }
 
+  function dismissPushOnboarding() {
+    window.localStorage.setItem(PUSH_ONBOARDING_KEY, 'dismissed');
+    setShowPushOnboarding(false);
+    setOpen(true);
+  }
+
   function actionFor(item) {
     if (!item.link_url) return null;
     const label = item.link_texto || 'Ver detalhes';
@@ -199,6 +217,35 @@ export default function NotificationBell() {
 
   return (
     <div className="notification-center" ref={panelRef}>
+      {showPushOnboarding ? (
+        <div className="push-onboarding-backdrop" role="presentation">
+          <section className="push-onboarding-modal" role="dialog" aria-modal="true" aria-labelledby="push-onboarding-title">
+            <span className="push-onboarding-icon" aria-hidden="true">&#128276;</span>
+            <small>Novidade no Yuri</small>
+            <h2 id="push-onboarding-title">Nao perca nenhum aviso importante!</h2>
+            <p>Ative as notificacoes para receber comunicados, atualizacoes e novidades do Yuri mesmo quando o site estiver fechado.</p>
+
+            {pushStatus === 'denied' ? (
+              <div className="push-onboarding-help">As notificacoes estao bloqueadas neste navegador. Libere a permissao nas configuracoes do site e tente novamente pelo sininho.</div>
+            ) : null}
+            {pushStatus === 'unsupported' ? (
+              <div className="push-onboarding-help">Este navegador nao oferece Push. No iPhone, adicione o Yuri a Tela de Inicio pelo Safari. No Android ou computador, use Chrome ou Edge.</div>
+            ) : null}
+            {pushStatus === 'unavailable' ? (
+              <div className="push-onboarding-help">O Push esta temporariamente indisponivel. O aviso continuara acessivel pelo sininho.</div>
+            ) : null}
+
+            <div className="push-onboarding-actions">
+              <button type="button" className="primary" disabled={['denied', 'unsupported', 'unavailable'].includes(pushStatus)} onClick={enablePush}>
+                Ativar notificacoes
+              </button>
+              <button type="button" className="secondary" onClick={dismissPushOnboarding}>Agora nao</button>
+            </div>
+            <p className="push-onboarding-note">Voce podera ativar depois pelo sininho.</p>
+          </section>
+        </div>
+      ) : null}
+
       <button
         type="button"
         className="notification-bell"
