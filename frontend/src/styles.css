@@ -4251,6 +4251,25 @@ tr:not(:last-child) td {
     padding: 1rem;
   }
 
+  .login-card {
+    margin-top: 0.75rem;
+    padding: 1.5rem;
+  }
+
+  .login-brand {
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .login-brand img {
+    height: 96px;
+    width: 96px;
+  }
+
+  .login-brand h1 {
+    font-size: 1.75rem;
+  }
+
   .login-transition {
     min-height: calc(100vh - 120px);
     margin: -1rem;
