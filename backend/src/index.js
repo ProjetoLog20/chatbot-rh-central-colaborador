@@ -67,11 +67,9 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.use(async (req, res, next) => {
-  const isAdminMetricsRoute = req.path === '/admin/acessos' || req.path.startsWith('/admin/acessos');
-  const isHealthRoute = req.path === '/api/health';
-  const isNotificationPoll = req.method === 'GET' && req.path === '/api/notificacoes';
   const isAssetRequest = /\.(css|js|png|jpg|jpeg|svg|ico|webp|woff2?|ttf|map)$/i.test(req.path);
-  if (process.env.ACCESS_COUNTER_ENABLED !== 'false' && !isAdminMetricsRoute && !isHealthRoute && !isNotificationPoll && !isAssetRequest) {
+  const isPageView = req.method === 'GET' && !req.path.startsWith('/api') && !isAssetRequest;
+  if (process.env.ACCESS_COUNTER_ENABLED !== 'false' && isPageView) {
     incrementAccessCounter(req).catch(() => {});
   }
   next();

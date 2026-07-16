@@ -34,6 +34,7 @@ export default function ActionsCarousel({ items = [] }) {
   const [selectedCategory, setSelectedCategory] = useState('todas');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
   const touchStart = useRef(null);
 
   const filteredItems = useMemo(() => {
@@ -44,12 +45,25 @@ export default function ActionsCarousel({ items = [] }) {
   const currentItem = filteredItems[currentIndex] || filteredItems[0];
 
   useEffect(() => {
-    if (paused || filteredItems.length < 2) return undefined;
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updatePreference = () => setReducedMotion(media.matches);
+    updatePreference();
+    media.addEventListener?.('change', updatePreference);
+    return () => media.removeEventListener?.('change', updatePreference);
+  }, []);
+
+  useEffect(() => {
+    if (!filteredItems.length || currentIndex < filteredItems.length) return;
+    setCurrentIndex(0);
+  }, [currentIndex, filteredItems.length]);
+
+  useEffect(() => {
+    if (paused || reducedMotion || filteredItems.length < 2) return undefined;
     const interval = window.setInterval(() => {
       setCurrentIndex((value) => (value + 1) % filteredItems.length);
     }, 6000);
     return () => window.clearInterval(interval);
-  }, [filteredItems.length, paused]);
+  }, [filteredItems.length, paused, reducedMotion]);
 
   function changeCategory(category) {
     setSelectedCategory(category);

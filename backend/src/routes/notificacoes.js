@@ -236,7 +236,7 @@ router.post('/admin', authenticateToken, authorizeRoles('admin'), async (req, re
     let pushResult = null;
     if (payload.status === 'publicado' && payload.enviar_push) {
       pushResult = await sendPushForNotification(created);
-      if (pushResult.configured) {
+      if (pushResult.configured && pushResult.failed === 0) {
         await db.run('UPDATE notificacoes SET push_enviado_em = CURRENT_TIMESTAMP WHERE id = ?', [created.id]);
       }
     }
@@ -270,7 +270,7 @@ router.put('/admin/:id', authenticateToken, authorizeRoles('admin'), async (req,
     let pushResult = null;
     if (payload.status === 'publicado' && payload.enviar_push && !existing.push_enviado_em) {
       pushResult = await sendPushForNotification(updated);
-      if (pushResult.configured) {
+      if (pushResult.configured && pushResult.failed === 0) {
         await db.run('UPDATE notificacoes SET push_enviado_em = CURRENT_TIMESTAMP WHERE id = ?', [updated.id]);
         updated = await db.get('SELECT * FROM notificacoes WHERE id = ?', [req.params.id]);
       }

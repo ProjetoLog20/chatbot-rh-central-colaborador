@@ -449,24 +449,15 @@ function ColaboradorRotaPanel({ rows }) {
   }, [rows]);
 
   const selected = rows.find((row) => String(row.id) === selectedId) || rows[0];
-  const consolidated = rows.reduce((acc, row) => {
-    acc.valor_total_previsto += asNumber(row.valor_total_previsto);
-    acc.entregas += asNumber(row.entregas);
-    acc.caixas += asNumber(row.caixas);
-    acc.recargas += asNumber(row.recargas);
-    acc.bonus += asNumber(row.bonus);
-    return acc;
-  }, { valor_total_previsto: 0, entregas: 0, caixas: 0, recargas: 0, bonus: 0 });
-
   return (
     <>
       {rows.length ? (
         <>
           <section className="prod-summary-grid">
-            <div className="prod-highlight-value"><span>Valor previsto</span><strong>{formatMoney(consolidated.valor_total_previsto)}</strong></div>
+            <div className="prod-highlight-value"><span>Valor previsto nesta competencia</span><strong>{formatMoney(selected?.valor_total_previsto)}</strong></div>
             <div><span>Funcao</span><strong>{formatRotaFuncao(selected?.funcao_rv)}</strong></div>
             <div><span>Competencia</span><strong>{selected?.competencia || '-'}</strong></div>
-            <div><span>Indicadores principais</span><strong>{formatNumber(consolidated.entregas)} entregas</strong></div>
+            <div><span>Indicadores principais</span><strong>{formatNumber(selected?.entregas)} entregas</strong></div>
             <div><span>Status</span><strong>{selected?.status_produtividade || 'Sem dados'}</strong></div>
           </section>
           {rows.length > 1 ? (

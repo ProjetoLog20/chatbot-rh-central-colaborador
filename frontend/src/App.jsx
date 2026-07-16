@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { getUser, clearToken, getToken } from './auth.js';
 import LoginPage from './components/LoginPage.jsx';
@@ -38,6 +38,7 @@ function App() {
   const location = useLocation();
   const [user, setUser] = useState(getUser());
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const headerActionsRef = useRef(null);
 
   useEffect(() => {
     if (!getToken()) {
@@ -48,6 +49,28 @@ function App() {
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return undefined;
+    function closeMenu(event) {
+      if (event.key === 'Escape') {
+        setMobileMenuOpen(false);
+        return;
+      }
+      if (event.type === 'mousedown' && (
+        !headerActionsRef.current?.contains(event.target)
+        || event.target.closest?.('.notification-center')
+      )) {
+        setMobileMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', closeMenu);
+    document.addEventListener('keydown', closeMenu);
+    return () => {
+      document.removeEventListener('mousedown', closeMenu);
+      document.removeEventListener('keydown', closeMenu);
+    };
+  }, [mobileMenuOpen]);
 
   function handleLogout() {
     clearToken();
@@ -84,7 +107,7 @@ function App() {
             <span>Central do Colaborador</span>
           </div>
         </div>
-        <div className={`header-actions ${mobileMenuOpen ? 'mobile-open' : ''}`}>
+        <div className={`header-actions ${mobileMenuOpen ? 'mobile-open' : ''}`} ref={headerActionsRef}>
           {user && !isFirstAccessRoute ? (
             <button
               type="button"

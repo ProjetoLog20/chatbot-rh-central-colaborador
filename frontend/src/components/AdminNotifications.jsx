@@ -78,6 +78,15 @@ export default function AdminNotifications() {
     setEditingId(null);
   }
 
+  function pushFeedback(push) {
+    if (!push) return '';
+    if (push.failed > 0) {
+      return ` Push: ${push.sent} enviado(s) e ${push.failed} falha(s). Salve novamente para tentar reenviar.`;
+    }
+    if (push.targeted === 0) return ' Nenhum dispositivo estava inscrito no Push.';
+    return ` Push enviado para ${push.sent} dispositivo(s).`;
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
     setMessage('');
@@ -85,11 +94,11 @@ export default function AdminNotifications() {
       if (editingId) {
         const result = await updateNotification(editingId, form);
         const push = result.push_result;
-        setMessage(push ? `Notificacao atualizada. Push enviado para ${push.sent} dispositivo(s).` : 'Notificacao atualizada.');
+        setMessage(`Notificacao atualizada.${pushFeedback(push)}`);
       } else {
         const result = await createNotification(form);
         const push = result.push_result;
-        setMessage(push ? `Notificacao publicada. Push enviado para ${push.sent} dispositivo(s).` : form.status === 'publicado' ? 'Notificacao publicada.' : 'Rascunho salvo.');
+        setMessage(form.status === 'publicado' ? `Notificacao publicada.${pushFeedback(push)}` : 'Rascunho salvo.');
       }
       resetForm();
       refresh();
