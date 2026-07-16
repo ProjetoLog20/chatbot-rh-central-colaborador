@@ -445,6 +445,43 @@ function connectSqlite() {
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_notificacoes_status_periodo ON notificacoes(status, inicio_em, fim_em)');
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_notificacoes_leituras_colaborador ON notificacoes_leituras(colaborador_id, notificacao_id)');
 
+    const ensureNotificacaoColumn = (name, definition) => {
+      sqliteDb.all('PRAGMA table_info(notificacoes)', [], (err, columns) => {
+        if (err) return;
+        if (!columns.some((column) => column.name === name)) {
+          sqliteDb.run(`ALTER TABLE notificacoes ADD COLUMN ${name} ${definition}`);
+        }
+      });
+    };
+
+    ensureNotificacaoColumn('enviar_push', 'INTEGER NOT NULL DEFAULT 0');
+    ensureNotificacaoColumn('push_enviado_em', 'TEXT');
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS push_inscricoes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      colaborador_id INTEGER NOT NULL,
+      endpoint TEXT NOT NULL UNIQUE,
+      p256dh TEXT NOT NULL,
+      auth TEXT NOT NULL,
+      user_agent TEXT,
+      ativo INTEGER NOT NULL DEFAULT 1,
+      ultimo_erro TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE CASCADE
+    )`);
+
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_push_inscricoes_colaborador ON push_inscricoes(colaborador_id, ativo)');
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS push_configuracao (
+      id INTEGER PRIMARY KEY,
+      public_key TEXT NOT NULL,
+      private_key TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`);
+
     sqliteDb.run(`CREATE TABLE IF NOT EXISTS acoes_comunicacao (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       categoria TEXT NOT NULL,

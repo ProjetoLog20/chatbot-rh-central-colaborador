@@ -1,0 +1,18 @@
+{
+  "name": "Yuri - Central do Colaborador",
+  "short_name": "Yuri",
+  "description": "Central do Colaborador LOG20 Cascavel",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f7f9",
+  "theme_color": "#003b68",
+  "icons": [
+    {
+      "src": "/rh-logo.jpg",
+      "sizes": "400x400",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}

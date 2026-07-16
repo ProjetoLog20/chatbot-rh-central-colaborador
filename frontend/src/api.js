@@ -364,6 +364,24 @@ export async function deleteNotification(id) {
   return request(`/notificacoes/admin/${id}`, { method: 'DELETE' });
 }
 
+export async function getPushConfig() {
+  return request('/notificacoes/push/config');
+}
+
+export async function subscribePush(subscription) {
+  return request('/notificacoes/push/subscribe', {
+    method: 'POST',
+    body: JSON.stringify({ subscription })
+  });
+}
+
+export async function unsubscribePush(endpoint) {
+  return request('/notificacoes/push/unsubscribe', {
+    method: 'POST',
+    body: JSON.stringify({ endpoint })
+  });
+}
+
 export async function getCampeoesSegurancaPublicos() {
   return request('/campeoes-seguranca/publicos');
 }
