@@ -1,6 +1,22 @@
 import { useEffect, useState } from 'react';
 import { getProfile } from '../api.js';
 
+const profileLabels = {
+  matricula: 'Matricula',
+  nome_completo: 'Nome completo',
+  nome_preferido: 'Nome preferido',
+  perfil: 'Perfil de acesso',
+  cargo: 'Cargo',
+  setor: 'Setor',
+  unidade: 'Unidade',
+  operacao: 'Operacao',
+  atividade: 'Atividade',
+  tipo_colaborador: 'Tipo de colaborador',
+  status: 'Status'
+};
+
+const hiddenProfileFields = new Set(['id', 'senha_hash', 'senha_temporaria', 'primeiro_acesso']);
+
 export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState('');
@@ -16,9 +32,9 @@ export default function ProfilePage() {
     <div className="page-card">
       <h1>Meus Dados</h1>
       <div className="detail-grid">
-        {Object.entries(profile).map(([key, value]) => (
+        {Object.entries(profile).filter(([key]) => !hiddenProfileFields.has(key)).map(([key, value]) => (
           <div key={key} className="detail-row">
-            <span>{key.replace('_', ' ').toUpperCase()}</span>
+            <span>{profileLabels[key] || key.replaceAll('_', ' ')}</span>
             <strong>{value || '-'}</strong>
           </div>
         ))}

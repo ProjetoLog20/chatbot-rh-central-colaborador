@@ -336,9 +336,13 @@ export default function Dashboard({ user }) {
         </div>
       </section>
 
-      <UnitDreamPanel />
-
       <section className="dashboard-card-section" aria-label="Atalhos da Central do Colaborador">
+        <div className="dashboard-section-heading">
+          <div>
+            <span>Acesso rapido</span>
+            <h2>O que voce precisa hoje?</h2>
+          </div>
+        </div>
         <div className="card-grid">
           {cards.map((card, index) => (
             <DashboardCard card={card} index={index} key={card.id} onMaintenance={setMaintenanceModule} />
@@ -347,6 +351,7 @@ export default function Dashboard({ user }) {
       </section>
 
       <ActionsCarousel items={acoes} />
+      <UnitDreamPanel />
       <MaintenanceNotice module={maintenanceModule} onClose={() => setMaintenanceModule(null)} />
     </div>
   );
