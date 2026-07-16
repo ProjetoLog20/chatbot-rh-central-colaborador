@@ -402,6 +402,171 @@ function findCompetencia(...tables) {
   return '';
 }
 
+function worksheetValue(sheet, row, column) {
+  return sheet?.[xlsx.utils.encode_cell({ r: row, c: column })]?.v ?? '';
+}
+
+function buildOnePagerRoleMaps(rows) {
+  const motorista = new Map();
+  const ajudante = new Map();
+  const header = (rows || []).find((row) => row.some((value) => normalizeKey(value) === 'cod')) || [];
+  for (let index = 0; index < header.length - 1; index += 1) {
+    if (normalizeKey(header[index]) !== 'cod') continue;
+    const role = normalizeKey(header[index + 1]);
+    if (!['motorista', 'ajudante'].includes(role)) continue;
+    for (const row of rows.slice(rows.indexOf(header) + 1)) {
+      const code = trim(rowValue(row, index));
+      const name = trim(rowValue(row, index + 1));
+      if (/^\d+$/.test(code) && name) (role === 'motorista' ? motorista : ajudante).set(code, name);
+    }
+  }
+  return { motorista, ajudante };
+}
+
+function officialRow({ competencia, codigo, nome, funcao, caixas, entregas, devolucao, recargas, mapas, bonus, valorRecarga, premio, metodo }) {
+  const period = officialPeriodForCompetencia(competencia);
+  return normalizeRow({
+    competencia,
+    periodo_inicio: period.inicio,
+    periodo_fim: period.fim,
+    matricula: '',
+    nome_completo: '',
+    cpf: '',
+    codigo_rv: codigo,
+    nome_rv: nome,
+    funcao_rv: funcao,
+    caixas,
+    entregas,
+    percentual_devolucao: devolucao,
+    meta_devolucao: '3.5%',
+    bateu_devolucao: devolucao <= 0.035 ? 'sim' : 'nao',
+    recargas,
+    mapas,
+    valor_recarga: valorRecarga,
+    bonus,
+    premio_produtividade: premio,
+    rv_nova: premio,
+    status_produtividade: premio > 0 ? 'Elegivel' : 'Sem premio',
+    metodo_cruzamento: metodo,
+    confianca_cruzamento: 1,
+    observacao_cruzamento: 'Valor final calculado diretamente pelas regras do One Pager oficial.',
+    mensagem_rh: 'Valor final conforme detalhamento oficial do One Pager.'
+  });
+}
+
+function calculateMainOnePagerRows({ dataSheet, planSheet, onePagerRows, competencia, ajudanteTableRows }) {
+  const roles = buildOnePagerRoleMaps(onePagerRows);
+  const month = Number(competencia.split('/')[0]);
+  const stats = new Map();
+  const init = (code, funcao, nome) => {
+    const key = `${funcao}:${code}`;
+    if (!stats.has(key)) stats.set(key, { code, funcao, nome, boxes: [0, 0, 0], deliveries: [0, 0, 0], returns: 0, denominator: 0, recargas: 0, mapas: 0 });
+    return stats.get(key);
+  };
+  roles.motorista.forEach((name, code) => init(code, 'motorista', name));
+  roles.ajudante.forEach((name, code) => init(code, 'ajudante', name));
+
+  const range = xlsx.utils.decode_range(dataSheet['!ref']);
+  for (let row = range.s.r + 1; row <= range.e.r; row += 1) {
+    if (Number(worksheetValue(dataSheet, row, 8)) !== month) continue; // I: mês
+    const driver = trim(worksheetValue(dataSheet, row, 9)); // J
+    const helpers = [trim(worksheetValue(dataSheet, row, 10)), trim(worksheetValue(dataSheet, row, 11))]; // K/L
+    const factor = Number(worksheetValue(dataSheet, row, 12)); // M
+    const recarga = parseNumber(worksheetValue(dataSheet, row, 16)); // Q
+    const boxes = parseNumber(worksheetValue(dataSheet, row, 31)); // AF
+    const deliveries = parseNumber(worksheetValue(dataSheet, row, 32)); // AG
+    const returned = parseNumber(worksheetValue(dataSheet, row, 15)); // P
+    const denominator = parseNumber(worksheetValue(dataSheet, row, 151)); // EV
+    const apply = (item) => {
+      item.mapas += 1;
+      item.returns += returned;
+      item.denominator += denominator;
+      item.recargas += recarga;
+      if (recarga === 0 && [0, 1, 2].includes(factor)) {
+        item.boxes[factor] += boxes;
+        item.deliveries[factor] += deliveries;
+      }
+    };
+    if (roles.motorista.has(driver)) apply(init(driver, 'motorista', roles.motorista.get(driver)));
+    // O One Pager soma separadamente as colunas K e L. Se o mesmo código
+    // aparecer nas duas, ambas as ocorrências fazem parte do valor oficial.
+    helpers.filter(Boolean).forEach((code) => {
+      if (roles.ajudante.has(code)) apply(init(code, 'ajudante', roles.ajudante.get(code)));
+    });
+  }
+
+  const extraByCode = new Map();
+  if (ajudanteTableRows?.length) {
+    const headerIndex = ajudanteTableRows.findIndex((row) => row.some((value) => trim(value) === 'Ajudante'));
+    const headers = ajudanteTableRows[headerIndex]?.map(normalizeKey) || [];
+    const codeIndex = headers.indexOf('ajudante');
+    const extraIndex = headers.indexOf('extra');
+    ajudanteTableRows.slice(headerIndex + 1).forEach((row) => extraByCode.set(trim(rowValue(row, codeIndex)), parseNumber(rowValue(row, extraIndex))));
+  }
+  const threshold = parseNumber(worksheetValue(planSheet, 9, 9)); // J10
+  const bonusValue = parseNumber(worksheetValue(planSheet, 11, 9)); // J12
+  const driverRecargaRate = parseNumber(worksheetValue(planSheet, 11, 12)); // M12
+  const helperRecargaRate = parseNumber(worksheetValue(planSheet, 11, 13)); // N12
+
+  return [...stats.values()].map((item) => {
+    const devolucao = item.denominator ? item.returns / item.denominator : 0;
+    const bonus = item.mapas >= 15 && devolucao <= threshold ? bonusValue : 0;
+    const isDriver = item.funcao === 'motorista';
+    const caixas = item.boxes.reduce((sum, value) => sum + value, 0);
+    const entregas = item.deliveries.reduce((sum, value) => sum + value, 0);
+    const valorRecarga = item.recargas * (isDriver ? driverRecargaRate : helperRecargaRate);
+    const premio = isDriver
+      ? item.boxes[0] * 0.24 + item.boxes[1] * 0.12 + item.boxes[2] * 0.06
+        + item.deliveries[0] * 2 + item.deliveries[1] + item.deliveries[2] + bonus + valorRecarga
+      : item.boxes[1] * 0.08 + item.boxes[2] * 0.04
+        + item.deliveries[1] * 0.7 + item.deliveries[2] * 0.35 + bonus + valorRecarga + (extraByCode.get(item.code) || 0);
+    if (premio <= 0) return null;
+    return officialRow({ competencia, codigo: item.code, nome: item.nome, funcao: item.funcao, caixas, entregas, devolucao, recargas: item.recargas, mapas: item.mapas, bonus, valorRecarga, premio: Number(premio.toFixed(4)), metodo: 'one_pager_codigo_rv' });
+  }).filter(Boolean);
+}
+
+function calculateVanOnePagerRows({ dataSheet, planSheet, onePagerRows, competencia }) {
+  const roles = buildOnePagerRoleMaps(onePagerRows);
+  const drivers = roles.motorista.size ? roles.motorista : (() => {
+    const map = new Map();
+    for (const row of onePagerRows || []) {
+      const code = trim(rowValue(row, 10));
+      const name = trim(rowValue(row, 11));
+      if (/^\d+$/.test(code) && name) map.set(code, name);
+    }
+    return map;
+  })();
+  const month = Number(competencia.split('/')[0]);
+  const stats = new Map([...drivers].map(([code, name]) => [code, { code, name, boxes0: 0, boxes1: 0, deliveries0: 0, deliveries1: 0, returns: 0, denominator: 0, mapas: 0 }]));
+  const range = xlsx.utils.decode_range(dataSheet['!ref']);
+  for (let row = range.s.r + 1; row <= range.e.r; row += 1) {
+    if (Number(worksheetValue(dataSheet, row, 5)) !== month) continue; // F
+    const code = trim(worksheetValue(dataSheet, row, 8)); // I
+    const item = stats.get(code);
+    if (!item) continue;
+    const helperFlag = Number(worksheetValue(dataSheet, row, 9)); // J
+    const routeFactor = Number(worksheetValue(dataSheet, row, 13)); // N
+    const boxes = parseNumber(worksheetValue(dataSheet, row, 23)); // X
+    const deliveries = parseNumber(worksheetValue(dataSheet, row, 24)); // Y
+    if (routeFactor === 0) item.boxes0 += boxes;
+    if (routeFactor === 0 && helperFlag === 1) item.boxes1 += boxes;
+    if (routeFactor === 0 && helperFlag === 0) item.deliveries0 += deliveries;
+    if (routeFactor === 0 && helperFlag === 1) item.deliveries1 += deliveries;
+    item.returns += parseNumber(worksheetValue(dataSheet, row, 12)); // M
+    item.denominator += parseNumber(worksheetValue(dataSheet, row, 134)); // EE
+    item.mapas += 1;
+  }
+  const threshold = parseNumber(worksheetValue(planSheet, 9, 9));
+  const bonusValue = parseNumber(worksheetValue(planSheet, 11, 9));
+  return [...stats.values()].map((item) => {
+    const devolucao = item.denominator ? item.returns / item.denominator : 0;
+    const bonus = item.mapas >= 15 && devolucao <= threshold ? bonusValue : 0;
+    const premio = item.boxes0 * 0.14 + item.boxes1 * 0.08 + item.deliveries0 * 1.45 + item.deliveries1 + bonus;
+    if (premio <= 0) return null;
+    return officialRow({ competencia, codigo: item.code, nome: item.name, funcao: 'motorista', caixas: item.boxes0 + item.boxes1, entregas: item.deliveries0 + item.deliveries1, devolucao, recargas: 0, mapas: item.mapas, bonus, valorRecarga: 0, premio: Number(premio.toFixed(4)), metodo: 'one_pager_van_codigo_rv' });
+  }).filter(Boolean);
+}
+
 function tableRowsToImportRows(rows, { funcaoRv, codeNameMap, competencia }) {
   const headerIndex = rows.findIndex((row) => row.some((value) => ['Motorista', 'Ajudante'].includes(trim(value))));
   if (headerIndex === -1) return [];
@@ -515,9 +680,11 @@ function readOfficialWorkbookRows(source, isBuffer) {
   const onePagerIndex = findSheetIndex(sheetNames, (name) => name === 'one_pager');
   const motoristaIndex = findSheetIndex(sheetNames, (name) => name.includes('tabelao_mot'));
   const ajudanteIndex = findSheetIndex(sheetNames, (name) => name.includes('tabelao_ajd'));
+  const dataIndex = findSheetIndex(sheetNames, (name) => name === '2art_ff');
+  const planIndex = findSheetIndex(sheetNames, (name) => name === 'planificador');
   if (onePagerIndex === -1 || (motoristaIndex === -1 && ajudanteIndex === -1)) return null;
 
-  const sheetIndexes = [onePagerIndex, motoristaIndex, ajudanteIndex].filter((index) => index !== -1);
+  const sheetIndexes = [onePagerIndex, motoristaIndex, ajudanteIndex, dataIndex, planIndex].filter((index) => index !== -1);
   const workbook = readWorkbookSubset(source, isBuffer, sheetIndexes);
   const onePagerName = sheetNames[onePagerIndex];
   const onePagerRows = xlsx.utils.sheet_to_json(workbook.Sheets[onePagerName], { header: 1, defval: '', raw: false });
@@ -529,6 +696,15 @@ function readOfficialWorkbookRows(source, isBuffer) {
     : xlsx.utils.sheet_to_json(workbook.Sheets[sheetNames[ajudanteIndex]], { header: 1, defval: '', raw: true });
   const codeNameMap = buildCodeNameMap(onePagerRows);
   const competencia = findCompetencia(motoristaRows, ajudanteRows);
+
+  if (dataIndex !== -1 && planIndex !== -1 && competencia) {
+    const dataSheet = workbook.Sheets[sheetNames[dataIndex]];
+    const planSheet = workbook.Sheets[sheetNames[planIndex]];
+    const isVanLayout = motoristaRows.some((row) => row.some((value) => normalizeKey(value) === 'caixa_viagem'));
+    return isVanLayout
+      ? calculateVanOnePagerRows({ dataSheet, planSheet, onePagerRows, competencia })
+      : calculateMainOnePagerRows({ dataSheet, planSheet, onePagerRows, competencia, ajudanteTableRows: ajudanteRows });
+  }
 
   return [
     ...(motoristaRows.length ? tableRowsToImportRows(motoristaRows, { funcaoRv: 'motorista', codeNameMap, competencia }) : []),
@@ -909,6 +1085,7 @@ if (require.main === module) {
 
 module.exports = {
   importWorkbook,
+  importRows,
   previewOfficialWorkbook,
   buildPayload,
   parseNumber,
