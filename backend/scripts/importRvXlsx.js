@@ -12,6 +12,8 @@ const MOTORISTA_CAIXA_FATOR_1_RATE = 0.12;
 const MOTORISTA_CAIXA_FATOR_2_RATE = 0.08;
 const AJUDANTE_CAIXA_FATOR_1_RATE = 0.08;
 const AJUDANTE_CAIXA_FATOR_2_RATE = 0.04;
+const VAN_CAIXA_RATE = 0.14;
+const VAN_ENTREGA_RATE = 1.45;
 const requiredColumns = [
   'competencia',
   'periodo_inicio',
@@ -330,8 +332,8 @@ function workbookSheetNames(source, isBuffer) {
 
 function readWorkbookSubset(source, isBuffer, sheetIndexes) {
   return isBuffer
-    ? xlsx.read(source, { type: 'buffer', sheets: sheetIndexes, cellFormula: false })
-    : xlsx.readFile(source, { sheets: sheetIndexes, cellFormula: false });
+    ? xlsx.read(source, { type: 'buffer', sheets: sheetIndexes, cellFormula: true })
+    : xlsx.readFile(source, { sheets: sheetIndexes, cellFormula: true });
 }
 
 function findSheetIndex(sheetNames, matcher) {
@@ -415,6 +417,10 @@ function tableRowsToImportRows(rows, { funcaoRv, codeNameMap, competencia }) {
   const antigaIndex = indexOf('Antiga RV');
   const premioIndex = indexOf('Nova RV');
   const extraIndex = indexOf('Extra');
+  const isVanLayout = funcaoRv === 'motorista'
+    && indexOf('Caixa/viagem') !== -1
+    && indexOf('Drop Médio') !== -1
+    && indexOf('Média Qtd Entrg') !== -1;
 
   return rows.slice(headerIndex + 1)
     .map((row) => {
@@ -428,11 +434,17 @@ function tableRowsToImportRows(rows, { funcaoRv, codeNameMap, competencia }) {
       if (!codigoRv || !/^\d+$/.test(codigoRv) || (!premioInformado && !hasActivity)) return null;
       const rvAntiga = parseNumber(rowValue(row, antigaIndex));
       const nomeRv = codeNameMap.get(codigoRv) || '';
+      // A planilha VAN traz linhas auxiliares no Tabelão (por exemplo, motoristas
+      // já contemplados na rota principal). O One Pager é a fonte oficial da
+      // equipe VAN; códigos ausentes nele não devem substituir a RV principal.
+      if (isVanLayout && !nomeRv) return null;
       const normalizedCompetencia = normalizeCompetencia(competencia);
       const period = officialPeriodForCompetencia(normalizedCompetencia);
       const bateuDevolucao = parsePercent(rowValue(row, devolucaoIndex)) <= 3.5;
       const bonus = normalizeBonusDevolucao(rowValue(row, bonusIndex), bateuDevolucao);
-      const premio = fallbackPremioRota(row, funcaoRv, {
+      const premio = isVanLayout
+        ? Number(((caixas * VAN_CAIXA_RATE) + (entregas * VAN_ENTREGA_RATE) + (recargas * 200)).toFixed(4))
+        : fallbackPremioRota(row, funcaoRv, {
         premio: premioIndex,
         caixas: caixasIndex,
         entregas: entregasIndex,
@@ -445,7 +457,7 @@ function tableRowsToImportRows(rows, { funcaoRv, codeNameMap, competencia }) {
         ftr0CJorn: ftr0CJornIndex,
         ftr0SJorn: ftr0SJornIndex,
         recargaValor: recargaValorIndex
-      }, bonus);
+        }, bonus);
       return normalizeRow({
         competencia: normalizedCompetencia,
         periodo_inicio: period.inicio,
@@ -477,7 +489,7 @@ function tableRowsToImportRows(rows, { funcaoRv, codeNameMap, competencia }) {
         diferenca_rv: Math.max(0, Number((premio - rvAntiga).toFixed(2))),
         extra: rowValue(row, extraIndex),
         status_produtividade: premio > 0 ? 'Elegivel' : 'Sem premio',
-        metodo_cruzamento: 'codigo_rv_planilha',
+        metodo_cruzamento: isVanLayout ? 'one_pager_van_codigo_rv' : 'one_pager_codigo_rv',
         confianca_cruzamento: 1,
         observacao_cruzamento: 'Importado da planilha oficial de Premio de Produtividade Rota.',
         mensagem_rh: 'Valor calculado conforme planilha oficial do Premio de Produtividade.'
@@ -510,6 +522,13 @@ function readOfficialWorkbookRows(source, isBuffer) {
     ...(motoristaRows.length ? tableRowsToImportRows(motoristaRows, { funcaoRv: 'motorista', codeNameMap, competencia }) : []),
     ...(ajudanteRows.length ? tableRowsToImportRows(ajudanteRows, { funcaoRv: 'ajudante', codeNameMap, competencia }) : [])
   ];
+}
+
+function previewOfficialWorkbook({ filePath, buffer } = {}) {
+  const resolvedPath = filePath ? path.resolve(filePath) : DEFAULT_FILE;
+  const rows = readOfficialWorkbookRows(buffer || resolvedPath, Boolean(buffer));
+  if (!rows) throw new Error('Formato oficial com One Pager e Tabelão não reconhecido.');
+  return rows;
 }
 
 async function assertTables() {
@@ -659,6 +678,7 @@ async function updateImportRecord(importacaoId, report) {
       report.totalPremioProdutividade,
       0,
       JSON.stringify({
+        removidos: report.removed || 0,
         erros: report.errors,
         sem_matricula: report.semMatricula,
         matriculas_nao_encontradas: report.notFound,
@@ -719,6 +739,7 @@ async function importRows(rows, { arquivo, criadoPor = null } = {}) {
     periodAlerts: [],
     totalPremioProdutividade: 0
   };
+  const importedCollaboratorIdsByFunction = new Map();
 
   for (const [index, row] of rows.entries()) {
     const lineNumber = index + 2;
@@ -773,6 +794,10 @@ async function importRows(rows, { arquivo, criadoPor = null } = {}) {
 
       const payload = buildPayload(row, colaborador, importacaoId);
       const result = await upsertProductivity(payload);
+      if (!importedCollaboratorIdsByFunction.has(payload.funcao_rv)) {
+        importedCollaboratorIdsByFunction.set(payload.funcao_rv, new Set());
+      }
+      importedCollaboratorIdsByFunction.get(payload.funcao_rv).add(payload.colaborador_id);
       if (result === 'created') report.created += 1;
       if (result === 'updated') report.updated += 1;
       if (payload.status_auditoria === 'revisar_cruzamento') {
@@ -783,6 +808,31 @@ async function importRows(rows, { arquivo, criadoPor = null } = {}) {
     } catch (error) {
       report.ignored += 1;
       report.errors.push({ linha: lineNumber, matricula, error: error.message });
+    }
+  }
+
+  const methods = [...new Set(rows.map((row) => trim(cell(row, 'metodo_cruzamento'))).filter(Boolean))];
+  const competencias = [...new Set(rows.map((row) => trim(cell(row, 'competencia'))).filter(Boolean))];
+  const funcoes = [...new Set(rows.map((row) => trim(cell(row, 'funcao_rv'))).filter(Boolean))];
+  report.removed = 0;
+  if (!report.errors.length
+      && report.ignored === 0
+      && methods.length === 1
+      && methods[0].startsWith('one_pager_')
+      && competencias.length === 1
+      && importedCollaboratorIdsByFunction.size) {
+    for (const funcao of funcoes) {
+      const ids = [...(importedCollaboratorIdsByFunction.get(funcao) || [])];
+      if (!ids.length) continue;
+      const result = await db.run(
+        `DELETE FROM produtividade_colaboradores
+         WHERE competencia = ?
+           AND metodo_cruzamento = ?
+           AND funcao_rv = ?
+           AND colaborador_id NOT IN (${ids.map(() => '?').join(', ')})`,
+        [competencias[0], methods[0], funcao, ...ids]
+      );
+      report.removed += result.changes || 0;
     }
   }
 
@@ -819,6 +869,7 @@ async function main() {
   logger.log(`Importados: ${report.created}`);
   logger.log(`Atualizados: ${report.updated}`);
   logger.log(`Ignorados: ${report.ignored}`);
+  logger.log(`Registros antigos removidos: ${report.removed || 0}`);
   logger.log(`Erros: ${report.errors.length}`);
   logger.log(`Valor total Premio de Produtividade: ${report.totalPremioProdutividade.toFixed(2)}`);
   logger.log(`Registros com baixa confianca: ${report.lowConfidence.length}`);
@@ -846,6 +897,7 @@ if (require.main === module) {
 
 module.exports = {
   importWorkbook,
+  previewOfficialWorkbook,
   parseNumber,
   parsePercent,
   parseDate,
