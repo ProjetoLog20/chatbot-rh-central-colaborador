@@ -52,6 +52,7 @@ export default function NotificationBell() {
   const [pushMessage, setPushMessage] = useState('');
   const [pushConfig, setPushConfig] = useState(null);
   const [showPushOnboarding, setShowPushOnboarding] = useState(false);
+  const [expandedNotification, setExpandedNotification] = useState(null);
   const panelRef = useRef(null);
 
   async function refresh() {
@@ -297,7 +298,7 @@ export default function NotificationBell() {
             ) : null}
             {items.map((item) => (
               <article
-                className={`notification-item ${Number(item.lida) ? 'read' : 'unread'} priority-${item.prioridade}`}
+                className={`notification-item ${Number(item.lida) ? 'read' : 'unread'} priority-${item.prioridade} ${expandedNotification === item.id ? 'expanded' : ''}`}
                 key={item.id}
                 onClick={() => markRead(item)}
               >
@@ -309,6 +310,19 @@ export default function NotificationBell() {
                   </div>
                   <h3>{item.titulo}</h3>
                   <p>{item.mensagem}</p>
+                  {String(item.mensagem || '').length > 180 ? (
+                    <button
+                      type="button"
+                      className="notification-expand"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        markRead(item);
+                        setExpandedNotification((current) => current === item.id ? null : item.id);
+                      }}
+                    >
+                      {expandedNotification === item.id ? 'Mostrar menos' : 'Ler comunicado'}
+                    </button>
+                  ) : null}
                   <footer>
                     <time>{formatDate(item.inicio_em || item.created_at)}</time>
                     {actionFor(item)}

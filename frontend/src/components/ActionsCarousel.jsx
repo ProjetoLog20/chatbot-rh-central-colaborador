@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 const categories = {
   cipa: { label: 'CIPA', icon: '🛡️' },
@@ -33,6 +33,8 @@ function ActionImage({ item }) {
 export default function ActionsCarousel({ items = [] }) {
   const [selectedCategory, setSelectedCategory] = useState('todas');
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const touchStart = useRef(null);
 
   const filteredItems = useMemo(() => {
     if (selectedCategory === 'todas') return items;
@@ -40,6 +42,14 @@ export default function ActionsCarousel({ items = [] }) {
   }, [items, selectedCategory]);
 
   const currentItem = filteredItems[currentIndex] || filteredItems[0];
+
+  useEffect(() => {
+    if (paused || filteredItems.length < 2) return undefined;
+    const interval = window.setInterval(() => {
+      setCurrentIndex((value) => (value + 1) % filteredItems.length);
+    }, 6000);
+    return () => window.clearInterval(interval);
+  }, [filteredItems.length, paused]);
 
   function changeCategory(category) {
     setSelectedCategory(category);
@@ -54,6 +64,21 @@ export default function ActionsCarousel({ items = [] }) {
   function goPrev() {
     if (!filteredItems.length) return;
     setCurrentIndex((value) => (value - 1 + filteredItems.length) % filteredItems.length);
+  }
+
+  function handleTouchStart(event) {
+    touchStart.current = event.touches[0]?.clientX ?? null;
+    setPaused(true);
+  }
+
+  function handleTouchEnd(event) {
+    const start = touchStart.current;
+    const end = event.changedTouches[0]?.clientX;
+    touchStart.current = null;
+    setPaused(false);
+    if (start === null || end === undefined || Math.abs(start - end) < 45) return;
+    if (start > end) goNext();
+    else goPrev();
   }
 
   return (
@@ -78,7 +103,16 @@ export default function ActionsCarousel({ items = [] }) {
       </div>
 
       {currentItem ? (
-        <div className="actions-carousel">
+        <>
+        <div
+          className="actions-carousel"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+          onFocus={() => setPaused(true)}
+          onBlur={() => setPaused(false)}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <button className="carousel-arrow" onClick={goPrev} aria-label="Acao anterior">‹</button>
           <article className="actions-slide">
             <ActionImage item={currentItem} key={currentItem.id} />
@@ -103,6 +137,20 @@ export default function ActionsCarousel({ items = [] }) {
           </article>
           <button className="carousel-arrow" onClick={goNext} aria-label="Proxima acao">›</button>
         </div>
+        {filteredItems.length > 1 ? (
+          <div className="carousel-dots" aria-label="Posicao no carrossel">
+            {filteredItems.map((item, index) => (
+              <button
+                type="button"
+                key={item.id}
+                className={index === currentIndex ? 'active' : ''}
+                aria-label={`Mostrar acao ${index + 1}`}
+                onClick={() => setCurrentIndex(index)}
+              />
+            ))}
+          </div>
+        ) : null}
+        </>
       ) : (
         <div className="empty-carousel">
           <h3>Nenhuma acao publicada ainda</h3>

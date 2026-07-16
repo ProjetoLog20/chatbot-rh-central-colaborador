@@ -37,12 +37,17 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState(getUser());
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!getToken()) {
       setUser(null);
     }
   }, []);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
 
   function handleLogout() {
     clearToken();
@@ -79,16 +84,37 @@ function App() {
             <span>Central do Colaborador</span>
           </div>
         </div>
-        <div className="header-actions">
+        <div className={`header-actions ${mobileMenuOpen ? 'mobile-open' : ''}`}>
           {user && !isFirstAccessRoute ? (
-            <nav className="center-nav" aria-label="Centrais">
+            <button
+              type="button"
+              className="mobile-menu-toggle"
+              aria-label={mobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
+              aria-expanded={mobileMenuOpen}
+              onClick={() => setMobileMenuOpen((current) => !current)}
+            >
+              <span aria-hidden="true">{mobileMenuOpen ? '×' : '☰'}</span>
+            </button>
+          ) : null}
+          {user && !isFirstAccessRoute ? (
+            <nav className="center-nav desktop-center-nav" aria-label="Centrais">
               <Link to="/">Central do Colaborador</Link>
+              <Link to="/profile">Meus dados</Link>
               {normalizePerfil(user.perfil) === 'admin' ? <Link to="/admin">Central do Administrador</Link> : null}
             </nav>
           ) : null}
-          {user && !isFirstAccessRoute ? <span>{user.nome_preferido || user.nome_completo} ({user.perfil})</span> : null}
+          {user && !isFirstAccessRoute ? <span className="desktop-user-name">{user.nome_preferido || user.nome_completo} ({user.perfil})</span> : null}
           {user && !isFirstAccessRoute ? <NotificationBell /> : null}
-          {user ? <button onClick={handleLogout}>Sair</button> : null}
+          {user ? <button className="desktop-logout" onClick={handleLogout}>Sair</button> : null}
+          {user && !isFirstAccessRoute && mobileMenuOpen ? (
+            <nav className="mobile-menu-panel" aria-label="Menu do colaborador">
+              <span>{user.nome_preferido || user.nome_completo}</span>
+              <Link to="/">Inicio</Link>
+              <Link to="/profile">Meus dados</Link>
+              {normalizePerfil(user.perfil) === 'admin' ? <Link to="/admin">Central do Administrador</Link> : null}
+              <button type="button" onClick={handleLogout}>Sair</button>
+            </nav>
+          ) : null}
         </div>
       </header>
 

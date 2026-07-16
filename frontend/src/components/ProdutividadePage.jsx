@@ -463,6 +463,7 @@ function ColaboradorRotaPanel({ rows }) {
       {rows.length ? (
         <>
           <section className="prod-summary-grid">
+            <div className="prod-highlight-value"><span>Valor previsto</span><strong>{formatMoney(consolidated.valor_total_previsto)}</strong></div>
             <div><span>Funcao</span><strong>{formatRotaFuncao(selected?.funcao_rv)}</strong></div>
             <div><span>Competencia</span><strong>{selected?.competencia || '-'}</strong></div>
             <div><span>Indicadores principais</span><strong>{formatNumber(consolidated.entregas)} entregas</strong></div>

@@ -132,6 +132,11 @@ button:hover:not(:disabled) {
   border-radius: 8px;
 }
 
+.mobile-menu-toggle,
+.mobile-menu-panel {
+  display: none;
+}
+
 .app-main {
   flex: 1;
   padding: 2rem;
@@ -629,6 +634,27 @@ button:hover:not(:disabled) {
   animation: panelIn 360ms ease both;
 }
 
+.dashboard-section-heading {
+  align-items: end;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.9rem;
+}
+
+.dashboard-section-heading span {
+  color: #e87522;
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dashboard-section-heading h2 {
+  color: #003b68;
+  font-size: clamp(1.35rem, 3vw, 1.8rem);
+  margin: 0.25rem 0 0;
+}
+
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(245px, 1fr));
@@ -891,6 +917,27 @@ button.dashboard-card-item {
   color: #003B68;
   font-size: 2rem;
   font-weight: 800;
+}
+
+.carousel-dots {
+  display: flex;
+  gap: 0.45rem;
+  justify-content: center;
+  margin-top: 0.8rem;
+}
+
+.carousel-dots button {
+  background: #c9d7e2;
+  border: 0;
+  border-radius: 999px;
+  height: 9px;
+  padding: 0;
+  width: 9px;
+}
+
+.carousel-dots button.active {
+  background: #e87522;
+  width: 26px;
 }
 
 .actions-slide {
@@ -3081,6 +3128,16 @@ tr:not(:last-child) td {
   color: #003B68;
 }
 
+.prod-summary-grid .prod-highlight-value {
+  background: linear-gradient(135deg, #003b68, #005a8c);
+  border-color: #005a8c;
+}
+
+.prod-summary-grid .prod-highlight-value span,
+.prod-summary-grid .prod-highlight-value strong {
+  color: #fff;
+}
+
 .prod-metric:nth-child(2) strong {
   color: #E87522;
   font-size: 1.25rem;
@@ -4233,18 +4290,110 @@ tr:not(:last-child) td {
 
 @media (max-width: 720px) {
   .app-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
+    align-items: center;
+    flex-direction: row;
+    gap: 0.65rem;
+    padding: 0.7rem 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 1400;
   }
 
   .header-actions {
-    justify-content: flex-start;
+    flex: 0 0 auto;
+    gap: 0.55rem;
+    justify-content: flex-end;
+    margin-left: auto;
   }
 
   .brand-block img {
-    width: 48px;
-    height: 48px;
+    height: 42px;
+    width: 42px;
+  }
+
+  .brand-block {
+    gap: 0.6rem;
+    min-width: 0;
+  }
+
+  .brand-block strong {
+    display: block;
+    font-size: 1rem;
+    line-height: 1.1;
+  }
+
+  .brand-block span {
+    font-size: 0.75rem;
+  }
+
+  .desktop-center-nav,
+  .desktop-user-name,
+  .desktop-logout {
+    display: none;
+  }
+
+  .header-actions .mobile-menu-toggle {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.13);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    display: inline-flex;
+    font-size: 22px;
+    height: 42px;
+    justify-content: center;
+    padding: 0;
+    width: 42px;
+  }
+
+  .mobile-menu-toggle span {
+    color: #fff;
+    font-size: inherit;
+  }
+
+  .mobile-menu-panel {
+    background: #fff;
+    border: 1px solid #dce5ec;
+    border-radius: 14px;
+    box-shadow: 0 22px 55px rgba(0, 35, 66, 0.28);
+    display: grid;
+    gap: 0.4rem;
+    padding: 0.75rem;
+    position: absolute;
+    right: 1rem;
+    top: calc(100% + 8px);
+    width: min(300px, calc(100vw - 2rem));
+  }
+
+  .mobile-menu-panel > span {
+    border-bottom: 1px solid #e4ebf0;
+    color: #607080;
+    font-size: 0.78rem;
+    font-weight: 800;
+    padding: 0.6rem 0.7rem 0.8rem;
+  }
+
+  .mobile-menu-panel a,
+  .header-actions .mobile-menu-panel button {
+    background: transparent;
+    border: 0;
+    border-radius: 9px;
+    color: #003b68;
+    display: block;
+    font-weight: 800;
+    padding: 0.8rem;
+    text-align: left;
+    text-decoration: none;
+    width: 100%;
+  }
+
+  .mobile-menu-panel a:hover,
+  .header-actions .mobile-menu-panel button:hover {
+    background: #eef5f9;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .header-actions .mobile-menu-panel button {
+    color: #a3441d;
   }
 
   .app-main {
@@ -4277,13 +4426,30 @@ tr:not(:last-child) td {
   }
 
   .dashboard-hero-content {
-    grid-template-columns: 1fr;
-    align-items: flex-start;
+    align-items: center;
+    grid-template-columns: auto minmax(0, 1fr);
   }
 
   .dashboard-hero-content img {
-    width: 78px;
-    height: 78px;
+    height: 64px;
+    width: 64px;
+  }
+
+  .dashboard-hero {
+    padding: 1rem;
+  }
+
+  .dashboard-hero h1 {
+    font-size: 1.65rem;
+  }
+
+  .dashboard-hero-lead {
+    font-size: 0.9rem;
+  }
+
+  .dashboard-hero-help,
+  .brand-tagline {
+    display: none;
   }
 
   .unit-dream-heading {
@@ -4299,11 +4465,47 @@ tr:not(:last-child) td {
   }
 
   .card-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem;
   }
 
   .dashboard-card-item {
-    min-height: 230px;
+    gap: 0.65rem;
+    min-height: 168px;
+    padding: 0.9rem;
+  }
+
+  .dashboard-card-icon {
+    border-radius: 10px;
+    font-size: 1.35rem;
+    height: 42px;
+    width: 42px;
+  }
+
+  .dashboard-card-badge {
+    font-size: 0.64rem;
+    max-width: 88px;
+    padding: 0.25rem 0.4rem;
+  }
+
+  .dashboard-card-copy {
+    gap: 0;
+  }
+
+  .dashboard-card-copy h3 {
+    font-size: 0.95rem;
+    line-height: 1.25;
+  }
+
+  .dashboard-card-copy p {
+    display: none;
+  }
+
+  .dashboard-card-action {
+    background: transparent;
+    color: #005a8c;
+    font-size: 0.76rem;
+    padding: 0;
   }
 
   .detail-row {
@@ -4320,7 +4522,7 @@ tr:not(:last-child) td {
   }
 
   .carousel-arrow {
-    min-height: 42px;
+    display: none;
   }
 
   .actions-slide {
@@ -4328,8 +4530,20 @@ tr:not(:last-child) td {
   }
 
   .actions-slide img {
-    min-height: 220px;
-    max-height: 280px;
+    max-height: 220px;
+    min-height: 190px;
+  }
+
+  .actions-slide-content {
+    gap: 0.55rem;
+    padding: 1rem;
+  }
+
+  .actions-slide-content > p {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
   }
 
   .actions-admin-item {
@@ -4354,8 +4568,8 @@ tr:not(:last-child) td {
 
   .mascot-launcher {
     align-self: flex-end;
-    width: 100px;
-    height: 120px;
+    height: 74px;
+    width: 62px;
   }
 
   .mascot-bubble {
@@ -4366,6 +4580,27 @@ tr:not(:last-child) td {
 
   .chat-window {
     width: min(440px, calc(100vw - 32px));
+  }
+
+  .chat-assistant.open {
+    bottom: 0;
+    right: 0;
+  }
+
+  .chat-assistant.open .chat-window {
+    border: 0;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    margin: 0;
+    width: 100vw;
+  }
+
+  .chat-assistant.open .chat-body {
+    flex: 1;
+    max-height: none;
+    min-height: 0;
   }
 
   .champion-hero {
@@ -4873,6 +5108,24 @@ tr:not(:last-child) td {
   line-height: 1.5;
   margin: 0;
   white-space: pre-line;
+}
+
+.notification-item:not(.expanded) p {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.header-actions .notification-expand {
+  background: transparent;
+  border: 0;
+  color: #005a8c;
+  font-size: 12px;
+  font-weight: 900;
+  margin-top: 7px;
+  padding: 2px 0;
 }
 
 .notification-item footer {
