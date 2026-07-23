@@ -336,6 +336,8 @@ export default function Dashboard({ user }) {
         </div>
       </section>
 
+      <UnitDreamPanel />
+
       <section className="dashboard-card-section" aria-label="Atalhos da Central do Colaborador">
         <div className="dashboard-section-heading">
           <div>
@@ -351,7 +353,6 @@ export default function Dashboard({ user }) {
       </section>
 
       <ActionsCarousel items={acoes} />
-      <UnitDreamPanel />
       <MaintenanceNotice module={maintenanceModule} onClose={() => setMaintenanceModule(null)} />
     </div>
   );
