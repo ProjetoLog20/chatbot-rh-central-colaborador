@@ -132,7 +132,7 @@ function App() {
           {user && !isFirstAccessRoute && mobileMenuOpen ? (
             <nav className="mobile-menu-panel" aria-label="Menu do colaborador">
               <span>{user.nome_preferido || user.nome_completo}</span>
-              <Link to="/">Inicio</Link>
+              <Link to="/">Início</Link>
               <Link to="/profile">Meus dados</Link>
               {normalizePerfil(user.perfil) === 'admin' ? <Link to="/admin">Central do Administrador</Link> : null}
               <button type="button" onClick={handleLogout}>Sair</button>

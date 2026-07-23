@@ -641,12 +641,12 @@ function connectSqlite() {
     const moduloDefaults = [
       ['pesquisa_clima', 'Pesquisa de Clima', 'Pesquisas de satisfacao da empresa.', 1, 0, null, 1, 1, 1, 10],
       ['skap', 'SKAP', 'Evolucao, nivel atual e habilidades avaliadas.', 1, 0, null, 1, 1, 1, 20],
-      ['campeao_seguranca', 'Campeao de Seguranca', 'Reconhecimento de atitudes seguras.', 1, 0, null, 1, 1, 1, 30],
+      ['campeao_seguranca', 'Campeão de Segurança', 'Reconhecimento de atitudes seguras.', 1, 0, null, 1, 1, 1, 30],
       ['tres_rs', '3 Rs', 'Responsabilidades, recursos e reconhecimentos da metodologia 3Rs.', 1, 0, null, 1, 1, 1, 40],
-      ['premio_produtividade', 'Premio de Produtividade', 'Indicadores, metas e valor previsto do premio.', 0, 1, 'Estamos ajustando os dados deste painel para garantir que as informacoes sejam apresentadas corretamente. Em breve ele estara disponivel.', 1, 1, 1, 50],
+      ['premio_produtividade', 'Prêmio de Produtividade', 'Indicadores, metas e valor previsto do prêmio.', 0, 1, 'Estamos ajustando os dados deste painel para garantir que as informações sejam apresentadas corretamente. Em breve ele estará disponível.', 1, 1, 1, 50],
       ['indicadores_rota', 'Indicadores da Rota', 'Acompanhe as metas e entenda os indicadores que ajudam sua rota a ser mais produtiva, organizada e segura.', 1, 0, null, 1, 1, 0, 55],
-      ['premio_produtividade_armazem', 'Premio de Produtividade do Armazem', 'RV e premio de produtividade para Ajudante, Operador de Empilhadeira e Amarrador.', 0, 1, 'Estamos ajustando os dados deste painel para garantir que as informacoes sejam apresentadas corretamente. Em breve ele estara disponivel.', 1, 1, 1, 56],
-      ['rotograma_seguro', 'Rotograma Seguro', 'Consulte rotas, pontos de risco, telefones de emergencia e orientacoes de seguranca da operacao.', 1, 0, null, 1, 1, 1, 57],
+      ['premio_produtividade_armazem', 'Prêmio de Produtividade do Armazém', 'RV e prêmio de produtividade para Ajudante, Operador de Empilhadeira e Amarrador.', 0, 1, 'Estamos ajustando os dados deste painel para garantir que as informações sejam apresentadas corretamente. Em breve ele estará disponível.', 1, 1, 1, 56],
+      ['rotograma_seguro', 'Rotograma Seguro', 'Consulte rotas, pontos de risco, telefones de emergência e orientações de segurança da operação.', 1, 0, null, 1, 1, 1, 57],
       ['prontuario_motorista', 'Prontuario do Motorista', 'Pontuacao, faixa atual e ocorrencias registradas.', 1, 0, null, 1, 1, 1, 60],
       ['ouvidoria', 'Ouvidoria', 'Canal oficial para solicitacoes, duvidas ou relatos.', 1, 0, null, 1, 1, 1, 70],
       ['assistente_rh', 'Yuri, Assistente de RH', 'Atendimento virtual da Central do Colaborador.', 1, 0, null, 1, 1, 1, 80]

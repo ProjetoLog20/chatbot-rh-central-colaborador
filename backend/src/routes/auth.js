@@ -27,7 +27,7 @@ function buildUserResponse(usuario) {
 router.post('/login', async (req, res) => {
   const { matricula, senha } = req.body;
   if (!matricula || !senha) {
-    return res.status(400).json({ error: 'Matricula e senha sao obrigatorias' });
+    return res.status(400).json({ error: 'Matrícula e senha são obrigatórias' });
   }
 
   try {
@@ -39,12 +39,12 @@ router.post('/login', async (req, res) => {
     );
 
     if (!usuario || !usuario.senha_hash) {
-      return res.status(401).json({ error: 'Matricula ou senha invalidos' });
+      return res.status(401).json({ error: 'Matrícula ou senha inválidos' });
     }
 
     const senhaOk = await bcrypt.compare(senha, usuario.senha_hash);
     if (!senhaOk) {
-      return res.status(401).json({ error: 'Matricula ou senha invalidos' });
+      return res.status(401).json({ error: 'Matrícula ou senha inválidos' });
     }
 
     if (isFirstAccess(usuario)) {
@@ -95,11 +95,11 @@ router.post('/primeiro-acesso', async (req, res) => {
   }
 
   if (novaSenha === 'log20') {
-    return res.status(400).json({ error: 'A nova senha nao pode ser igual a senha temporaria.' });
+    return res.status(400).json({ error: 'A nova senha não pode ser igual à senha temporária.' });
   }
 
   if (novaSenha !== confirmarSenha) {
-    return res.status(400).json({ error: 'As senhas nao coincidem.' });
+    return res.status(400).json({ error: 'As senhas não coincidem.' });
   }
 
   try {
@@ -109,7 +109,7 @@ router.post('/primeiro-acesso', async (req, res) => {
     );
 
     if (!usuario) {
-      return res.status(404).json({ error: 'Matricula nao encontrada.' });
+      return res.status(404).json({ error: 'Matrícula não encontrada.' });
     }
 
     const senhaOk = await bcrypt.compare(senhaAtual || '', usuario.senha_hash);

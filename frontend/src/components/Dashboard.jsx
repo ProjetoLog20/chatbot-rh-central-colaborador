@@ -340,7 +340,7 @@ export default function Dashboard({ user }) {
         <div className="dashboard-section-heading">
           <div>
             <span>Acesso rapido</span>
-            <h2>O que voce precisa hoje?</h2>
+            <h2>O que você precisa hoje?</h2>
           </div>
         </div>
         <div className="card-grid">

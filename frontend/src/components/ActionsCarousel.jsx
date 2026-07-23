@@ -99,10 +99,10 @@ export default function ActionsCarousel({ items = [] }) {
     <section className="actions-carousel-section">
       <div className="section-title-row">
         <div>
-          <h2>Acoes e encontros</h2>
+          <h2>Ações e encontros</h2>
           <p>CIPA, Café com o Gerente e Comitê de Gente: registros, imagens e encaminhamentos publicados pelo RH.</p>
         </div>
-        <div className="carousel-filters" aria-label="Filtro de acoes">
+        <div className="carousel-filters" aria-label="Filtro de ações">
           {[
             ['todas', 'Todas'],
             ['cipa', 'CIPA'],

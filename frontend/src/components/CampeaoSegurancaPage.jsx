@@ -6,7 +6,7 @@ const criteria = [
   ['log_on_100', 'Log On 100%'],
   ['participacao_matinais', 'Participacao em matinais'],
   ['sem_acidentes', 'Sem acidentes'],
-  ['sem_fluxo_punitivo', 'Sem fluxo punitivo por seguranca nos ultimos 8 meses']
+  ['sem_fluxo_punitivo', 'Sem fluxo punitivo por segurança nos últimos 8 meses']
 ];
 
 function initials(name) {
@@ -97,7 +97,7 @@ export default function CampeaoSegurancaPage({ user }) {
   useEffect(() => {
     getCampeoesSegurancaPublicos()
       .then(setItems)
-      .catch((err) => setMessage(err.error || 'Erro ao carregar campeoes de seguranca.'));
+      .catch((err) => setMessage(err.error || 'Erro ao carregar campeões de segurança.'));
   }, []);
 
   return (
@@ -105,7 +105,7 @@ export default function CampeaoSegurancaPage({ user }) {
       <section className="champion-hero">
         <div>
           <span>Reconhecimento LOG20</span>
-          <h1>Campeao de Seguranca</h1>
+          <h1>Campeão de Segurança</h1>
           <p>Colaboradores reconhecidos por atitude segura, disciplina operacional e exemplo para o time.</p>
         </div>
         {isAdmin ? (

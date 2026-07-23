@@ -139,7 +139,7 @@ router.post('/push/subscribe', authenticateToken, async (req, res) => {
 
 router.post('/push/unsubscribe', authenticateToken, async (req, res) => {
   const endpoint = text(req.body?.endpoint, 2000);
-  if (!endpoint) return res.status(400).json({ error: 'Endpoint obrigatorio' });
+  if (!endpoint) return res.status(400).json({ error: 'Endpoint obrigatório' });
   try {
     await db.run(
       `UPDATE push_inscricoes SET ativo = 0, updated_at = CURRENT_TIMESTAMP
@@ -160,7 +160,7 @@ router.post('/:id/ler', authenticateToken, async (req, res) => {
          AND ${audienceClause(req.user.perfil)}`,
       [req.params.id]
     );
-    if (!notificacao) return res.status(404).json({ error: 'Notificacao nao encontrada' });
+    if (!notificacao) return res.status(404).json({ error: 'Notificação não encontrada' });
 
     await db.run(
       `INSERT INTO notificacoes_leituras (notificacao_id, colaborador_id, lida_em)
@@ -170,7 +170,7 @@ router.post('/:id/ler', authenticateToken, async (req, res) => {
     );
     return res.json({ lida: true });
   } catch (error) {
-    return res.status(500).json({ error: 'Erro ao marcar notificacao como lida' });
+    return res.status(500).json({ error: 'Erro ao marcar notificação como lida' });
   }
 });
 
@@ -242,8 +242,8 @@ router.post('/admin', authenticateToken, authorizeRoles('admin'), async (req, re
     }
     return res.status(201).json({ ...created, push_result: pushResult });
   } catch (error) {
-    console.error('Erro ao criar notificacao:', error);
-    return res.status(500).json({ error: 'Erro ao criar notificacao' });
+    console.error('Erro ao criar notificação:', error);
+    return res.status(500).json({ error: 'Erro ao criar notificação' });
   }
 });
 
@@ -255,7 +255,7 @@ router.put('/admin/:id', authenticateToken, authorizeRoles('admin'), async (req,
 
   try {
     const existing = await db.get('SELECT * FROM notificacoes WHERE id = ?', [req.params.id]);
-    if (!existing) return res.status(404).json({ error: 'Notificacao nao encontrada' });
+    if (!existing) return res.status(404).json({ error: 'Notificação não encontrada' });
     await db.run(
       `UPDATE notificacoes SET
        titulo = ?, mensagem = ?, categoria = ?, prioridade = ?, status = ?,
@@ -277,17 +277,17 @@ router.put('/admin/:id', authenticateToken, authorizeRoles('admin'), async (req,
     }
     return res.json({ ...updated, push_result: pushResult });
   } catch (error) {
-    return res.status(500).json({ error: 'Erro ao atualizar notificacao' });
+    return res.status(500).json({ error: 'Erro ao atualizar notificação' });
   }
 });
 
 router.delete('/admin/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
   try {
     const result = await db.run('DELETE FROM notificacoes WHERE id = ?', [req.params.id]);
-    if (!result.changes) return res.status(404).json({ error: 'Notificacao nao encontrada' });
+    if (!result.changes) return res.status(404).json({ error: 'Notificação não encontrada' });
     return res.json({ deleted: true });
   } catch (error) {
-    return res.status(500).json({ error: 'Erro ao excluir notificacao' });
+    return res.status(500).json({ error: 'Erro ao excluir notificação' });
   }
 });
 

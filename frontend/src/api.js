@@ -282,7 +282,7 @@ export async function exportAdminProdutividadeArmazem(filters = {}) {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    throw body || { error: 'Erro ao exportar produtividade do armazem' };
+    throw body || { error: 'Erro ao exportar produtividade do armazém' };
   }
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);

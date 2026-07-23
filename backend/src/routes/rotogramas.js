@@ -190,7 +190,7 @@ router.get('/opcoes', authenticateToken, ensureRotogramaAvailable, async (req, r
       `SELECT origem, destino, cidade, nome
        FROM rotogramas
        WHERE COALESCE(ativo, true) = true
-         AND classificacao_rota IN ('ATENÃ‡ÃƒO', 'OK')
+         AND classificacao_rota IN ('ATENÇÃO', 'OK')
        ORDER BY origem, destino, cidade, nome`
     );
 

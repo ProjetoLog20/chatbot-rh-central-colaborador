@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { getProfile } from '../api.js';
 
 const profileLabels = {
-  matricula: 'Matricula',
+  matricula: 'Matrícula',
   nome_completo: 'Nome completo',
   nome_preferido: 'Nome preferido',
   perfil: 'Perfil de acesso',

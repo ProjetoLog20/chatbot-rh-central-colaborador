@@ -21,9 +21,9 @@ const emptyForm = {
 const categories = [
   ['novidade', 'Novidades do Yuri'],
   ['comunicado', 'Comunicado'],
-  ['premio', 'Premio atualizado'],
-  ['manutencao', 'Manutencao'],
-  ['seguranca', 'Seguranca'],
+  ['premio', 'Prêmio atualizado'],
+  ['manutencao', 'Manutenção'],
+  ['seguranca', 'Segurança'],
   ['prazo', 'Prazo'],
   ['reconhecimento', 'Reconhecimento']
 ];
@@ -94,16 +94,16 @@ export default function AdminNotifications() {
       if (editingId) {
         const result = await updateNotification(editingId, form);
         const push = result.push_result;
-        setMessage(`Notificacao atualizada.${pushFeedback(push)}`);
+        setMessage(`Notificação atualizada.${pushFeedback(push)}`);
       } else {
         const result = await createNotification(form);
         const push = result.push_result;
-        setMessage(form.status === 'publicado' ? `Notificacao publicada.${pushFeedback(push)}` : 'Rascunho salvo.');
+        setMessage(form.status === 'publicado' ? `Notificação publicada.${pushFeedback(push)}` : 'Rascunho salvo.');
       }
       resetForm();
       refresh();
     } catch (error) {
-      setMessage(error.error || 'Erro ao salvar notificacao.');
+      setMessage(error.error || 'Erro ao salvar notificação.');
     }
   }
 
@@ -125,19 +125,19 @@ export default function AdminNotifications() {
       fim_em: toLocalDateTime(item.fim_em),
       enviar_push: Boolean(Number(item.enviar_push))
     });
-    setMessage('Editando notificacao selecionada.');
+    setMessage('Editando notificação selecionada.');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   async function remove(item) {
-    if (!window.confirm(`Excluir a notificacao "${item.titulo}"?`)) return;
+    if (!window.confirm(`Excluir a notificação "${item.titulo}"?`)) return;
     try {
       await deleteNotification(item.id);
-      setMessage('Notificacao excluida.');
+      setMessage('Notificação excluída.');
       if (editingId === item.id) resetForm();
       refresh();
     } catch (error) {
-      setMessage(error.error || 'Erro ao excluir notificacao.');
+      setMessage(error.error || 'Erro ao excluir notificação.');
     }
   }
 
@@ -157,7 +157,7 @@ export default function AdminNotifications() {
         <div className="form-grid">
           <label className="wide-field">
             Titulo
-            <input maxLength="140" required value={form.titulo} onChange={(event) => setForm({ ...form, titulo: event.target.value })} placeholder="Ex.: Premio de Produtividade atualizado" />
+            <input maxLength="140" required value={form.titulo} onChange={(event) => setForm({ ...form, titulo: event.target.value })} placeholder="Ex.: Prêmio de Produtividade atualizado" />
           </label>
           <label className="wide-field">
             Mensagem
@@ -199,7 +199,7 @@ export default function AdminNotifications() {
           </label>
           <label>
             Texto do botao
-            <input maxLength="80" value={form.link_texto} onChange={(event) => setForm({ ...form, link_texto: event.target.value })} placeholder="Ver meu premio" />
+            <input maxLength="80" value={form.link_texto} onChange={(event) => setForm({ ...form, link_texto: event.target.value })} placeholder="Ver meu prêmio" />
           </label>
         </div>
 
@@ -224,7 +224,7 @@ export default function AdminNotifications() {
         </label>
 
         <div className="notification-form-actions">
-          <button type="submit">{editingId ? 'Salvar alteracoes' : form.status === 'publicado' ? 'Publicar notificacao' : 'Salvar notificacao'}</button>
+          <button type="submit">{editingId ? 'Salvar alterações' : form.status === 'publicado' ? 'Publicar notificação' : 'Salvar notificação'}</button>
           {editingId ? <button type="button" className="secondary" onClick={resetForm}>Cancelar edicao</button> : null}
         </div>
       </form>
@@ -232,7 +232,7 @@ export default function AdminNotifications() {
       <div className="notification-admin-list">
         <h3>Historico de mensagens</h3>
         {loading ? <p>Carregando...</p> : null}
-        {!loading && !items.length ? <p>Nenhuma notificacao criada ainda.</p> : null}
+        {!loading && !items.length ? <p>Nenhuma notificação criada ainda.</p> : null}
         {items.map((item) => (
           <article key={item.id}>
             <div>

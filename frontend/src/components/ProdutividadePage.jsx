@@ -17,7 +17,7 @@ import {
 } from '../api.js';
 
 const rotaMetricFields = [
-  ['competencia', 'Periodo', ''],
+  ['competencia', 'Período', ''],
   ['valor_total_previsto', 'Valor', 'money'],
   ['mapas', 'Qnt Mapas', 'number'],
   ['caixas', 'Caixas', 'number'],
@@ -26,15 +26,15 @@ const rotaMetricFields = [
 ];
 
 const rotaDetailFields = [
-  ['competencia', 'Competencia'],
-  ['periodo_inicio', 'Periodo inicial', 'date'],
-  ['periodo_fim', 'Periodo final', 'date'],
-  ['funcao_rv', 'Funcao no periodo'],
+  ['competencia', 'Competência'],
+  ['periodo_inicio', 'Período inicial', 'date'],
+  ['periodo_fim', 'Período final', 'date'],
+  ['funcao_rv', 'Função no período'],
   ['caixas', 'Caixas', 'number'],
   ['entregas', 'Entregas', 'number'],
-  ['percentual_devolucao', 'Percentual de devolucao', 'percent'],
-  ['meta_devolucao', 'Meta de devolucao', 'percent'],
-  ['bateu_devolucao', 'Status da devolucao', 'devolucao'],
+  ['percentual_devolucao', 'Percentual de devolução', 'percent'],
+  ['meta_devolucao', 'Meta de devolução', 'percent'],
+  ['bateu_devolucao', 'Status da devolução', 'devolucao'],
   ['recargas', 'Recargas', 'number'],
   ['mapas', 'Mapas', 'number'],
   ['valor_recarga', 'Valor recarga', 'money'],
@@ -43,7 +43,7 @@ const rotaDetailFields = [
   ['status_produtividade', 'Status produtividade'],
   ['status_auditoria', 'Auditoria', 'auditoria'],
   ['metodo_cruzamento', 'Metodo cruzamento'],
-  ['confianca_cruzamento', 'Confianca cruzamento', 'percent'],
+  ['confianca_cruzamento', 'Confiança do cruzamento', 'percent'],
   ['mensagem_rh', 'Mensagem RH']
 ];
 
@@ -51,16 +51,16 @@ const armazemMetricFields = [
   ['valor_total_previsto', 'Valor previsto', 'money'],
   ['pontos', 'Pontuacao', 'number'],
   ['faixa', 'Faixa'],
-  ['funcao_armazem', 'Funcao'],
+  ['funcao_armazem', 'Função'],
   ['erros', 'Erros', 'number'],
   ['rv_nova', 'RV Nova', 'money']
 ];
 
 const armazemDetailFields = [
-  ['competencia', 'Competencia'],
-  ['periodo_inicio', 'Periodo inicial', 'date'],
-  ['periodo_fim', 'Periodo final', 'date'],
-  ['funcao_armazem', 'Funcao no armazem'],
+  ['competencia', 'Competência'],
+  ['periodo_inicio', 'Período inicial', 'date'],
+  ['periodo_fim', 'Período final', 'date'],
+  ['funcao_armazem', 'Função no armazém'],
   ['pontos', 'Pontos', 'number'],
   ['faixa', 'Faixa'],
   ['rv_antiga', 'RV antiga', 'money'],
@@ -71,9 +71,9 @@ const armazemDetailFields = [
   ['origem_calculo', 'Origem do calculo'],
   ['status_auditoria', 'Auditoria', 'auditoria'],
   ['metodo_cruzamento', 'Metodo cruzamento'],
-  ['confianca_cruzamento', 'Confianca cruzamento', 'percent'],
-  ['usuario_wms', 'Usuario WMS'],
-  ['codigo_operacional', 'Codigo operacional'],
+  ['confianca_cruzamento', 'Confiança do cruzamento', 'percent'],
+  ['usuario_wms', 'Usuário WMS'],
+  ['codigo_operacional', 'Código operacional'],
   ['mensagem_rh', 'Mensagem RH']
 ];
 
@@ -231,7 +231,7 @@ function ProdutividadeMaintenance({ message }) {
   return (
     <div className="maintenance-page">
       <span className="maintenance-modal-icon" aria-hidden="true">!</span>
-      <h1>Premio de Produtividade em manutencao</h1>
+      <h1>Prêmio de Produtividade em manutenção</h1>
       <p>{message || 'Estamos ajustando os dados deste painel para garantir que as informacoes sejam apresentadas corretamente. Em breve ele estara disponivel.'}</p>
     </div>
   );
@@ -239,7 +239,7 @@ function ProdutividadeMaintenance({ message }) {
 
 function ProdTabs({ activeTab, onChange, tabs }) {
   return (
-    <div className="prod-tabs" role="tablist" aria-label="Tipos de premio de produtividade">
+    <div className="prod-tabs" role="tablist" aria-label="Tipos de prêmio de produtividade">
       {tabs.map((tab) => (
         <button
           key={tab.id}
@@ -266,7 +266,7 @@ function ProdutividadeDetail({ registro, variant = 'rota' }) {
       <div className="prod-detail-heading">
         <div>
           <h2>{registro.nome_completo}</h2>
-          <p>{registro.matricula} - {funcao || 'Funcao nao informada'}</p>
+          <p>{registro.matricula} - {funcao || 'Função não informada'}</p>
         </div>
         <StatusBadge type="status" value={registro.status_produtividade} />
       </div>
@@ -306,9 +306,9 @@ function ProdutividadeDetail({ registro, variant = 'rota' }) {
 
 function ArmazemGoalsCard() {
   return (
-    <section className="prod-armazem-goals" aria-label="Metas Armazem">
+    <section className="prod-armazem-goals" aria-label="Metas Armazém">
       <div className="prod-armazem-goals-heading">
-        <h2>Metas Armazem</h2>
+        <h2>Metas Armazém</h2>
       </div>
       <div className="prod-goal-groups">
         {armazemGoalGroups.map((group) => (
@@ -344,7 +344,7 @@ function ArmazemGoalsCard() {
 }
 
 const rotaManualFields = [
-  ['valor_total_previsto', 'Premio de Produtividade', 'number'],
+  ['valor_total_previsto', 'Prêmio de Produtividade', 'number'],
   ['rv_nova', 'RV nova', 'number'],
   ['bonus', 'Bonus', 'number'],
   ['valor_recarga', 'Valor recarga', 'number'],
@@ -353,11 +353,11 @@ const rotaManualFields = [
 ];
 
 const armazemManualFields = [
-  ['matricula', 'Matricula', 'text'],
-  ['competencia', 'Competencia', 'text'],
-  ['periodo_inicio', 'Periodo inicial', 'date'],
-  ['periodo_fim', 'Periodo final', 'date'],
-  ['funcao_armazem', 'Funcao no armazem', 'select'],
+  ['matricula', 'Matrícula', 'text'],
+  ['competencia', 'Competência', 'text'],
+  ['periodo_inicio', 'Período inicial', 'date'],
+  ['periodo_fim', 'Período final', 'date'],
+  ['funcao_armazem', 'Função no armazém', 'select'],
   ['pontos', 'Pontos', 'number'],
   ['faixa', 'Faixa', 'text'],
   ['rv_antiga', 'RV antiga', 'number'],
@@ -365,8 +365,8 @@ const armazemManualFields = [
   ['erros', 'Erros', 'number'],
   ['valor_total_previsto', 'Valor total previsto', 'number'],
   ['status_produtividade', 'Status', 'text'],
-  ['usuario_wms', 'Usuario WMS', 'text'],
-  ['codigo_operacional', 'Codigo operacional', 'text']
+  ['usuario_wms', 'Usuário WMS', 'text'],
+  ['codigo_operacional', 'Código operacional', 'text']
 ];
 
 function buildManualState(registro = {}, variant = 'rota') {
@@ -401,8 +401,8 @@ function ManualProdutividadeForm({ registro, variant = 'rota', onSubmit, onCance
     <form className="prod-manual-form" onSubmit={handleSubmit}>
       <div className="prod-manual-form-heading">
         <div>
-          <h3>{isArmazem ? 'Lancamento manual do armazem' : 'Editar premio de rota'}</h3>
-          <p>{isArmazem ? 'Preencha os dados que serao exibidos ao colaborador.' : 'Ajuste manualmente os valores do premio para motoristas e ajudantes.'}</p>
+          <h3>{isArmazem ? 'Lançamento manual do armazém' : 'Editar prêmio da rota'}</h3>
+          <p>{isArmazem ? 'Preencha os dados que serão exibidos ao colaborador.' : 'Ajuste manualmente os valores do prêmio para motoristas e ajudantes.'}</p>
         </div>
         {onCancel ? <button type="button" className="detail-action-button secondary" onClick={onCancel}>Cancelar</button> : null}
       </div>
@@ -454,15 +454,15 @@ function ColaboradorRotaPanel({ rows }) {
       {rows.length ? (
         <>
           <section className="prod-summary-grid">
-            <div className="prod-highlight-value"><span>Valor previsto nesta competencia</span><strong>{formatMoney(selected?.valor_total_previsto)}</strong></div>
-            <div><span>Funcao</span><strong>{formatRotaFuncao(selected?.funcao_rv)}</strong></div>
-            <div><span>Competencia</span><strong>{selected?.competencia || '-'}</strong></div>
+            <div className="prod-highlight-value"><span>Valor previsto nesta competência</span><strong>{formatMoney(selected?.valor_total_previsto)}</strong></div>
+            <div><span>Função</span><strong>{formatRotaFuncao(selected?.funcao_rv)}</strong></div>
+            <div><span>Competência</span><strong>{selected?.competencia || '-'}</strong></div>
             <div><span>Indicadores principais</span><strong>{formatNumber(selected?.entregas)} entregas</strong></div>
             <div><span>Status</span><strong>{selected?.status_produtividade || 'Sem dados'}</strong></div>
           </section>
           {rows.length > 1 ? (
               <label className="prod-selector">
-                Competencia / funcao
+                Competência / função
                 <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
                   {rows.map((row) => <option key={row.id} value={row.id}>{row.competencia} - {formatRotaFuncao(row.funcao_rv)}</option>)}
                 </select>
@@ -487,19 +487,19 @@ function ColaboradorArmazemPanel({ rows }) {
   return (
     <>
       <ArmazemGoalsCard />
-      <div className="prod-info-note">Seu premio do armazem e calculado com base nos dados importados da apuracao oficial da RV.</div>
+      <div className="prod-info-note">Seu prêmio do armazém é calculado com base nos dados importados da apuração oficial da RV.</div>
       {rows.length ? (
         <>
           <section className="prod-summary-grid">
             <div><span>Valor previsto</span><strong>{formatMoney(selected?.valor_total_previsto)}</strong></div>
-            <div><span>Funcao</span><strong>{formatArmazemFuncao(selected?.funcao_armazem)}</strong></div>
-            <div><span>Competencia</span><strong>{selected?.competencia || '-'}</strong></div>
+            <div><span>Função</span><strong>{formatArmazemFuncao(selected?.funcao_armazem)}</strong></div>
+            <div><span>Competência</span><strong>{selected?.competencia || '-'}</strong></div>
             <div><span>Indicadores principais</span><strong>{formatNumber(selected?.pontos)} pontos</strong></div>
             <div><span>Status</span><strong>{selected?.status_produtividade || 'Sem dados'}</strong></div>
           </section>
           {rows.length > 1 ? (
             <label className="prod-selector">
-              Competencia / funcao
+              Competência / função
               <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
                 {rows.map((row) => <option key={row.id} value={row.id}>{row.competencia} - {formatArmazemFuncao(row.funcao_armazem)}</option>)}
               </select>
@@ -544,10 +544,10 @@ function ColaboradorProdutividade() {
         if (rotaRows.length) setActiveTab('rota');
         if (!rotaRows.length && !armazemRows.length && armazemMaintenance) setMaintenance(armazemMaintenance);
         if (!rotaRows.length && !armazemRows.length && !armazemMaintenance) {
-          setMessage('Voce ainda nao possui dados de Premio de Produtividade para este periodo.');
+          setMessage('Você ainda não possui dados de Prêmio de Produtividade para este período.');
         }
       })
-      .catch(() => setMessage('Voce ainda nao possui dados de Premio de Produtividade para este periodo.'))
+      .catch(() => setMessage('Você ainda não possui dados de Prêmio de Produtividade para este período.'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -574,7 +574,7 @@ function ColaboradorProdutividade() {
       </div>
       <div className="prod-warning">Caso não concorde ou não entenda alguma informação, procure o RH.</div>
       {loading ? <p>Carregando produtividade...</p> : null}
-      {!loading && !tabs.length ? <div className="empty-state">{message || 'Voce ainda nao possui dados de Premio de Produtividade para este periodo.'}</div> : null}
+      {!loading && !tabs.length ? <div className="empty-state">{message || 'Você ainda não possui dados de Prêmio de Produtividade para este período.'}</div> : null}
       {!loading && tabs.length > 1 ? <ProdTabs activeTab={activeTab} onChange={setActiveTab} tabs={tabs} /> : null}
       {!loading && tabs.length === 1 ? <div className="prod-area-label">{tabs[0].label}</div> : null}
       {!loading && activeTab === 'rota' && rotaRows.length ? <ColaboradorRotaPanel rows={rotaRows} /> : null}
@@ -650,9 +650,9 @@ function AdminRotaPanel() {
       setDetail(result.registro);
       setEditing(false);
       await refresh();
-      setMessage(result.message || 'Premio atualizado manualmente.');
+      setMessage(result.message || 'Prêmio atualizado manualmente.');
     } catch (err) {
-      setMessage(err.error || 'Erro ao salvar premio manual');
+      setMessage(err.error || 'Erro ao salvar prêmio manual');
     }
   }
 
@@ -660,7 +660,7 @@ function AdminRotaPanel() {
     if (!files.length) return;
     try {
       const result = await importProdutividadeFile(files[0]);
-      setMessage(`Importacao Premio de Produtividade: ${result.created} novos, ${result.updated} atualizados, ${result.ignored} ignorados, ${result.errors.length} erros.`);
+      setMessage(`Importação do Prêmio de Produtividade: ${result.created} novos, ${result.updated} atualizados, ${result.ignored} ignorados, ${result.errors.length} erros.`);
       await refresh();
     } catch (err) {
       setMessage(err.error || 'Erro ao importar RV');
@@ -668,22 +668,22 @@ function AdminRotaPanel() {
   }
 
   const summaryCards = [
-    ['Colaboradores com premio', summary.total_colaboradores, 'number'],
+    ['Colaboradores com prêmio', summary.total_colaboradores, 'number'],
     ['Motoristas', summary.total_motoristas, 'number'],
     ['Ajudantes', summary.total_ajudantes, 'number'],
-    ['Premio de Produtividade', summary.valor_total_previsto ?? summary.valor_total_nova_rv, 'money'],
+    ['Prêmio de Produtividade', summary.valor_total_previsto ?? summary.valor_total_nova_rv, 'money'],
     ['Dentro da meta', summary.total_bateu_devolucao, 'number'],
     ['Fora da meta', summary.total_nao_bateu_devolucao, 'number'],
     ['Recargas', summary.total_recargas, 'number'],
     ['Mapas', summary.total_mapas, 'number'],
-    ['Revisar vinculo', summary.total_baixa_confianca, 'number']
+    ['Revisar vínculo', summary.total_baixa_confianca, 'number']
   ];
 
   return (
     <>
       <div className="prod-actions">
-        <button onClick={() => exportAdminProdutividade(filters)}>Exportar relatorio</button>
-        <label>Importar Premio<input type="file" accept=".xlsx,.xlsm" onChange={(event) => handleImport(event.target.files)} /></label>
+        <button onClick={() => exportAdminProdutividade(filters)}>Exportar relatório</button>
+        <label>Importar Prêmio<input type="file" accept=".xlsx,.xlsm" onChange={(event) => handleImport(event.target.files)} /></label>
       </div>
       {message ? <div className="import-message">{message}</div> : null}
       {detail ? (
@@ -692,7 +692,7 @@ function AdminRotaPanel() {
             <button type="button" className="detail-back-button" onClick={closeDetail}>
               <span aria-hidden="true">&larr;</span> Retornar
             </button>
-            <button type="button" className="detail-action-button" onClick={() => setEditing(true)}>Editar premio</button>
+            <button type="button" className="detail-action-button" onClick={() => setEditing(true)}>Editar prêmio</button>
           </div>
           {editing ? <ManualProdutividadeForm registro={detail} onSubmit={saveManual} onCancel={() => setEditing(false)} /> : null}
           <ProdutividadeDetail registro={detail} />
@@ -703,20 +703,20 @@ function AdminRotaPanel() {
         {summaryCards.map(([label, value, type]) => <div key={label}><span>{label}</span><strong>{formatValue(value, type)}</strong></div>)}
       </section>
       <section className="prod-filters">
-        <label>Buscar por nome, matricula, CPF, competencia, nome RV ou codigo RV<input value={filters.busca} onChange={(event) => setFilters({ ...filters, busca: event.target.value })} /></label>
-        <label>Competencia<select value={filters.competencia} onChange={(event) => setFilters({ ...filters, competencia: event.target.value })}><option value="">Todas</option>{options.competencia.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
-        <label>Funcao<select value={filters.funcao_rv} onChange={(event) => setFilters({ ...filters, funcao_rv: event.target.value })}><option value="">Todas</option><option value="motorista">Motorista</option><option value="ajudante">Ajudante de Motorista</option>{options.funcao_rv.filter((option) => !['motorista', 'ajudante'].includes(String(option).toLowerCase())).map((option) => <option key={option} value={option}>{formatRotaFuncao(option)}</option>)}</select></label>
+        <label>Buscar por nome, matrícula, CPF, competência, nome RV ou código RV<input value={filters.busca} onChange={(event) => setFilters({ ...filters, busca: event.target.value })} /></label>
+        <label>Competência<select value={filters.competencia} onChange={(event) => setFilters({ ...filters, competencia: event.target.value })}><option value="">Todas</option>{options.competencia.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
+        <label>Função<select value={filters.funcao_rv} onChange={(event) => setFilters({ ...filters, funcao_rv: event.target.value })}><option value="">Todas</option><option value="motorista">Motorista</option><option value="ajudante">Ajudante de Motorista</option>{options.funcao_rv.filter((option) => !['motorista', 'ajudante'].includes(String(option).toLowerCase())).map((option) => <option key={option} value={option}>{formatRotaFuncao(option)}</option>)}</select></label>
         <label>Status<select value={filters.status_produtividade} onChange={(event) => setFilters({ ...filters, status_produtividade: event.target.value })}><option value="">Todos</option>{options.status_produtividade.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
-        <label>Devolucao<select value={filters.bateu_devolucao} onChange={(event) => setFilters({ ...filters, bateu_devolucao: event.target.value })}><option value="">Todas</option><option value="true">Dentro da meta</option><option value="false">Fora da meta</option></select></label>
+        <label>Devolução<select value={filters.bateu_devolucao} onChange={(event) => setFilters({ ...filters, bateu_devolucao: event.target.value })}><option value="">Todas</option><option value="true">Dentro da meta</option><option value="false">Fora da meta</option></select></label>
         <label>Auditoria<select value={filters.status_auditoria} onChange={(event) => setFilters({ ...filters, status_auditoria: event.target.value })}><option value="">Todas</option>{options.status_auditoria.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
       </section>
-      {summary.total_baixa_confianca ? <div className="prod-warning">Existem {summary.total_baixa_confianca} registro(s) com baixa confianca de cruzamento para revisao.</div> : null}
+      {summary.total_baixa_confianca ? <div className="prod-warning">Existem {summary.total_baixa_confianca} registro(s) com baixa confiança de cruzamento para revisão.</div> : null}
       {loading ? <p>Carregando produtividade...</p> : null}
       {!loading && !rows.length ? <div className="empty-state">Nenhum dado de produtividade encontrado.</div> : null}
       {!loading && rows.length ? (
         <div className="table-scroll">
           <table>
-            <thead><tr><th>Matricula</th><th>Nome</th><th>CPF</th><th>Competencia</th><th>Funcao</th><th>Caixas</th><th>Entregas</th><th>Devolucao</th><th>Status devolucao</th><th>Recargas</th><th>Mapas</th><th>Premio de Produtividade</th><th>Status</th><th>Auditoria</th><th>Acoes</th></tr></thead>
+            <thead><tr><th>Matrícula</th><th>Nome</th><th>CPF</th><th>Competência</th><th>Função</th><th>Caixas</th><th>Entregas</th><th>Devolução</th><th>Status da devolução</th><th>Recargas</th><th>Mapas</th><th>Prêmio de Produtividade</th><th>Status</th><th>Auditoria</th><th>Ações</th></tr></thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id}>
@@ -766,7 +766,7 @@ function AdminArmazemPanel() {
       setRows(listResult.rows || []);
       setSummary(resumoResult || listResult.summary || emptyArmazemSummary);
     } catch (err) {
-      setMessage(err.error || 'Erro ao carregar produtividade do armazem');
+      setMessage(err.error || 'Erro ao carregar produtividade do armazém');
     } finally {
       setLoading(false);
     }
@@ -782,7 +782,7 @@ function AdminArmazemPanel() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
     } catch (err) {
-      setMessage(err.error || 'Erro ao abrir detalhe do armazem');
+      setMessage(err.error || 'Erro ao abrir detalhe do armazém');
     }
   }
 
@@ -803,9 +803,9 @@ function AdminArmazemPanel() {
       setEditing(false);
       setCreating(false);
       await refresh();
-      setMessage(result.message || 'Lancamento manual do armazem salvo.');
+      setMessage(result.message || 'Lançamento manual do armazém salvo.');
     } catch (err) {
-      setMessage(err.error || 'Erro ao salvar lancamento manual do armazem');
+      setMessage(err.error || 'Erro ao salvar lançamento manual do armazém');
     }
   }
 
@@ -817,14 +817,14 @@ function AdminArmazemPanel() {
     ['Valor previsto', summary.valor_total_previsto, 'money'],
     ['RV antiga', summary.valor_total_rv_antiga, 'money'],
     ['RV nova', summary.valor_total_rv_nova, 'money'],
-    ['Revisar vinculo', summary.total_baixa_confianca, 'number']
+    ['Revisar vínculo', summary.total_baixa_confianca, 'number']
   ];
 
   return (
     <>
       <div className="prod-actions">
-        <button type="button" onClick={() => { setDetail(null); setEditing(false); setCreating(true); }}>Novo lancamento manual</button>
-        <button onClick={() => exportAdminProdutividadeArmazem(filters)}>Exportar relatorio</button>
+        <button type="button" onClick={() => { setDetail(null); setEditing(false); setCreating(true); }}>Novo lançamento manual</button>
+        <button onClick={() => exportAdminProdutividadeArmazem(filters)}>Exportar relatório</button>
       </div>
       {message ? <div className="import-message">{message}</div> : null}
       {creating ? (
@@ -840,7 +840,7 @@ function AdminArmazemPanel() {
             <button type="button" className="detail-back-button" onClick={closeDetail}>
               <span aria-hidden="true">&larr;</span> Retornar
             </button>
-            <button type="button" className="detail-action-button" onClick={() => setEditing(true)}>Editar lancamento</button>
+            <button type="button" className="detail-action-button" onClick={() => setEditing(true)}>Editar lançamento</button>
           </div>
           {editing ? <ManualProdutividadeForm registro={detail} variant="armazem" onSubmit={saveManual} onCancel={() => setEditing(false)} /> : null}
           <ProdutividadeDetail registro={detail} variant="armazem" />
@@ -852,20 +852,20 @@ function AdminArmazemPanel() {
         {summaryCards.map(([label, value, type]) => <div key={label}><span>{label}</span><strong>{formatValue(value, type)}</strong></div>)}
       </section>
       <section className="prod-filters">
-        <label>Buscar por nome, matricula, CPF, competencia, usuario WMS ou codigo operacional<input value={filters.busca} onChange={(event) => setFilters({ ...filters, busca: event.target.value })} /></label>
-        <label>Competencia<select value={filters.competencia} onChange={(event) => setFilters({ ...filters, competencia: event.target.value })}><option value="">Todas</option>{options.competencia.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
-        <label>Funcao<select value={filters.funcao_armazem} onChange={(event) => setFilters({ ...filters, funcao_armazem: event.target.value })}><option value="">Todas</option><option value="Ajudante">Ajudante</option><option value="Operador de Empilhadeira">Operador de Empilhadeira</option><option value="Amarrador">Amarrador</option>{options.funcao_armazem.filter((option) => !['ajudante', 'operador de empilhadeira', 'amarrador'].includes(String(option).toLowerCase())).map((option) => <option key={option} value={option}>{formatArmazemFuncao(option)}</option>)}</select></label>
+        <label>Buscar por nome, matrícula, CPF, competência, usuário WMS ou código operacional<input value={filters.busca} onChange={(event) => setFilters({ ...filters, busca: event.target.value })} /></label>
+        <label>Competência<select value={filters.competencia} onChange={(event) => setFilters({ ...filters, competencia: event.target.value })}><option value="">Todas</option>{options.competencia.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
+        <label>Função<select value={filters.funcao_armazem} onChange={(event) => setFilters({ ...filters, funcao_armazem: event.target.value })}><option value="">Todas</option><option value="Ajudante">Ajudante</option><option value="Operador de Empilhadeira">Operador de Empilhadeira</option><option value="Amarrador">Amarrador</option>{options.funcao_armazem.filter((option) => !['ajudante', 'operador de empilhadeira', 'amarrador'].includes(String(option).toLowerCase())).map((option) => <option key={option} value={option}>{formatArmazemFuncao(option)}</option>)}</select></label>
         <label>Status<select value={filters.status_produtividade} onChange={(event) => setFilters({ ...filters, status_produtividade: event.target.value })}><option value="">Todos</option>{options.status_produtividade.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
         <label>Auditoria<select value={filters.status_auditoria} onChange={(event) => setFilters({ ...filters, status_auditoria: event.target.value })}><option value="">Todas</option>{options.status_auditoria.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
-        <label>Origem calculo<select value={filters.origem_calculo} onChange={(event) => setFilters({ ...filters, origem_calculo: event.target.value })}><option value="">Todas</option>{options.origem_calculo.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
+        <label>Origem do cálculo<select value={filters.origem_calculo} onChange={(event) => setFilters({ ...filters, origem_calculo: event.target.value })}><option value="">Todas</option>{options.origem_calculo.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
       </section>
-      {summary.total_baixa_confianca ? <div className="prod-warning">Existem {summary.total_baixa_confianca} registro(s) com baixa confianca de cruzamento para revisao.</div> : null}
-      {loading ? <p>Carregando produtividade do armazem...</p> : null}
-      {!loading && !rows.length ? <div className="empty-state">Nenhum dado de produtividade do armazem encontrado.</div> : null}
+      {summary.total_baixa_confianca ? <div className="prod-warning">Existem {summary.total_baixa_confianca} registro(s) com baixa confiança de cruzamento para revisão.</div> : null}
+      {loading ? <p>Carregando produtividade do armazém...</p> : null}
+      {!loading && !rows.length ? <div className="empty-state">Nenhum dado de produtividade do armazém encontrado.</div> : null}
       {!loading && rows.length ? (
         <div className="table-scroll">
           <table>
-            <thead><tr><th>Matricula</th><th>Nome</th><th>Funcao</th><th>Competencia</th><th>Pontos</th><th>Faixa</th><th>RV antiga</th><th>RV nova</th><th>Erros</th><th>Valor previsto</th><th>Status</th><th>Auditoria</th><th>Acoes</th></tr></thead>
+            <thead><tr><th>Matrícula</th><th>Nome</th><th>Função</th><th>Competência</th><th>Pontos</th><th>Faixa</th><th>RV antiga</th><th>RV nova</th><th>Erros</th><th>Valor previsto</th><th>Status</th><th>Auditoria</th><th>Ações</th></tr></thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id}>
@@ -899,9 +899,9 @@ function AdminProdutividadeResumo() {
           armazem: armazemResult.status === 'fulfilled' ? armazemResult.value : emptyArmazemSummary
         });
         if (failed.length === 2) {
-          setLoadError('Nao foi possivel carregar o resumo. Atualize a pagina ou entre novamente.');
+          setLoadError('Não foi possível carregar o resumo. Atualize a página ou entre novamente.');
         } else if (failed.length === 1) {
-          setLoadError('Uma parte do resumo nao foi carregada. Atualize a pagina para tentar novamente.');
+          setLoadError('Uma parte do resumo não foi carregada. Atualize a página para tentar novamente.');
         }
       })
       .finally(() => setLoading(false));
@@ -916,7 +916,7 @@ function AdminProdutividadeResumo() {
   }
 
   const cards = [
-    [`Total Premio Rota${summary.rota.competencia_selecionada ? ` (${summary.rota.competencia_selecionada})` : ''}`, summary.rota.valor_total_previsto ?? summary.rota.valor_total_nova_rv, 'money'],
+    [`Total Prêmio Rota${summary.rota.competencia_selecionada ? ` (${summary.rota.competencia_selecionada})` : ''}`, summary.rota.valor_total_previsto ?? summary.rota.valor_total_nova_rv, 'money'],
     ['Total RV Armazém', summary.armazem.valor_total_previsto, 'money'],
     ['Total Motoristas', summary.rota.total_motoristas, 'number'],
     ['Total Ajudantes de Motorista', summary.rota.total_ajudantes, 'number'],
@@ -948,7 +948,7 @@ function AdminProdutividade() {
       <div className="admin-heading">
         <div>
           <h1>{activeTab === 'armazem' ? 'Prêmio de Produtividade - Armazém' : 'Prêmio de Produtividade'}</h1>
-          <p>{activeTab === 'armazem' ? 'Consulte, filtre, importe e exporte os dados oficiais de RV do Armazém.' : 'Consulte, filtre, importe e exporte os dados oficiais do Premio de Produtividade da Rota.'}</p>
+          <p>{activeTab === 'armazem' ? 'Consulte, filtre, importe e exporte os dados oficiais de RV do Armazém.' : 'Consulte, filtre, importe e exporte os dados oficiais do Prêmio de Produtividade da Rota.'}</p>
         </div>
       </div>
       <AdminProdutividadeResumo />

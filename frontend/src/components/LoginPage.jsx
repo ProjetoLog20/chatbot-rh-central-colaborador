@@ -56,13 +56,13 @@ export default function LoginPage({ onLogin }) {
         <img src="/rh-logo.jpg" alt="RH Log20 Cascavel" />
         <div>
           <h1>Login</h1>
-          <p>Faca login com sua matricula e senha.</p>
+          <p>Faça login com sua matrícula e senha.</p>
         </div>
       </div>
       {location.state?.message && <div className="form-success">{location.state.message}</div>}
       <form onSubmit={handleSubmit}>
         <label>
-          Matricula
+          Matrícula
           <input value={matricula} onChange={(e) => setMatricula(e.target.value)} required />
         </label>
         <label>

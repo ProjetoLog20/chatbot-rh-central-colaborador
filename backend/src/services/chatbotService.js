@@ -124,10 +124,10 @@ function getContextualAnswer(question, user) {
   if (hasAnyToken(question, ['ola', 'ajuda', 'fazer', 'funciona', 'assistente'])) {
     return {
       resposta: [
-        'Eu sou o Yuri, assistente de RH da LOG20. Posso ajudar com Pesquisa de Clima, SKAP, Campeao de Seguranca, 3Rs, Premio de Produtividade, prontuario, ouvidoria, primeiro acesso e informacoes gerais da Central.',
+        'Eu sou o Yuri, assistente de RH da LOG20. Posso ajudar com Pesquisa de Clima, SKAP, Campeão de Segurança, 3Rs, Prêmio de Produtividade, prontuário, ouvidoria, primeiro acesso e informações gerais da Central.',
         user?.perfil === 'motorista'
           ? 'Tambem consigo orientar voce sobre o resumo do seu prontuario.'
-          : 'Se a sua duvida envolver dados pessoais ou algo que nao esteja disponivel, procure o RH.'
+          : 'Se a sua dúvida envolver dados pessoais ou algo que não esteja disponível, procure o RH.'
       ].join(' '),
       origem: 'contexto_usuario',
       categoria: 'Ajuda'
@@ -144,7 +144,7 @@ function getContextualAnswer(question, user) {
 
   if (isContestQuestion(question)) {
     return {
-      resposta: 'Caso nao concorde ou nao entenda alguma informacao, procure o RH para conferencia.',
+      resposta: 'Caso não concorde ou não entenda alguma informação, procure o RH para conferência.',
       origem: 'contexto_usuario',
       categoria: 'Conferencia RH'
     };
@@ -153,7 +153,7 @@ function getContextualAnswer(question, user) {
   if (hasAnyToken(question, ['prontuario', 'pontuacao', 'motorista'])) {
     if (!user?.prontuario) {
       return {
-        resposta: 'Essa informacao ainda nao esta disponivel na sua central. Caso precise de apoio, procure o RH.',
+        resposta: 'Essa informação ainda não está disponível na sua central. Caso precise de apoio, procure o RH.',
         origem: 'contexto_usuario',
         categoria: 'Prontuario'
       };
@@ -162,8 +162,8 @@ function getContextualAnswer(question, user) {
     const prontuario = user.prontuario;
     return {
       resposta: [
-        `Seu prontuario consta com pontuacao ponderada ${prontuario.pontuacao_ponderada ?? 'nao informada'} e faixa ${prontuario.faixa || 'nao informada'}.`,
-        `Classificacao da faixa: ${prontuario.cor_faixa || 'sem_faixa'}. Status: ${prontuario.status_prontuario || 'nao informado'}. Caso nao concorde ou nao entenda alguma informacao, procure o RH para conferencia.`
+        `Seu prontuário consta com pontuação ponderada ${prontuario.pontuacao_ponderada ?? 'não informada'} e faixa ${prontuario.faixa || 'não informada'}.`,
+        `Classificação da faixa: ${prontuario.cor_faixa || 'sem_faixa'}. Status: ${prontuario.status_prontuario || 'não informado'}. Caso não concorde ou não entenda alguma informação, procure o RH para conferência.`
       ].join(' '),
       origem: 'contexto_usuario',
       categoria: 'Prontuario'
@@ -181,22 +181,22 @@ function buildKnowledgeText(rows) {
 }
 
 function buildUserContext(user) {
-  if (!user) return 'Usuario autenticado, sem dados adicionais disponiveis.';
+  if (!user) return 'Usuário autenticado, sem dados adicionais disponíveis.';
   const lines = [
-    `Nome: ${user.nome_completo || 'nao informado'}`,
-    `Nome preferido: ${user.nome_preferido || 'nao informado'}`,
-    `Perfil: ${user.perfil || 'nao informado'}`,
-    `Matricula: ${user.matricula || 'nao informada'}`,
-    `Cargo: ${user.cargo || 'nao informado'}`,
-    `Setor: ${user.setor || 'nao informado'}`,
-    `Unidade: ${user.unidade || 'nao informada'}`,
-      `Status: ${user.status || 'nao informado'}`
+    `Nome: ${user.nome_completo || 'não informado'}`,
+    `Nome preferido: ${user.nome_preferido || 'não informado'}`,
+    `Perfil: ${user.perfil || 'não informado'}`,
+    `Matrícula: ${user.matricula || 'não informada'}`,
+    `Cargo: ${user.cargo || 'não informado'}`,
+    `Setor: ${user.setor || 'não informado'}`,
+    `Unidade: ${user.unidade || 'não informada'}`,
+      `Status: ${user.status || 'não informado'}`
   ];
 
   if (user.prontuario) {
     lines.push(
-      `Prontuario motorista - pontuacao ponderada: ${user.prontuario.pontuacao_ponderada ?? 'nao informada'}`,
-      `Prontuario motorista - faixa: ${user.prontuario.faixa || 'nao informada'}`,
+      `Prontuário do motorista - pontuação ponderada: ${user.prontuario.pontuacao_ponderada ?? 'não informada'}`,
+      `Prontuário do motorista - faixa: ${user.prontuario.faixa || 'não informada'}`,
       `Prontuario motorista - cor da faixa: ${user.prontuario.cor_faixa || 'sem_faixa'}`
     );
   }
@@ -224,15 +224,15 @@ async function askOpenAI({ question, knowledgeBase, user, previousResponseId }) 
       'Use linguagem simples, tom de apoio ao colaborador e evite termos tecnicos.',
       'Responda em portugues do Brasil, com tom claro, acolhedor e objetivo.',
       'Priorize as respostas oficiais cadastradas pelo RH na base de conhecimento.',
-      'Ajude com Pesquisa de Clima, SKAP, Campeao de Seguranca, 3Rs, Premio de Produtividade, Prontuario do Motorista, Ouvidoria, primeiro acesso, senha temporaria e informacoes gerais da Central.',
-      'Use o contexto do usuario apenas para personalizar orientacoes permitidas.',
-      'Nao mostre dados de outro colaborador e respeite as regras de perfil do sistema.',
-      'Nao prometa alterar dados sozinho.',
-      'Se o usuario perguntar sobre dados pessoais, responda: "Essas informacoes ficam disponiveis somente para voce e para os administradores autorizados."',
-      'Se a informacao nao estiver disponivel, responda: "Essa informacao ainda nao esta disponivel na sua central. Caso precise de apoio, procure o RH."',
-      'Quando o assunto for contestacao de premio, prontuario ou SKAP, responda: "Caso nao concorde ou nao entenda alguma informacao, procure o RH para conferencia."',
-      'Se a base nao tiver informacao suficiente, oriente o colaborador a procurar o RH/Admin em vez de inventar politicas internas.',
-      'Nao exponha dados sensiveis.',
+      'Ajude com Pesquisa de Clima, SKAP, Campeão de Segurança, 3Rs, Prêmio de Produtividade, Prontuário do Motorista, Ouvidoria, primeiro acesso, senha temporária e informações gerais da Central.',
+      'Use o contexto do usuário apenas para personalizar orientações permitidas.',
+      'Não mostre dados de outro colaborador e respeite as regras de perfil do sistema.',
+      'Não prometa alterar dados sozinho.',
+      'Se o usuário perguntar sobre dados pessoais, responda: "Essas informações ficam disponíveis somente para você e para os administradores autorizados."',
+      'Se a informação não estiver disponível, responda: "Essa informação ainda não está disponível na sua central. Caso precise de apoio, procure o RH."',
+      'Quando o assunto for contestação de prêmio, prontuário ou SKAP, responda: "Caso não concorde ou não entenda alguma informação, procure o RH para conferência."',
+      'Se a base não tiver informação suficiente, oriente o colaborador a procurar o RH/Admin em vez de inventar políticas internas.',
+      'Não exponha dados sensíveis.',
       'Use no maximo 2 paragrafos curtos.'
     ].join('\n'),
     input: [
@@ -242,7 +242,7 @@ async function askOpenAI({ question, knowledgeBase, user, previousResponseId }) 
           {
             type: 'input_text',
             text: [
-              `Contexto do usuario:\n${buildUserContext(user)}`,
+              `Contexto do usuário:\n${buildUserContext(user)}`,
               `Base oficial do RH:\n${buildKnowledgeText(knowledgeBase)}`,
               `Pergunta do colaborador:\n${question}`
             ].join('\n\n')
@@ -375,7 +375,7 @@ async function answerQuestion({ question, user, previousResponseId }) {
   }
 
   const result = {
-    resposta: 'Essa informacao ainda nao esta disponivel na sua central. Caso precise de apoio, procure o RH.',
+    resposta: 'Essa informação ainda não está disponível na sua central. Caso precise de apoio, procure o RH.',
     origem: 'fallback'
   };
 
@@ -383,7 +383,7 @@ async function answerQuestion({ question, user, previousResponseId }) {
     user: enrichedUser,
     question: cleanQuestion,
     answer: result.resposta,
-    category: 'Nao classificado',
+    category: 'Não classificado',
     status: 'Pendente'
   });
 

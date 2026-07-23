@@ -54,7 +54,7 @@ test('login bloqueia forca bruta sem alterar resposta das tentativas normais', a
       .send({ matricula: `inexistente-${attempt}`, senha: 'senha-invalida' })
       .expect(401);
 
-    assert.equal(response.body.error, 'Matricula ou senha invalidos');
+    assert.equal(response.body.error, 'Matrícula ou senha inválidos');
   }
 
   const blocked = await request(app)

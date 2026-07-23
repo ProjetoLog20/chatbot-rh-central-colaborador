@@ -54,7 +54,7 @@ router.patch('/admin/modulos/:chave', authenticateToken, authorizeRoles('admin')
   try {
     await ensureModuleConfigTable();
     const existing = await db.get('SELECT id FROM configuracoes_modulos WHERE chave = ?', [req.params.chave]);
-    if (!existing) return res.status(404).json({ error: 'Modulo nao encontrado' });
+    if (!existing) return res.status(404).json({ error: 'Módulo não encontrado' });
 
     const sets = entries.map(([field]) => `${field} = ?`);
     const params = entries.map(([, value]) => value);

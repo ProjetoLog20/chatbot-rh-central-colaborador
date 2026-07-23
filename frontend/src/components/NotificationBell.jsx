@@ -12,9 +12,9 @@ import {
 const categoryLabels = {
   novidade: 'Novidades do Yuri',
   comunicado: 'Comunicado',
-  premio: 'Premio atualizado',
-  manutencao: 'Manutencao',
-  seguranca: 'Seguranca',
+  premio: 'Prêmio atualizado',
+  manutencao: 'Manutenção',
+  seguranca: 'Segurança',
   prazo: 'Prazo',
   reconhecimento: 'Reconhecimento'
 };
@@ -178,7 +178,7 @@ export default function NotificationBell() {
     } catch (error) {
       console.error('Falha ao ativar Push:', error);
       setPushStatus('disabled');
-      setPushMessage('Nao foi possivel ativar neste dispositivo.');
+      setPushMessage('Não foi possível ativar neste dispositivo.');
     }
   }
 
@@ -197,7 +197,7 @@ export default function NotificationBell() {
     } catch (error) {
       console.error('Falha ao desativar Push:', error);
       setPushStatus('enabled');
-      setPushMessage('Nao foi possivel desativar agora.');
+      setPushMessage('Não foi possível desativar agora.');
     }
   }
 
@@ -223,14 +223,14 @@ export default function NotificationBell() {
           <section className="push-onboarding-modal" role="dialog" aria-modal="true" aria-labelledby="push-onboarding-title">
             <span className="push-onboarding-icon" aria-hidden="true">&#128276;</span>
             <small>Novidade no Yuri</small>
-            <h2 id="push-onboarding-title">Nao perca nenhum aviso importante!</h2>
+            <h2 id="push-onboarding-title">Não perca nenhum aviso importante!</h2>
             <p>Ative as notificacoes para receber comunicados, atualizacoes e novidades do Yuri mesmo quando o site estiver fechado.</p>
 
             {pushStatus === 'denied' ? (
               <div className="push-onboarding-help">As notificacoes estao bloqueadas neste navegador. Libere a permissao nas configuracoes do site e tente novamente pelo sininho.</div>
             ) : null}
             {pushStatus === 'unsupported' ? (
-              <div className="push-onboarding-help">Este navegador nao oferece Push. No iPhone, adicione o Yuri a Tela de Inicio pelo Safari. No Android ou computador, use Chrome ou Edge.</div>
+              <div className="push-onboarding-help">Este navegador não oferece Push. No iPhone, adicione o Yuri à Tela de Início pelo Safari. No Android ou computador, use Chrome ou Edge.</div>
             ) : null}
             {pushStatus === 'unavailable' ? (
               <div className="push-onboarding-help">O Push esta temporariamente indisponivel. O aviso continuara acessivel pelo sininho.</div>
@@ -240,9 +240,9 @@ export default function NotificationBell() {
               <button type="button" className="primary" disabled={['denied', 'unsupported', 'unavailable'].includes(pushStatus)} onClick={enablePush}>
                 Ativar notificacoes
               </button>
-              <button type="button" className="secondary" onClick={dismissPushOnboarding}>Agora nao</button>
+              <button type="button" className="secondary" onClick={dismissPushOnboarding}>Agora não</button>
             </div>
-            <p className="push-onboarding-note">Voce podera ativar depois pelo sininho.</p>
+            <p className="push-onboarding-note">Você poderá ativar depois pelo sininho.</p>
           </section>
         </div>
       ) : null}
@@ -250,7 +250,7 @@ export default function NotificationBell() {
       <button
         type="button"
         className="notification-bell"
-        aria-label={unread ? `Notificacoes, ${unread} nao lidas` : 'Notificacoes'}
+        aria-label={unread ? `Notificações, ${unread} não lidas` : 'Notificações'}
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
@@ -269,7 +269,7 @@ export default function NotificationBell() {
           </header>
 
           <div className="notification-toolbar">
-            <span>{unread ? `${unread} nao lida${unread === 1 ? '' : 's'}` : 'Tudo em dia'}</span>
+            <span>{unread ? `${unread} não lida${unread === 1 ? '' : 's'}` : 'Tudo em dia'}</span>
             {unread ? <button type="button" onClick={markAllRead}>Marcar todas como lidas</button> : null}
           </div>
 

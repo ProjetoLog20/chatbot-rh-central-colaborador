@@ -48,7 +48,7 @@ const importOptions = [
   {
     type: 'colaboradores',
     title: 'Colaboradores',
-    description: 'Cadastre ou atualize matricula, perfil, setor, unidade, contato e status.',
+    description: 'Cadastre ou atualize matrícula, perfil, setor, unidade, contato e status.',
     path: '/import/colaboradores'
   },
   {
@@ -253,7 +253,7 @@ export default function AdminPage() {
 
     if (failed.length) {
       console.error('Falha ao carregar areas administrativas:', failed, { col, pr, resp, acoesData, modulosData });
-      setMessage(`Nao foi possivel carregar: ${failed.join(', ')}.`);
+      setMessage(`Não foi possível carregar: ${failed.join(', ')}.`);
     }
   }
 
@@ -462,9 +462,9 @@ export default function AdminPage() {
       </section>
 
       <div className="admin-tabs" role="tablist" aria-label="Areas administrativas">
-        <button className={activeTab === 'excel' ? 'active' : ''} onClick={() => setActiveTab('excel')}>Exportar para a pagina via Excel</button>
+        <button className={activeTab === 'excel' ? 'active' : ''} onClick={() => setActiveTab('excel')}>Exportar para a página via Excel</button>
         <button className={activeTab === 'dados' ? 'active' : ''} onClick={() => setActiveTab('dados')}>Dados publicados</button>
-        <button className={activeTab === 'acoes' ? 'active' : ''} onClick={() => setActiveTab('acoes')}>Acoes e Eventos</button>
+        <button className={activeTab === 'acoes' ? 'active' : ''} onClick={() => setActiveTab('acoes')}>Ações e Eventos</button>
         <button className={activeTab === 'campeoes' ? 'active' : ''} onClick={() => setActiveTab('campeoes')}>Campeao Segurança</button>
         <button className={activeTab === 'modulos' ? 'active' : ''} onClick={() => setActiveTab('modulos')}>Configuração de Módulos</button>
         <button className={activeTab === 'chatbot' ? 'active' : ''} onClick={() => setActiveTab('chatbot')}>Yuri</button>
@@ -480,7 +480,7 @@ export default function AdminPage() {
             <div className="table-scroll">
               <table>
                 <thead>
-                  <tr><th>Matricula</th><th>Nome</th><th>Perfil</th><th>Status</th><th>Primeiro acesso</th><th>Acoes</th></tr>
+                  <tr><th>Matrícula</th><th>Nome</th><th>Perfil</th><th>Status</th><th>Primeiro acesso</th><th>Ações</th></tr>
                 </thead>
                 <tbody>
                   {colaboradores.map((item) => (
@@ -518,7 +518,7 @@ export default function AdminPage() {
 
       {activeTab === 'excel' ? (
         <section className="admin-section">
-          <h2>Exportar dados para a pagina</h2>
+          <h2>Exportar dados para a página</h2>
           <p className="section-help">Use este fluxo: baixe o modelo, preencha no Excel e envie o arquivo preenchido. Ao importar, os dados ficam publicados nas telas do sistema.</p>
           <div className="import-grid">
             {importOptions.map((option) => (
@@ -550,7 +550,7 @@ export default function AdminPage() {
           <div className="table-scroll">
             <table>
               <thead>
-                <tr><th>Categoria</th><th>Pergunta</th><th>Resposta</th><th>Ativo</th><th>Acoes</th></tr>
+                <tr><th>Categoria</th><th>Pergunta</th><th>Resposta</th><th>Ativo</th><th>Ações</th></tr>
               </thead>
               <tbody>
                 {respostas.map((item) => (
@@ -558,7 +558,7 @@ export default function AdminPage() {
                     <td>{item.categoria}</td>
                     <td>{item.pergunta}</td>
                     <td>{item.resposta}</td>
-                    <td>{item.ativo ? 'Sim' : 'Nao'}</td>
+                    <td>{item.ativo ? 'Sim' : 'Não'}</td>
                     <td>
                       <button onClick={() => startEditResposta(item)}>Editar</button>
                       <button onClick={() => handleToggleResposta(item)}>{item.ativo ? 'Desativar' : 'Ativar'}</button>
@@ -590,7 +590,7 @@ export default function AdminPage() {
                 Ativa
               </label>
               <div className="row-actions">
-                <button type="submit">Salvar alteracoes</button>
+                <button type="submit">Salvar alterações</button>
                 <button type="button" onClick={cancelEditResposta}>Cancelar</button>
               </div>
             </form>
@@ -756,7 +756,7 @@ export default function AdminPage() {
                         Publicar
                       </label>
                       <div className="row-actions">
-                        <button type="submit">Salvar alteracoes</button>
+                        <button type="submit">Salvar alterações</button>
                         <button type="button" onClick={cancelEditAcao}>Cancelar</button>
                       </div>
                     </form>

@@ -120,11 +120,11 @@ export default function AdminCampeoesSeguranca() {
     try {
       if (form.id) await updateCampeaoSeguranca(form.id, payload);
       else await createCampeaoSeguranca(payload);
-      setMessage('Campeao de seguranca salvo.');
+      setMessage('Campeão de segurança salvo.');
       resetForm();
       await refresh();
     } catch (err) {
-      setMessage(err.error || 'Erro ao salvar campeao de seguranca');
+      setMessage(err.error || 'Erro ao salvar campeão de segurança');
     }
   }
 
@@ -142,8 +142,8 @@ export default function AdminCampeoesSeguranca() {
     <section className="admin-section">
       <div className="admin-heading">
         <div>
-          <h2>Campeao de Seguranca</h2>
-          <p>Cadastre e publique reconhecimentos de seguranca para o mural.</p>
+          <h2>Campeão de Segurança</h2>
+          <p>Cadastre e publique reconhecimentos de segurança para o mural.</p>
         </div>
         <button type="button" onClick={() => setShowForm(true)}>Cadastrar campeao</button>
       </div>
@@ -154,18 +154,18 @@ export default function AdminCampeoesSeguranca() {
         <form className="admin-form champion-admin-form" onSubmit={handleSubmit}>
           <div className="form-grid">
             <label>
-              Competencia/mes
+              Competência/mês
               <input type="month" value={form.competencia} onChange={(event) => setForm({ ...form, competencia: event.target.value })} required />
             </label>
             <label>
               Colaborador
               <select value={form.colaborador_id} onChange={(event) => selectColaborador(event.target.value)}>
-                <option value="">Selecione por nome ou matricula</option>
+                <option value="">Selecione por nome ou matrícula</option>
                 {collaboratorOptions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
               </select>
             </label>
             <label>
-              Matricula
+              Matrícula
               <input value={form.matricula} onChange={(event) => setForm({ ...form, matricula: event.target.value })} required />
             </label>
             <label>

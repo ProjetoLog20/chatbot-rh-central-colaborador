@@ -97,7 +97,7 @@ function ProntuarioDetail({ prontuario }) {
           <strong>{prontuario.nome_condutor || prontuario.nome_completo}</strong>
         </div>
         <div>
-          <span>Matricula</span>
+          <span>Matrícula</span>
           <strong>{formatValue(prontuario.matricula)}</strong>
         </div>
         <div>
@@ -202,7 +202,7 @@ function AdminProntuarioPanel() {
     if (!files.length) return;
     try {
       const result = await importProntuarioFile(files[0]);
-      setMessage(`Importacao: ${result.created} novos, ${result.updated} atualizados, ${result.notFound} nao encontrados, ${result.conflicts} conflitos.`);
+      setMessage(`Importação: ${result.created} novos, ${result.updated} atualizados, ${result.notFound} não encontrados, ${result.conflicts} conflitos.`);
       await refresh();
     } catch (err) {
       setMessage(err.error || 'Erro ao importar prontuario');
@@ -220,7 +220,7 @@ function AdminProntuarioPanel() {
   return (
     <div className="driver-admin">
       <div className="driver-actions">
-        <button onClick={handleExport}>Exportar relatorio</button>
+        <button onClick={handleExport}>Exportar relatório</button>
         <label>
           Importar Prontuário
           <input type="file" accept=".xls,.xlsx" onChange={(e) => handleImport(e.target.files)} />
@@ -283,14 +283,14 @@ function AdminProntuarioPanel() {
         <table>
           <thead>
             <tr>
-              <th>Matricula</th>
+              <th>Matrícula</th>
               <th>Nome</th>
               <th>Cargo</th>
               <th>Status</th>
               <th>Pontuacao</th>
               <th>Faixa</th>
               <th>Cor</th>
-              <th>Acoes</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -329,7 +329,7 @@ export default function DriverPage({ user }) {
 
     getProntuarioMe()
       .then(setProntuario)
-      .catch((err) => setError(err.error || 'Voce ainda nao possui prontuario registrado.'))
+      .catch((err) => setError(err.error || 'Você ainda não possui prontuário registrado.'))
       .finally(() => setLoading(false));
   }, [isAdmin]);
 

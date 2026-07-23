@@ -30,7 +30,7 @@ export default function FirstAccessPage({ onComplete }) {
     setError('');
 
     if (!nomePreferido.trim() || nomePreferido.trim().length < 2) {
-      setError('Informe como voce deseja ser chamado.');
+      setError('Informe como você deseja ser chamado.');
       return;
     }
 
@@ -40,12 +40,12 @@ export default function FirstAccessPage({ onComplete }) {
     }
 
     if (novaSenha === 'log20') {
-      setError('A nova senha nao pode ser igual a senha temporaria.');
+      setError('A nova senha não pode ser igual à senha temporária.');
       return;
     }
 
     if (novaSenha !== confirmarSenha) {
-      setError('As senhas nao coincidem.');
+      setError('As senhas não coincidem.');
       return;
     }
 
@@ -66,7 +66,7 @@ export default function FirstAccessPage({ onComplete }) {
         state: { message: 'Senha criada com sucesso. Acesse com sua nova senha.' }
       });
     } catch (err) {
-      setError(err.error || 'Nao foi possivel configurar seu acesso.');
+      setError(err.error || 'Não foi possível configurar seu acesso.');
     } finally {
       setLoading(false);
     }
@@ -82,12 +82,12 @@ export default function FirstAccessPage({ onComplete }) {
 
         <div className="first-access-copy">
           <h1>Ola, seja bem-vindo(a)!</h1>
-          <p>Antes de acessar sua central, vamos configurar seu acesso com seguranca.</p>
+          <p>Antes de acessar sua central, vamos configurar seu acesso com segurança.</p>
         </div>
 
         <form className="first-access-form" onSubmit={handleSubmit}>
           <label>
-            Como voce deseja ser chamado?
+            Como você deseja ser chamado?
             <input
               value={nomePreferido}
               onChange={(e) => setNomePreferido(e.target.value)}
@@ -109,7 +109,7 @@ export default function FirstAccessPage({ onComplete }) {
 
           <div className="password-tips">
             <span>Use pelo menos 6 caracteres.</span>
-            <span>Nao utilize a senha temporaria log20.</span>
+            <span>Não utilize a senha temporária log20.</span>
           </div>
 
           <label>
