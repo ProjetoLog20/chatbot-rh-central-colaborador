@@ -5,6 +5,7 @@ const path = require('path');
 const bcrypt = require('bcrypt');
 const { parse } = require('csv-parse/sync');
 const db = require('../src/db');
+const DEFAULT_TASK_VALUES_FILE = path.join(__dirname, '../config/armazem-task-values.json');
 
 const armazemColumns = [
   'importacao_id',
@@ -121,12 +122,14 @@ function canonicalActivity(activity) {
   if (text.includes('ressuprimento') || text.includes('reabastecimento')) return 'Ressuprimento';
   if (text.includes('retrabalho')) return 'Retrabalho';
   if (text.includes('repack') || text.includes('reintegracao')) return 'Repack';
+  if (text.includes('remonte')) return 'Remonte';
+  if (text.includes('refugo') || text.includes('pnc')) return 'Refugo';
+  if (text.includes('tarefa operacional') || text === 'tarefa op') return 'Tarefa Operacional';
   if (text.includes('fitilho')) return 'Colocar fitilho';
   if (text.includes('amarracao')) return 'Amarração';
   if (text.includes('descarregar') || text.includes('descarga') || text.includes('desamarrar')) return 'Descarga';
   if (text.includes('chop') || text.includes('chopp')) return 'Separar Chopp';
   if (text.includes('carregamento') && text.includes('van')) return 'Carregamento Van';
-  if (text.includes('carregamento')) return 'Carregamento Van';
   return 'Demais Atividades';
 }
 
@@ -142,8 +145,8 @@ function readCsv(file) {
 }
 
 function readTaskValues(file) {
-  if (!file) return {};
-  const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const source = file ? path.resolve(file) : DEFAULT_TASK_VALUES_FILE;
+  const raw = JSON.parse(fs.readFileSync(source, 'utf8'));
   const entries = Array.isArray(raw)
     ? raw.map((item) => [item.task_name || item.atividade || item.name, item.value ?? item.valor])
     : Object.entries(raw);
@@ -310,14 +313,49 @@ async function backupSqlite() {
 }
 
 async function findColaborador(row) {
-  const exact = await db.get('SELECT * FROM colaboradores WHERE LOWER(nome_completo) = LOWER(?)', [row.nome_completo]);
-  if (exact) return exact;
-  const all = await db.all('SELECT * FROM colaboradores');
-  return all.find((colaborador) => normalizeName(colaborador.nome_completo) === normalizeName(row.nome_completo)) || null;
+  const activeFilter = `LOWER(TRIM(COALESCE(status, 'ativo'))) NOT IN ('desligado', 'removido', 'inativo')`;
+  const all = await db.all(`SELECT * FROM colaboradores WHERE ${activeFilter}`);
+  const sourceName = normalizeName(row.nome_completo);
+  const wmsMatches = all.filter((colaborador) => normalizeName(colaborador.usuario_wms) === sourceName);
+  if (wmsMatches.length === 1) return { colaborador: wmsMatches[0], metodo: 'usuario_wms_exato', confianca: 1 };
+  const nameMatches = all.filter((colaborador) => normalizeName(colaborador.nome_completo) === sourceName);
+  if (nameMatches.length === 1) return { colaborador: nameMatches[0], metodo: 'nome_exato_normalizado', confianca: 0.95 };
+  return null;
+}
+
+function applyCollaboratorRoleRules(row, colaborador) {
+  const role = normalizeName(`${colaborador.cargo || ''} ${colaborador.tipo_colaborador || ''}`);
+  if (role.includes('operador') || role.includes('empilhadeira')) {
+    row.funcao_armazem = 'Operador de Empilhadeira';
+    let original = {};
+    try {
+      original = JSON.parse(row.dados_originais_json || '{}');
+    } catch {
+      original = {};
+    }
+    const activities = Array.isArray(original.atividades) ? original.atividades : [];
+    const adjusted = activities.map((activity) => ({
+      ...activity,
+      valuePerUnit: 0.1,
+      total: Number((numberValue(activity.quantidade) * 0.1).toFixed(2))
+    }));
+    const total = Number(adjusted.reduce((sum, activity) => sum + activity.total, 0).toFixed(2));
+    row.rv_nova = total;
+    row.valor_total_previsto = total;
+    row.faixa = total > 0 ? 'Elegivel' : 'Sem premio';
+    row.status_produtividade = total > 0 ? 'Elegivel' : 'Sem premio';
+    row.dados_originais_json = JSON.stringify({ ...original, atividades: adjusted, regra_funcao: 'operador_tarefa_0_10' });
+    row.mensagem_rh = `Importado do On Demand. Operador de Empilhadeira: ${row.pontos} tarefa(s) a R$ 0,10.`;
+  } else if (role.includes('amarrador') || role.includes('amarracao')) {
+    row.funcao_armazem = 'Amarrador';
+  } else {
+    row.funcao_armazem = 'Ajudante';
+  }
+  return row;
 }
 
 async function createColaborador(row) {
-  const senhaHash = await bcrypt.hash('123456', 10);
+  const senhaHash = await bcrypt.hash('log20', 10);
   const matricula = `OND${String(row.sourceIndex + 1).padStart(5, '0')}`;
   const result = await db.run(
     `INSERT INTO colaboradores (
@@ -342,22 +380,23 @@ async function createColaborador(row) {
   return db.get('SELECT * FROM colaboradores WHERE id = ?', [result.lastID]);
 }
 
-async function createImportRecord(file, rows, context) {
+async function createImportRecord(file, rows, context, options = {}) {
   const total = rows.reduce((sum, row) => sum + row.valor_total_previsto, 0);
   const result = await db.run(
     `INSERT INTO produtividade_armazem_importacoes (
       arquivo, competencia, periodo_inicio, periodo_fim, total_linhas,
-      valor_total_previsto, valor_total_rv_nova, detalhes_json
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      valor_total_previsto, valor_total_rv_nova, detalhes_json, criado_por
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      path.basename(file),
+      options.originalFilename || path.basename(file),
       context.competencia,
       context.period.inicio,
       context.period.fim,
       rows.length,
       Number(total.toFixed(2)),
       Number(total.toFixed(2)),
-      JSON.stringify({ origem: 'on_demand_csv', missing_values: context.missingValues })
+      JSON.stringify({ origem: 'on_demand_csv', missing_values: context.missingValues }),
+      options.createdBy || null
     ]
   );
   return result.lastID;
@@ -417,6 +456,7 @@ async function importOnDemand(file, options = {}) {
     updated: 0,
     ignored: 0,
     notFound: [],
+    crossed: [],
     dryRun: Boolean(options.dryRun)
   };
 
@@ -425,47 +465,87 @@ async function importOnDemand(file, options = {}) {
   }
 
   if (options.dryRun) {
-    report.preview = context.rows.map((row) => ({
-      nome_completo: row.nome_completo,
-      pontos: row.pontos,
-      valor_total_previsto: row.valor_total_previsto,
-      indicador_1: row.indicador_1,
-      indicador_2: row.indicador_2,
-      indicador_3: row.indicador_3
-    }));
+    report.preview = [];
+    for (const row of context.rows) {
+      const match = await findColaborador(row);
+      if (!match) {
+        report.ignored += 1;
+        report.notFound.push(row.nome_completo);
+      } else {
+        applyCollaboratorRoleRules(row, match.colaborador);
+        report.crossed.push({
+          colaborador_id: match.colaborador.id,
+          matricula: match.colaborador.matricula,
+          nome_completo: match.colaborador.nome_completo,
+          usuario_on_demand: row.nome_completo,
+          metodo: match.metodo,
+          confianca: match.confianca,
+          valor_total_previsto: row.valor_total_previsto
+        });
+      }
+      report.preview.push({
+        nome_completo: row.nome_completo,
+        pontos: row.pontos,
+        valor_total_previsto: row.valor_total_previsto,
+        funcao_armazem: row.funcao_armazem,
+        vinculado: Boolean(match),
+        matricula: match?.colaborador?.matricula || null,
+        metodo_cruzamento: match?.metodo || null,
+        indicador_1: row.indicador_1,
+        indicador_2: row.indicador_2,
+        indicador_3: row.indicador_3
+      });
+    }
     return report;
   }
 
-  await ensureArmazemTables();
   report.backupPath = await backupSqlite();
-  const importacaoId = await createImportRecord(file, context.rows, context);
+  const importacaoId = await createImportRecord(file, context.rows, context, options);
   report.importacaoId = importacaoId;
 
   for (const row of context.rows) {
-    let colaborador = await findColaborador(row);
-    if (!colaborador && options.createMissing) {
-      colaborador = await createColaborador(row);
+    let match = await findColaborador(row);
+    if (!match && options.createMissing) {
+      const colaborador = await createColaborador(row);
+      match = { colaborador, metodo: 'cadastro_criado_importacao', confianca: 0.8 };
       report.createdCollaborators += 1;
     }
-    if (!colaborador) {
+    if (!match) {
       report.ignored += 1;
       report.notFound.push(row.nome_completo);
       continue;
     }
-    const result = await upsertArmazem(row, colaborador, importacaoId);
+    row.metodo_cruzamento = match.metodo;
+    row.confianca_cruzamento = match.confianca;
+    row.status_auditoria = context.missingValues.length ? 'revisar_valores_atividade' : 'ok';
+    row.observacao_cruzamento = `Cruzamento ${match.metodo} com o cadastro ativo do Yuri.`;
+    applyCollaboratorRoleRules(row, match.colaborador);
+    const result = await upsertArmazem(row, match.colaborador, importacaoId);
     if (result === 'created') report.created += 1;
     if (result === 'updated') report.updated += 1;
+    report.crossed.push({
+      colaborador_id: match.colaborador.id,
+      matricula: match.colaborador.matricula,
+      nome_completo: match.colaborador.nome_completo,
+      usuario_on_demand: row.nome_completo,
+      metodo: match.metodo,
+      confianca: match.confianca,
+      valor_total_previsto: row.valor_total_previsto
+    });
   }
 
   await db.run(
     `UPDATE produtividade_armazem_importacoes
-     SET importados = ?, atualizados = ?, ignorados = ?, detalhes_json = ?
+     SET importados = ?, atualizados = ?, ignorados = ?,
+         valor_total_previsto = ?, valor_total_rv_nova = ?, detalhes_json = ?
      WHERE id = ?`,
     [
       report.created,
       report.updated,
       report.ignored,
-      JSON.stringify({ origem: 'on_demand_csv', missing_values: report.missingValues, not_found: report.notFound }),
+      Number(report.crossed.reduce((sum, item) => sum + numberValue(item.valor_total_previsto), 0).toFixed(2)),
+      Number(report.crossed.reduce((sum, item) => sum + numberValue(item.valor_total_previsto), 0).toFixed(2)),
+      JSON.stringify({ origem: 'on_demand_csv', missing_values: report.missingValues, not_found: report.notFound, crossed: report.crossed }),
       importacaoId
     ]
   );
@@ -501,5 +581,6 @@ module.exports = {
   importOnDemand,
   buildRows,
   canonicalActivity,
+  applyCollaboratorRoleRules,
   officialPeriodForCompetencia
 };

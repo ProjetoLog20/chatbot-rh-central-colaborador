@@ -48,7 +48,13 @@ function connectSqlite() {
       nome_preferido TEXT,
       primeiro_acesso INTEGER DEFAULT 1,
       senha_temporaria INTEGER DEFAULT 1,
-      data_ultima_troca_senha TEXT
+      data_ultima_troca_senha TEXT,
+      usuario_wms TEXT,
+      codigo_operacional TEXT,
+      wms_vinculo_status TEXT,
+      wms_vinculo_metodo TEXT,
+      wms_vinculado_em TEXT,
+      wms_vinculo_origem TEXT
     )`);
 
     const ensureColumn = (name, definition) => {
@@ -64,6 +70,12 @@ function connectSqlite() {
     ensureColumn('primeiro_acesso', 'INTEGER DEFAULT 1');
     ensureColumn('senha_temporaria', 'INTEGER DEFAULT 1');
     ensureColumn('data_ultima_troca_senha', 'TEXT');
+    ensureColumn('usuario_wms', 'TEXT');
+    ensureColumn('codigo_operacional', 'TEXT');
+    ensureColumn('wms_vinculo_status', 'TEXT');
+    ensureColumn('wms_vinculo_metodo', 'TEXT');
+    ensureColumn('wms_vinculado_em', 'TEXT');
+    ensureColumn('wms_vinculo_origem', 'TEXT');
 
     sqliteDb.run(`CREATE TABLE IF NOT EXISTS prontuario_motoristas (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

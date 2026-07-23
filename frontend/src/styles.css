@@ -1559,6 +1559,359 @@ tr:not(:last-child) td {
   width: auto;
 }
 
+.user-management-heading,
+.user-form-title,
+.user-form-actions,
+.user-list-tools,
+.user-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-management-heading,
+.user-form-title {
+  justify-content: space-between;
+}
+
+.user-form {
+  padding: 1.25rem;
+  border: 1px solid #D7E3EC;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #F8FBFD, #EEF5FA);
+}
+
+.user-form h3,
+.user-form-title small {
+  margin: 0;
+}
+
+.user-form-title small {
+  display: block;
+  margin-top: 0.35rem;
+  color: #526473;
+}
+
+.user-form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.user-access-selector {
+  margin: 1.25rem 0;
+  padding: 1rem;
+  border: 1px solid #C9D9E5;
+  border-radius: 14px;
+}
+
+.user-access-selector legend {
+  padding: 0 0.4rem;
+  font-weight: 800;
+  color: #003B68;
+}
+
+.user-access-selector > label {
+  display: flex;
+  grid-template-columns: none;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.user-access-selector > label.selected {
+  border-color: #0B6FA4;
+  background: #E8F5FC;
+}
+
+.user-access-selector input {
+  width: auto;
+  margin-top: 0.2rem;
+}
+
+.user-access-selector small {
+  display: block;
+  margin-top: 0.2rem;
+  color: #526473;
+  line-height: 1.35;
+}
+
+.user-list-tools {
+  flex-wrap: wrap;
+  margin: 1.5rem 0 0.75rem;
+}
+
+.user-list-tools input,
+.user-list-tools select {
+  padding: 0.75rem 0.9rem;
+  border: 1px solid #CBD8E2;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.user-list-tools input {
+  flex: 1 1 280px;
+}
+
+.user-list-tools span {
+  color: #526473;
+  font-weight: 700;
+}
+
+.user-access-badge,
+.user-status {
+  display: inline-flex;
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.user-access-badge.admin {
+  color: #7C2D12;
+  background: #FFEDD5;
+}
+
+.user-access-badge.motorista {
+  color: #064E3B;
+  background: #D1FAE5;
+}
+
+.user-access-badge.colaborador {
+  color: #1E3A8A;
+  background: #DBEAFE;
+}
+
+.user-status {
+  color: #166534;
+  background: #DCFCE7;
+}
+
+.user-status.desligado,
+.user-status.removido,
+.user-status.inativo {
+  color: #991B1B;
+  background: #FEE2E2;
+}
+
+.user-status.afastado {
+  color: #854D0E;
+  background: #FEF9C3;
+}
+
+.user-row-actions {
+  flex-wrap: wrap;
+}
+
+.danger-button {
+  background: #B42318 !important;
+}
+
+.warning-button {
+  background: #B45309 !important;
+}
+
+.secondary-button {
+  color: #003B68 !important;
+  background: #E5EEF5 !important;
+}
+
+.prod-file-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  color: #fff;
+  background: #0B6FA4;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.prod-file-action input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.prod-file-action.disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.prod-file-action.van {
+  background: #6D28D9;
+}
+
+.import-conference {
+  margin: 1.25rem 0;
+  padding: 1.25rem;
+  border: 2px solid #0B6FA4;
+  border-radius: 18px;
+  background: #F8FCFF;
+  box-shadow: 0 16px 36px rgba(0, 59, 104, 0.12);
+}
+
+.import-conference-heading,
+.import-conference-approval {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.import-conference-heading h2,
+.import-conference-heading p {
+  margin: 0.25rem 0 0;
+}
+
+.conference-step {
+  color: #006B3C;
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.import-conference-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 0.7rem;
+  margin: 1rem 0;
+}
+
+.import-conference-summary > div {
+  padding: 0.8rem;
+  border: 1px solid #D7E5EE;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.import-conference-summary span,
+.import-conference-summary strong {
+  display: block;
+}
+
+.import-conference-summary span {
+  color: #607180;
+  font-size: 0.8rem;
+}
+
+.import-conference-summary strong {
+  margin-top: 0.25rem;
+  color: #003B68;
+}
+
+.import-conference-table {
+  max-height: 52vh;
+  margin-top: 1rem;
+}
+
+.conference-row-error {
+  background: #FFF1F2;
+}
+
+.conference-status {
+  display: inline-flex;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.conference-status.ok {
+  color: #166534;
+  background: #DCFCE7;
+}
+
+.conference-status.error {
+  color: #991B1B;
+  background: #FEE2E2;
+}
+
+.import-conference-approval {
+  align-items: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #D7E5EE;
+}
+
+.import-conference-approval p {
+  margin: 0;
+  max-width: 720px;
+}
+
+@media (max-width: 720px) {
+  .import-conference-heading,
+  .import-conference-approval {
+    flex-direction: column;
+  }
+
+  .import-conference-approval button {
+    width: 100%;
+  }
+}
+
+.ondemand-import-report {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid #B7D8E8;
+  border-radius: 14px;
+  background: #F0F9FD;
+}
+
+.ondemand-import-report h3 {
+  margin: 0 0 0.8rem;
+  color: #003B68;
+}
+
+.ondemand-import-report > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.6rem;
+}
+
+.ondemand-import-report > div span {
+  padding: 0.7rem;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.ondemand-import-report > div strong {
+  display: block;
+  font-size: 1.25rem;
+  color: #005B87;
+}
+
+.prod-task-breakdown {
+  margin-top: 1.25rem;
+}
+
+.prod-task-breakdown h3 {
+  margin-bottom: 0.75rem;
+  color: #003B68;
+}
+
+@media (max-width: 720px) {
+  .user-management-heading,
+  .user-form-title {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .user-form {
+    padding: 1rem;
+  }
+
+  .user-form-actions > button {
+    flex: 1;
+  }
+}
+
 .actions-admin-list {
   display: grid;
   gap: 1rem;

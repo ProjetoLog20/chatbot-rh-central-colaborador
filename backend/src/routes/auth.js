@@ -24,6 +24,10 @@ function buildUserResponse(usuario) {
   };
 }
 
+function isInactiveStatus(status) {
+  return ['desligado', 'removido', 'inativo'].includes(String(status || '').trim().toLowerCase());
+}
+
 router.post('/login', async (req, res) => {
   const { matricula, senha } = req.body;
   if (!matricula || !senha) {
@@ -40,6 +44,10 @@ router.post('/login', async (req, res) => {
 
     if (!usuario || !usuario.senha_hash) {
       return res.status(401).json({ error: 'Matrícula ou senha inválidos' });
+    }
+
+    if (isInactiveStatus(usuario.status)) {
+      return res.status(403).json({ error: 'Cadastro inativo. Procure o RH.' });
     }
 
     const senhaOk = await bcrypt.compare(senha, usuario.senha_hash);
@@ -104,12 +112,15 @@ router.post('/primeiro-acesso', async (req, res) => {
 
   try {
     const usuario = await db.get(
-      'SELECT id, matricula, senha_hash FROM colaboradores WHERE matricula = ?',
+      'SELECT id, matricula, senha_hash, status FROM colaboradores WHERE matricula = ?',
       [matricula]
     );
 
     if (!usuario) {
       return res.status(404).json({ error: 'Matrícula não encontrada.' });
+    }
+    if (isInactiveStatus(usuario.status)) {
+      return res.status(403).json({ error: 'Cadastro inativo. Procure o RH.' });
     }
 
     const senhaOk = await bcrypt.compare(senhaAtual || '', usuario.senha_hash);

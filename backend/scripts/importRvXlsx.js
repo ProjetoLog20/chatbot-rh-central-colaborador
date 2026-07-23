@@ -744,7 +744,8 @@ async function loadRvCodeMap() {
     `SELECT p.codigo_rv, p.nome_rv, c.id, c.matricula, c.nome_completo, c.cpf
      FROM produtividade_colaboradores p
      JOIN colaboradores c ON c.id = p.colaborador_id
-     WHERE COALESCE(p.codigo_rv, '') <> ''`
+     WHERE COALESCE(p.codigo_rv, '') <> ''
+       AND LOWER(TRIM(COALESCE(c.status, 'ativo'))) NOT IN ('desligado', 'removido', 'inativo')`
   );
   const map = new Map();
   rows.forEach((row) => {
@@ -756,7 +757,10 @@ async function loadRvCodeMap() {
 }
 
 async function loadNameMap() {
-  const colaboradores = await db.all('SELECT id, matricula, nome_completo, cpf FROM colaboradores');
+  const colaboradores = await db.all(
+    `SELECT id, matricula, nome_completo, cpf FROM colaboradores
+     WHERE LOWER(TRIM(COALESCE(status, 'ativo'))) NOT IN ('desligado', 'removido', 'inativo')`
+  );
   const map = new Map();
   colaboradores.forEach((colaborador) => {
     const name = normalizeName(colaborador.nome_completo);
@@ -765,6 +769,111 @@ async function loadNameMap() {
     map.get(name).push(colaborador);
   });
   return map;
+}
+
+function readImportRows({ filePath, buffer } = {}) {
+  const resolvedPath = filePath ? path.resolve(filePath) : DEFAULT_FILE;
+  const source = buffer || resolvedPath;
+  let rows = readOfficialWorkbookRows(source, Boolean(buffer));
+  if (!rows) {
+    const workbook = buffer ? xlsx.read(buffer, { type: 'buffer' }) : xlsx.readFile(resolvedPath);
+    rows = readRowsFromWorkbook(workbook);
+  }
+  return rows;
+}
+
+async function previewWorkbook({ filePath, buffer } = {}) {
+  await assertTables();
+  const rows = readImportRows({ filePath, buffer });
+  const rvCodeMap = await loadRvCodeMap();
+  const nameMap = await loadNameMap();
+  const preview = [];
+  const errors = [];
+  const notFound = [];
+  const periodAlerts = [];
+  let total = 0;
+
+  for (const [index, row] of rows.entries()) {
+    const lineNumber = index + 2;
+    let matricula = trim(cell(row, 'matricula'));
+    const codigoRv = trim(cell(row, 'codigo_rv'));
+    const nomeRv = firstText(row, ['nome_rv', 'nome_completo']);
+    let colaborador = null;
+    let metodo = 'matricula';
+
+    if (!matricula && codigoRv && rvCodeMap.has(codigoRv)) {
+      colaborador = rvCodeMap.get(codigoRv);
+      matricula = colaborador.matricula;
+      metodo = 'codigo_rv';
+    }
+    if (!matricula) {
+      const matches = nameMap.get(normalizeName(nomeRv)) || [];
+      if (matches.length === 1) {
+        colaborador = matches[0];
+        matricula = colaborador.matricula;
+        metodo = 'nome_exato';
+      }
+    }
+    if (!colaborador && matricula) {
+      colaborador = await db.get(
+        `SELECT id, matricula, nome_completo, cpf FROM colaboradores
+         WHERE matricula = ?
+           AND LOWER(TRIM(COALESCE(status, 'ativo'))) NOT IN ('desligado', 'removido', 'inativo')`,
+        [matricula]
+      );
+    }
+
+    const periodCheck = validateOfficialPeriod(row);
+    if (periodCheck.esperado.inicio && !periodCheck.valid) {
+      periodAlerts.push({ linha: lineNumber, matricula, ...periodCheck });
+    }
+    if (!trim(cell(row, 'competencia')) || !trim(cell(row, 'funcao_rv'))) {
+      errors.push({ linha: lineNumber, matricula, error: 'Competencia ou funcao vazia' });
+    }
+    if (!colaborador) {
+      notFound.push({ linha: lineNumber, matricula, nome: nomeRv });
+    }
+
+    const informedValue = firstDefinedNumber(row, ['premio_produtividade', 'valor_total_previsto', 'rv_nova', 'nova_rv']);
+    const value = informedValue.found
+      ? informedValue.value
+      : normalizeBonusDevolucao(cell(row, 'bonus'), parseBoolean(cell(row, 'bateu_devolucao')));
+    total += colaborador ? value : 0;
+    preview.push({
+      linha: lineNumber,
+      colaborador_id: colaborador?.id || null,
+      matricula: colaborador?.matricula || matricula || null,
+      nome_completo: colaborador?.nome_completo || nomeRv,
+      competencia: trim(cell(row, 'competencia')),
+      periodo_inicio: parseDate(cell(row, 'periodo_inicio')),
+      periodo_fim: parseDate(cell(row, 'periodo_fim')),
+      funcao_rv: trim(cell(row, 'funcao_rv')),
+      caixas: parseNumber(cell(row, 'caixas')),
+      entregas: parseNumber(cell(row, 'entregas')),
+      recargas: parseNumber(cell(row, 'recargas')),
+      mapas: parseNumber(cell(row, 'mapas')),
+      percentual_devolucao: parsePercent(cell(row, 'percentual_devolucao')),
+      valor_total_previsto: value,
+      vinculado: Boolean(colaborador),
+      metodo_cruzamento: colaborador ? metodo : null
+    });
+  }
+
+  const sourceMethods = [...new Set(rows.map((row) => trim(cell(row, 'metodo_cruzamento'))).filter(Boolean))];
+  const tipoDetectado = sourceMethods.some((method) => method.includes('one_pager_van')) ? 'van' : 'rota';
+  return {
+    tipoDetectado,
+    metodosLeitura: sourceMethods,
+    totalRows: rows.length,
+    validRows: preview.filter((row) => row.vinculado).length,
+    ignored: preview.filter((row) => !row.vinculado).length,
+    totalPremioProdutividade: Number(total.toFixed(2)),
+    competencias: [...new Set(preview.map((row) => row.competencia).filter(Boolean))],
+    errors,
+    notFound,
+    periodAlerts,
+    rows: preview
+  };
 }
 
 function buildPayload(row, colaborador, importacaoId) {
@@ -969,7 +1078,9 @@ async function importRows(rows, { arquivo, criadoPor = null } = {}) {
     try {
       if (!colaborador) {
         colaborador = await db.get(
-          'SELECT id, matricula, nome_completo, cpf FROM colaboradores WHERE matricula = ?',
+          `SELECT id, matricula, nome_completo, cpf FROM colaboradores
+           WHERE matricula = ?
+             AND LOWER(TRIM(COALESCE(status, 'ativo'))) NOT IN ('desligado', 'removido', 'inativo')`,
           [matricula]
         );
       }
@@ -1032,15 +1143,7 @@ async function importRows(rows, { arquivo, criadoPor = null } = {}) {
 async function importWorkbook({ filePath, buffer, originalName, criadoPor } = {}) {
   await assertTables();
   const resolvedPath = filePath ? path.resolve(filePath) : DEFAULT_FILE;
-  const source = buffer || resolvedPath;
-  const isBuffer = Boolean(buffer);
-  let rows = readOfficialWorkbookRows(source, isBuffer);
-  if (!rows) {
-    const workbook = buffer
-      ? xlsx.read(buffer, { type: 'buffer' })
-      : xlsx.readFile(resolvedPath);
-    rows = readRowsFromWorkbook(workbook);
-  }
+  const rows = readImportRows({ filePath, buffer });
   const arquivo = originalName || path.basename(resolvedPath);
   return importRows(rows, { arquivo, criadoPor });
 }
@@ -1087,6 +1190,7 @@ module.exports = {
   importWorkbook,
   importRows,
   previewOfficialWorkbook,
+  previewWorkbook,
   buildPayload,
   parseNumber,
   parsePercent,

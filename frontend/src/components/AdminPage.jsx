@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
   getCollaborators,
+  createCollaborator,
+  updateCollaborator,
+  removeCollaborator,
   getProntuarios,
   getRespostas,
   importFile,
@@ -25,6 +28,31 @@ const actionCategories = [
   ['cafe_com_gerente', 'Café com o Gerente'],
   ['comite_de_gente', 'Comitê de Gente']
 ];
+
+const emptyCollaboratorForm = {
+  matricula: '',
+  nome_completo: '',
+  nome_preferido: '',
+  cpf: '',
+  telefone_whatsapp: '',
+  email: '',
+  cargo: '',
+  setor: '',
+  unidade: 'Cascavel',
+  tipo_colaborador: '',
+  status: 'Ativo',
+  data_admissao: '',
+  perfil: 'colaborador',
+  usuario_wms: '',
+  codigo_operacional: '',
+  senha: ''
+};
+
+const accessDescriptions = {
+  admin: 'Acesso total à Central do Administrador, cadastros, importações e configurações.',
+  motorista: 'Acesso aos recursos operacionais da rota, conforme os módulos liberados para Motorista/Ajudante.',
+  colaborador: 'Acesso comum aos serviços e informações do colaborador, conforme os módulos liberados.'
+};
 
 function labelForActionCategory(category) {
   return actionCategories.find(([value]) => value === category)?.[1] || 'CIPA';
@@ -192,6 +220,11 @@ export default function AdminPage() {
   const [modulos, setModulos] = useState([]);
   const [accessMetrics, setAccessMetrics] = useState(null);
   const [message, setMessage] = useState('');
+  const [collaboratorForm, setCollaboratorForm] = useState(emptyCollaboratorForm);
+  const [editingCollaboratorId, setEditingCollaboratorId] = useState(null);
+  const [collaboratorSearch, setCollaboratorSearch] = useState('');
+  const [collaboratorStatusFilter, setCollaboratorStatusFilter] = useState('ativos');
+  const [savingCollaborator, setSavingCollaborator] = useState(false);
   const [importErrors, setImportErrors] = useState(null);
   const [respostaText, setRespostaText] = useState({ pergunta: '', resposta: '', categoria: '', ativo: true });
   const [editingRespostaId, setEditingRespostaId] = useState(null);
@@ -418,6 +451,64 @@ export default function AdminPage() {
     }
   }
 
+  function startCreateCollaborator() {
+    setEditingCollaboratorId(null);
+    setCollaboratorForm(emptyCollaboratorForm);
+  }
+
+  function startEditCollaborator(item) {
+    setEditingCollaboratorId(item.id);
+    setCollaboratorForm({
+      ...emptyCollaboratorForm,
+      ...Object.fromEntries(Object.keys(emptyCollaboratorForm).map((key) => [key, item[key] ?? ''])),
+      senha: ''
+    });
+    setMessage('');
+  }
+
+  async function handleSaveCollaborator(event) {
+    event.preventDefault();
+    setSavingCollaborator(true);
+    try {
+      if (editingCollaboratorId) {
+        await updateCollaborator(editingCollaboratorId, collaboratorForm);
+        setMessage('Cadastro atualizado. Os acessos já refletem o perfil e o status escolhidos.');
+      } else {
+        const result = await createCollaborator(collaboratorForm);
+        setMessage(`Usuário criado. Senha temporária: ${result.senha_temporaria || 'log20'}.`);
+      }
+      startCreateCollaborator();
+      await refresh();
+    } catch (err) {
+      setMessage(err.error || 'Erro ao salvar o cadastro.');
+    } finally {
+      setSavingCollaborator(false);
+    }
+  }
+
+  async function handleDeactivateCollaborator(item) {
+    if (!window.confirm(`Desligar ${item.nome_completo}? O acesso será bloqueado imediatamente e o histórico será preservado.`)) return;
+    try {
+      await updateCollaborator(item.id, { status: 'Desligado' });
+      setMessage(`${item.nome_completo} foi desligado e não pode mais acessar o Yuri.`);
+      await refresh();
+    } catch (err) {
+      setMessage(err.error || 'Erro ao desligar o usuário.');
+    }
+  }
+
+  async function handleRemoveCollaborator(item) {
+    if (!window.confirm(`Remover o cadastro de ${item.nome_completo}? O acesso e os vínculos operacionais serão revogados, mas o histórico continuará protegido.`)) return;
+    try {
+      await removeCollaborator(item.id);
+      setMessage(`Cadastro de ${item.nome_completo} removido com o histórico preservado.`);
+      if (editingCollaboratorId === item.id) startCreateCollaborator();
+      await refresh();
+    } catch (err) {
+      setMessage(err.error || 'Erro ao remover o usuário.');
+    }
+  }
+
   async function handleSaveModulo(chave, payload) {
     try {
       await updateAdminModulo(chave, payload);
@@ -431,6 +522,15 @@ export default function AdminPage() {
   const filteredAcoes = acaoAdminFilter === 'todas'
     ? acoes
     : acoes.filter((item) => item.categoria === acaoAdminFilter);
+  const filteredCollaborators = colaboradores.filter((item) => {
+    const inactive = ['desligado', 'removido', 'inativo'].includes(String(item.status || '').toLowerCase());
+    if (collaboratorStatusFilter === 'ativos' && inactive) return false;
+    if (collaboratorStatusFilter === 'inativos' && !inactive) return false;
+    const query = collaboratorSearch.trim().toLowerCase();
+    if (!query) return true;
+    return [item.matricula, item.nome_completo, item.nome_preferido, item.cargo, item.setor, item.usuario_wms]
+      .some((value) => String(value || '').toLowerCase().includes(query));
+  });
 
   return (
     <div className="page-card admin-card">
@@ -476,23 +576,79 @@ export default function AdminPage() {
       {activeTab === 'dados' ? (
         <>
           <section className="admin-section">
-            <h2>Colaboradores</h2>
+            <div className="user-management-heading">
+              <div>
+                <h2>Gestão de usuários</h2>
+                <p className="section-help">Cadastre colaboradores, determine o nível de acesso e desligue usuários sem perder os históricos do RH.</p>
+              </div>
+              {editingCollaboratorId ? <button type="button" onClick={startCreateCollaborator}>+ Novo usuário</button> : null}
+            </div>
+            <form className="admin-form user-form" onSubmit={handleSaveCollaborator}>
+              <div className="user-form-title">
+                <div>
+                  <h3>{editingCollaboratorId ? 'Editar cadastro' : 'Cadastrar novo usuário'}</h3>
+                  <small>Campos com * são obrigatórios. A senha inicial padrão é <strong>log20</strong>.</small>
+                </div>
+                <span className={`user-access-badge ${collaboratorForm.perfil}`}>{collaboratorForm.perfil}</span>
+              </div>
+              <div className="form-grid user-form-grid">
+                <label>Matrícula *<input required value={collaboratorForm.matricula} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, matricula: e.target.value })} /></label>
+                <label>Nome completo *<input required value={collaboratorForm.nome_completo} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, nome_completo: e.target.value })} /></label>
+                <label>Nome preferido<input value={collaboratorForm.nome_preferido} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, nome_preferido: e.target.value })} /></label>
+                <label>CPF<input value={collaboratorForm.cpf} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, cpf: e.target.value })} /></label>
+                <label>Cargo<input value={collaboratorForm.cargo} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, cargo: e.target.value })} /></label>
+                <label>Tipo de colaborador<input placeholder="Ex.: Motorista, Ajudante, Operador" value={collaboratorForm.tipo_colaborador} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, tipo_colaborador: e.target.value })} /></label>
+                <label>Setor<input value={collaboratorForm.setor} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, setor: e.target.value })} /></label>
+                <label>Unidade<input value={collaboratorForm.unidade} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, unidade: e.target.value })} /></label>
+                <label>Telefone / WhatsApp<input type="tel" value={collaboratorForm.telefone_whatsapp} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, telefone_whatsapp: e.target.value })} /></label>
+                <label>E-mail<input type="email" value={collaboratorForm.email} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, email: e.target.value })} /></label>
+                <label>Data de admissão<input type="date" value={collaboratorForm.data_admissao || ''} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, data_admissao: e.target.value })} /></label>
+                <label>Status<select value={collaboratorForm.status} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, status: e.target.value })}><option value="Ativo">Ativo</option><option value="Afastado">Afastado</option><option value="Desligado">Desligado</option></select></label>
+                <label>Usuário WMS<input value={collaboratorForm.usuario_wms} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, usuario_wms: e.target.value })} /></label>
+                <label>Código operacional<input value={collaboratorForm.codigo_operacional} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, codigo_operacional: e.target.value })} /></label>
+                <label>Senha temporária<input type="password" placeholder={editingCollaboratorId ? 'Vazio mantém a senha atual' : 'Padrão: log20'} value={collaboratorForm.senha} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, senha: e.target.value })} /></label>
+              </div>
+              <fieldset className="user-access-selector">
+                <legend>Perfil e acessos *</legend>
+                {Object.entries(accessDescriptions).map(([profile, description]) => (
+                  <label className={collaboratorForm.perfil === profile ? 'selected' : ''} key={profile}>
+                    <input type="radio" name="perfil" value={profile} checked={collaboratorForm.perfil === profile} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, perfil: e.target.value })} />
+                    <span><strong>{profile === 'admin' ? 'Administrador' : profile === 'motorista' ? 'Motorista / Ajudante' : 'Colaborador'}</strong><small>{description}</small></span>
+                  </label>
+                ))}
+              </fieldset>
+              <div className="user-form-actions">
+                <button type="submit" disabled={savingCollaborator}>{savingCollaborator ? 'Salvando...' : editingCollaboratorId ? 'Salvar alterações' : 'Criar usuário'}</button>
+                {editingCollaboratorId ? <button type="button" className="secondary-button" onClick={startCreateCollaborator}>Cancelar edição</button> : null}
+              </div>
+            </form>
+            <div className="user-list-tools">
+              <input aria-label="Buscar usuário" placeholder="Buscar por nome, matrícula, cargo ou WMS" value={collaboratorSearch} onChange={(e) => setCollaboratorSearch(e.target.value)} />
+              <select aria-label="Filtrar status" value={collaboratorStatusFilter} onChange={(e) => setCollaboratorStatusFilter(e.target.value)}><option value="ativos">Ativos</option><option value="inativos">Desligados e removidos</option><option value="todos">Todos</option></select>
+              <span>{filteredCollaborators.length} cadastro(s)</span>
+            </div>
             <div className="table-scroll">
               <table>
                 <thead>
                   <tr><th>Matrícula</th><th>Nome</th><th>Perfil</th><th>Status</th><th>Primeiro acesso</th><th>Ações</th></tr>
                 </thead>
                 <tbody>
-                  {colaboradores.map((item) => (
+                  {filteredCollaborators.map((item) => (
                     <tr key={item.id}>
                       <td>{item.matricula}</td>
                       <td>{item.nome_preferido || item.nome_completo}</td>
-                      <td>{item.perfil}</td>
-                      <td>{item.status}</td>
+                      <td><span className={`user-access-badge ${item.perfil}`}>{item.perfil}</span></td>
+                      <td><span className={`user-status ${String(item.status || '').toLowerCase()}`}>{item.status || 'Ativo'}</span></td>
                       <td>{item.primeiro_acesso || item.senha_temporaria ? 'Pendente' : 'Concluido'}</td>
-                      <td><button onClick={() => handleResetPassword(item)}>Resetar senha</button></td>
+                      <td><div className="user-row-actions">
+                        <button type="button" onClick={() => startEditCollaborator(item)}>Editar</button>
+                        <button type="button" onClick={() => handleResetPassword(item)}>Resetar senha</button>
+                        {!['desligado', 'removido'].includes(String(item.status || '').toLowerCase()) ? <button type="button" className="warning-button" onClick={() => handleDeactivateCollaborator(item)}>Desligar</button> : null}
+                        {String(item.status || '').toLowerCase() !== 'removido' ? <button type="button" className="danger-button" onClick={() => handleRemoveCollaborator(item)}>Remover</button> : null}
+                      </div></td>
                     </tr>
                   ))}
+                  {!filteredCollaborators.length ? <tr><td colSpan="6">Nenhum cadastro encontrado com esses filtros.</td></tr> : null}
                 </tbody>
               </table>
             </div>

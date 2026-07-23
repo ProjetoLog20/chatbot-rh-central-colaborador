@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   createAdminProdutividadeArmazemManual,
+  approveOnDemandArmazemImport,
+  approveProdutividadeImport,
   exportAdminProdutividade,
   exportAdminProdutividadeArmazem,
   getAdminProdutividade,
@@ -12,6 +14,7 @@ import {
   getMeuProdutividade,
   getMeuProdutividadeArmazem,
   importProdutividadeFile,
+  importOnDemandArmazemFile,
   updateAdminProdutividadeArmazemRegistro,
   updateAdminProdutividadeRegistro
 } from '../api.js';
@@ -254,7 +257,7 @@ function ProdTabs({ activeTab, onChange, tabs }) {
   );
 }
 
-function ProdutividadeDetail({ registro, variant = 'rota' }) {
+function ProdutividadeDetail({ registro, variant = 'rota', detailedTasks = false }) {
   if (!registro) return null;
   const isArmazem = variant === 'armazem';
   const metricFields = isArmazem ? armazemMetricFields : rotaMetricFields;
@@ -300,6 +303,25 @@ function ProdutividadeDetail({ registro, variant = 'rota' }) {
           </div>
         ))}
       </div>
+      {isArmazem && registro.tarefas_detalhadas?.length ? (
+        <section className="prod-task-breakdown">
+          <h3>Tarefas consideradas no cálculo</h3>
+          <div className="table-scroll">
+            <table>
+              <thead><tr><th>Tarefa</th>{detailedTasks ? <><th>Quantidade</th><th>Valor unitário</th></> : null}<th>Valor</th></tr></thead>
+              <tbody>
+                {registro.tarefas_detalhadas.map((task, index) => (
+                  <tr key={`${task.atividade}-${index}`}>
+                    <td>{task.atividade}</td>
+                    {detailedTasks ? <><td>{formatNumber(task.quantidade)}</td><td>{formatMoney(task.valuePerUnit)}</td></> : null}
+                    <td>{formatMoney(task.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
     </section>
   );
 }
@@ -583,6 +605,58 @@ function ColaboradorProdutividade() {
   );
 }
 
+function ImportConference({ variant, data, publishing, onApprove, onCancel }) {
+  if (!data) return null;
+  const isArmazem = variant === 'armazem';
+  const report = isArmazem ? data.report : data.preview;
+  const rows = isArmazem ? report?.linhas || [] : report?.rows || [];
+  const valid = isArmazem ? report?.cruzamentos?.length || 0 : report?.validRows || 0;
+  const ignored = isArmazem ? report?.ignorados || 0 : report?.ignored || 0;
+  const total = isArmazem
+    ? (report?.cruzamentos || []).reduce((sum, item) => sum + asNumber(item.valor_total_previsto), 0)
+    : report?.totalPremioProdutividade || 0;
+  const issues = isArmazem
+    ? [...(report?.nao_encontrados || []), ...(report?.tarefas_sem_valor || [])]
+    : [...(report?.notFound || []), ...(report?.errors || []), ...(report?.periodAlerts || [])];
+
+  return (
+    <section className="import-conference">
+      <div className="import-conference-heading">
+        <div><span className="conference-step">CONFERÊNCIA OBRIGATÓRIA</span><h2>Revise antes de publicar</h2><p>O arquivo foi apenas lido. Nenhum valor está visível para os colaboradores neste momento.</p></div>
+        <button type="button" className="secondary-button" onClick={onCancel} disabled={publishing}>Cancelar</button>
+      </div>
+      <div className="import-conference-summary">
+        <div><span>Arquivo</span><strong>{data.arquivo || 'On Demand CSV'}</strong></div>
+        <div><span>Competência</span><strong>{isArmazem ? report?.competencia : report?.competencias?.join(', ')}</strong></div>
+        <div><span>Vínculos válidos</span><strong>{valid}</strong></div>
+        <div><span>Ignorados</span><strong>{ignored}</strong></div>
+        <div><span>Total a publicar</span><strong>{formatMoney(total)}</strong></div>
+        <div><span>Expiração</span><strong>{data.expira_em_minutos || 30} min</strong></div>
+      </div>
+      {issues.length ? <div className="prod-warning">Existem {issues.length} inconsistência(s). Linhas sem vínculo não serão publicadas.</div> : null}
+      <div className="table-scroll import-conference-table">
+        <table>
+          <thead><tr><th>Situação</th><th>Matrícula</th><th>Nome</th><th>Função</th><th>Competência</th>{isArmazem ? <th>Tarefas/Pontos</th> : <><th>Caixas</th><th>Entregas</th><th>Mapas</th></>}<th>Valor</th></tr></thead>
+          <tbody>
+            {rows.map((row, index) => (
+              <tr className={row.vinculado ? '' : 'conference-row-error'} key={`${row.matricula || row.nome_completo}-${index}`}>
+                <td><span className={`conference-status ${row.vinculado ? 'ok' : 'error'}`}>{row.vinculado ? 'Pronto' : 'Ignorado'}</span></td>
+                <td>{row.matricula || '-'}</td><td>{row.nome_completo}</td><td>{formatArmazemFuncao(row.funcao_armazem || row.funcao_rv)}</td><td>{row.competencia}</td>
+                {isArmazem ? <td>{formatNumber(row.pontos)}</td> : <><td>{formatNumber(row.caixas)}</td><td>{formatNumber(row.entregas)}</td><td>{formatNumber(row.mapas)}</td></>}
+                <td>{formatMoney(row.valor_total_previsto)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="import-conference-approval">
+        <p><strong>Ao confirmar, os valores válidos serão publicados na competência correspondente.</strong></p>
+        <button type="button" onClick={onApprove} disabled={publishing || !valid}>{publishing ? 'Publicando...' : `Aprovar e publicar ${valid} registro(s)`}</button>
+      </div>
+    </section>
+  );
+}
+
 function AdminRotaPanel() {
   const [filters, setFilters] = useState({ busca: '', competencia: '', funcao_rv: '', status_produtividade: '', bateu_devolucao: '', status_auditoria: '' });
   const [rows, setRows] = useState([]);
@@ -591,6 +665,8 @@ function AdminRotaPanel() {
   const [editing, setEditing] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [pendingImport, setPendingImport] = useState(null);
+  const [publishingImport, setPublishingImport] = useState(false);
 
   const options = useMemo(() => {
     const uniq = (key) => [...new Set(rows.map((row) => row[key]).filter(Boolean))].sort();
@@ -656,14 +732,28 @@ function AdminRotaPanel() {
     }
   }
 
-  async function handleImport(files) {
+  async function handleImport(files, tipo) {
     if (!files.length) return;
     try {
-      const result = await importProdutividadeFile(files[0]);
-      setMessage(`Importação do Prêmio de Produtividade: ${result.created} novos, ${result.updated} atualizados, ${result.ignored} ignorados, ${result.errors.length} erros.`);
-      await refresh();
+      const result = await importProdutividadeFile(files[0], tipo);
+      setPendingImport(result);
+      setMessage('Arquivo lido. Confira todos os valores antes de publicar.');
     } catch (err) {
       setMessage(err.error || 'Erro ao importar RV');
+    }
+  }
+
+  async function approveRouteConference() {
+    setPublishingImport(true);
+    try {
+      const result = await approveProdutividadeImport(pendingImport.preview_token);
+      setPendingImport(null);
+      await refresh();
+      setMessage(`Prêmio publicado: ${result.created} novo(s), ${result.updated} atualizado(s) e ${result.ignored} ignorado(s).`);
+    } catch (err) {
+      setMessage(err.error || 'Erro ao publicar a conferência.');
+    } finally {
+      setPublishingImport(false);
     }
   }
 
@@ -683,9 +773,11 @@ function AdminRotaPanel() {
     <>
       <div className="prod-actions">
         <button onClick={() => exportAdminProdutividade(filters)}>Exportar relatório</button>
-        <label>Importar Prêmio<input type="file" accept=".xlsx,.xlsm" onChange={(event) => handleImport(event.target.files)} /></label>
+        <label className="prod-file-action">Importar Rota<input type="file" accept=".xlsx,.xlsm" onChange={(event) => handleImport(event.target.files, 'rota')} /></label>
+        <label className="prod-file-action van">Importar VAN<input type="file" accept=".xlsx,.xlsm" onChange={(event) => handleImport(event.target.files, 'van')} /></label>
       </div>
       {message ? <div className="import-message">{message}</div> : null}
+      {pendingImport ? <ImportConference data={pendingImport} variant="rota" publishing={publishingImport} onApprove={approveRouteConference} onCancel={() => setPendingImport(null)} /> : null}
       {detail ? (
         <section className="detail-view-panel">
           <div className="detail-view-toolbar">
@@ -742,6 +834,10 @@ function AdminArmazemPanel() {
   const [creating, setCreating] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [importing, setImporting] = useState(false);
+  const [importReport, setImportReport] = useState(null);
+  const [pendingImport, setPendingImport] = useState(null);
+  const [publishingImport, setPublishingImport] = useState(false);
 
   const options = useMemo(() => {
     const uniq = (key) => [...new Set(rows.map((row) => row[key]).filter(Boolean))].sort();
@@ -809,6 +905,37 @@ function AdminArmazemPanel() {
     }
   }
 
+  async function approveWarehouseConference() {
+    setPublishingImport(true);
+    try {
+      const result = await approveOnDemandArmazemImport(pendingImport.preview_token);
+      setPendingImport(null);
+      setImportReport(null);
+      await refresh();
+      setMessage(result.message || 'Valores do On Demand publicados.');
+    } catch (err) {
+      setMessage(err.error || 'Erro ao publicar a conferência.');
+    } finally {
+      setPublishingImport(false);
+    }
+  }
+
+  async function importOnDemand(files) {
+    if (!files?.length) return;
+    setImporting(true);
+    setImportReport(null);
+    try {
+      const result = await importOnDemandArmazemFile(files[0]);
+      setImportReport(result.report || null);
+      setPendingImport(result);
+      setMessage(result.message || 'Arquivo On Demand importado.');
+    } catch (err) {
+      setMessage(err.error || 'Erro ao importar o arquivo On Demand.');
+    } finally {
+      setImporting(false);
+    }
+  }
+
   const summaryCards = [
     ['Colaboradores com RV', summary.total_colaboradores_com_rv, 'number'],
     ['Ajudantes', summary.total_ajudantes, 'number'],
@@ -823,10 +950,28 @@ function AdminArmazemPanel() {
   return (
     <>
       <div className="prod-actions">
+        <label className={`prod-file-action ${importing ? 'disabled' : ''}`}>
+          {importing ? 'Processando On Demand...' : 'Importar On Demand (.csv)'}
+          <input type="file" accept=".csv,text/csv" disabled={importing} onChange={(event) => importOnDemand(event.target.files)} />
+        </label>
         <button type="button" onClick={() => { setDetail(null); setEditing(false); setCreating(true); }}>Novo lançamento manual</button>
         <button onClick={() => exportAdminProdutividadeArmazem(filters)}>Exportar relatório</button>
       </div>
       {message ? <div className="import-message">{message}</div> : null}
+      {pendingImport ? <ImportConference data={pendingImport} variant="armazem" publishing={publishingImport} onApprove={approveWarehouseConference} onCancel={() => { setPendingImport(null); setImportReport(null); }} /> : null}
+      {importReport && !pendingImport ? (
+        <section className="ondemand-import-report">
+          <h3>Relatório da importação On Demand — {importReport.competencia}</h3>
+          <div>
+            <span><strong>{importReport.criados || 0}</strong> novos valores</span>
+            <span><strong>{importReport.atualizados || 0}</strong> atualizados</span>
+            <span><strong>{importReport.ignorados || 0}</strong> ignorados</span>
+            <span><strong>{importReport.cruzamentos?.length || 0}</strong> vínculos confirmados</span>
+          </div>
+          {importReport.nao_encontrados?.length ? <p><strong>Não publicados:</strong> {importReport.nao_encontrados.join(', ')}.</p> : null}
+          {importReport.tarefas_sem_valor?.length ? <p><strong>Tarefas sem valor:</strong> {importReport.tarefas_sem_valor.join(', ')}.</p> : null}
+        </section>
+      ) : null}
       {creating ? (
         <ManualProdutividadeForm
           variant="armazem"
@@ -843,7 +988,7 @@ function AdminArmazemPanel() {
             <button type="button" className="detail-action-button" onClick={() => setEditing(true)}>Editar lançamento</button>
           </div>
           {editing ? <ManualProdutividadeForm registro={detail} variant="armazem" onSubmit={saveManual} onCancel={() => setEditing(false)} /> : null}
-          <ProdutividadeDetail registro={detail} variant="armazem" />
+          <ProdutividadeDetail registro={detail} variant="armazem" detailedTasks />
         </section>
       ) : (
         <>

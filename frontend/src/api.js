@@ -52,6 +52,24 @@ export async function getCollaborators() {
   return request('/colaboradores');
 }
 
+export async function createCollaborator(payload) {
+  return request('/colaboradores', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function updateCollaborator(id, payload) {
+  return request(`/colaboradores/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function removeCollaborator(id) {
+  return request(`/colaboradores/${id}`, { method: 'DELETE' });
+}
+
 export async function resetCollaboratorPassword(id) {
   return request(`/colaboradores/${id}`, {
     method: 'PUT',
@@ -191,7 +209,7 @@ export async function updateAdminProdutividadeRegistro(id, payload) {
   });
 }
 
-export async function importProdutividadeFile(file) {
+export async function importProdutividadeFile(file, tipo = 'rota') {
   const token = localStorage.getItem('token');
   const formData = new FormData();
   formData.append('file', file);
@@ -267,6 +285,41 @@ export async function updateAdminProdutividadeArmazemRegistro(id, payload) {
   return request(`/produtividade-armazem/admin/registro/${id}`, {
     method: 'PUT',
     body: JSON.stringify(payload)
+  });
+}
+
+export async function approveProdutividadeImport(previewToken) {
+  return request('/produtividade/importar/aprovar', {
+    method: 'POST',
+    body: JSON.stringify({ preview_token: previewToken })
+  });
+}
+
+export async function importOnDemandArmazemFile(file, competencia = '') {
+  const token = localStorage.getItem('token');
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('tipo', tipo);
+  if (competencia) formData.append('competencia', competencia);
+  const res = await fetch(`${API_BASE}/produtividade-armazem/importar`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData
+  });
+  const body = await res.json().catch(() => null);
+  if (res.status === 401 && token) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.assign('/login');
+  }
+  if (!res.ok) throw body || { error: 'Erro ao importar o arquivo On Demand' };
+  return body;
+}
+
+export async function approveOnDemandArmazemImport(previewToken) {
+  return request('/produtividade-armazem/importar/aprovar', {
+    method: 'POST',
+    body: JSON.stringify({ preview_token: previewToken })
   });
 }
 

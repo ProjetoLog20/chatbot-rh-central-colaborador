@@ -3,7 +3,8 @@ const multer = require('multer');
 const db = require('../db');
 const { authenticateToken, authorizeRoles } = require('../authMiddleware');
 const { ensureModuleAvailable, maintenancePayload } = require('../moduleConfig');
-const { importWorkbook } = require('../../scripts/importRvXlsx');
+const { importWorkbook, previewWorkbook } = require('../../scripts/importRvXlsx');
+const { createPreview, consumePreview } = require('../importPreviewStore');
 
 const router = express.Router();
 
@@ -325,14 +326,48 @@ router.post('/importar', authenticateToken, authorizeRoles('admin'), uploadSingl
   if (!req.file) return res.status(400).json({ error: 'Arquivo nao enviado' });
 
   try {
-    const result = await importWorkbook({
-      buffer: req.file.buffer,
+    const preview = await previewWorkbook({ buffer: req.file.buffer });
+    const requestedType = String(req.body.tipo || '').trim().toLowerCase();
+    if (!['rota', 'van'].includes(requestedType)) {
+      return res.status(400).json({ error: 'Informe se o arquivo pertence a Rota ou VAN.' });
+    }
+    if (preview.tipoDetectado !== requestedType) {
+      return res.status(400).json({
+        error: `A planilha foi reconhecida como ${preview.tipoDetectado === 'van' ? 'VAN' : 'Rota'}, mas foi enviada pelo botão de ${requestedType === 'van' ? 'VAN' : 'Rota'}.`
+      });
+    }
+    const staged = createPreview({
+      type: 'rota',
+      userId: req.user.id,
+      buffer: Buffer.from(req.file.buffer),
       originalName: req.file.originalname,
+      planType: requestedType
+    });
+    return res.json({
+      status: 'aguardando_confirmacao',
+      preview_token: staged.token,
+      expira_em_minutos: staged.expiresInMinutes,
+      arquivo: req.file.originalname,
+      tipo: requestedType,
+      preview
+    });
+  } catch (error) {
+    return res.status(400).json({ error: error.message || 'Erro ao ler a RV para conferencia' });
+  }
+});
+
+router.post('/importar/aprovar', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+  const staged = consumePreview(req.body.preview_token, req.user.id, 'rota');
+  if (!staged) return res.status(410).json({ error: 'A conferencia expirou ou ja foi utilizada. Leia o arquivo novamente.' });
+  try {
+    const result = await importWorkbook({
+      buffer: staged.buffer,
+      originalName: staged.originalName,
       criadoPor: req.user.id
     });
-    return res.json(result);
+    return res.json({ status: 'publicado', ...result });
   } catch (error) {
-    return res.status(400).json({ error: error.message || 'Erro ao importar RV' });
+    return res.status(400).json({ error: error.message || 'Erro ao publicar a RV conferida' });
   }
 });
 

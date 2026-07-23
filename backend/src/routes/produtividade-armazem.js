@@ -1,9 +1,32 @@
 const express = require('express');
+const crypto = require('crypto');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const multer = require('multer');
 const db = require('../db');
 const { authenticateToken, authorizeRoles } = require('../authMiddleware');
 const { ensureModuleAvailable, maintenancePayload } = require('../moduleConfig');
+const { importOnDemand } = require('../../scripts/importOnDemandArmazemCsv');
+const { createPreview, consumePreview } = require('../importPreviewStore');
 
 const router = express.Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (req, file, callback) => {
+    callback(null, path.extname(file.originalname || '').toLowerCase() === '.csv');
+  }
+});
+
+function uploadCsv(req, res, next) {
+  upload.single('file')(req, res, (error) => {
+    if (error?.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: 'O CSV excede o limite de 8 MB.' });
+    if (error) return res.status(400).json({ error: 'Erro ao receber o arquivo On Demand.' });
+    if (!req.file) return res.status(400).json({ error: 'Envie um arquivo On Demand no formato CSV.' });
+    next();
+  });
+}
 
 const selectArmazem = `
   SELECT
@@ -67,6 +90,22 @@ function parseManualNumber(value) {
 
 function trim(value) {
   return String(value ?? '').trim();
+}
+
+function shapeArmazemRow(row) {
+  if (!row) return row;
+  let original = {};
+  try {
+    original = typeof row.dados_originais_json === 'string'
+      ? JSON.parse(row.dados_originais_json)
+      : row.dados_originais_json || {};
+  } catch {
+    original = {};
+  }
+  return {
+    ...row,
+    tarefas_detalhadas: Array.isArray(original.atividades) ? original.atividades : []
+  };
 }
 
 function manualPayload(body, colaborador, existing = {}) {
@@ -243,7 +282,8 @@ async function ensureProductivityModules(req, res) {
 
 async function getAdminRows(query) {
   const { where, params } = buildAdminFilters(query);
-  return db.all(`${selectArmazem} ${where} ORDER BY p.competencia DESC, p.nome_completo`, params);
+  const rows = await db.all(`${selectArmazem} ${where} ORDER BY p.competencia DESC, p.nome_completo`, params);
+  return rows.map(shapeArmazemRow);
 }
 
 router.get('/meu', authenticateToken, async (req, res) => {
@@ -259,7 +299,7 @@ router.get('/meu', authenticateToken, async (req, res) => {
     );
 
     return res.json({
-      rows,
+      rows: rows.map(shapeArmazemRow),
       message: rows.length ? null : 'Voce ainda nao possui dados de Premio de Produtividade do Armazem para este periodo.'
     });
   } catch (error) {
@@ -306,7 +346,8 @@ router.get('/admin/:colaboradorId', authenticateToken, authorizeRoles('admin'), 
       [colaboradorId]
     );
     if (!rows.length) return res.status(404).json({ error: 'Produtividade do armazem nao encontrada' });
-    return res.json({ colaborador: rows[0], registros: rows });
+    const shapedRows = rows.map(shapeArmazemRow);
+    return res.json({ colaborador: shapedRows[0], registros: shapedRows });
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao abrir produtividade do armazem' });
   }
@@ -337,7 +378,7 @@ router.post('/admin/manual', authenticateToken, authorizeRoles('admin'), async (
         [...manualColumns.filter((column) => column !== 'colaborador_id').map((column) => payload[column]), existing.id]
       );
       const updated = await db.get(`${selectArmazem} WHERE p.id = ?`, [existing.id]);
-      return res.json({ message: 'Lancamento manual do armazem atualizado.', registro: updated });
+      return res.json({ message: 'Lancamento manual do armazem atualizado.', registro: shapeArmazemRow(updated) });
     }
 
     const columns = ['importacao_id', ...manualColumns];
@@ -353,7 +394,7 @@ router.post('/admin/manual', authenticateToken, authorizeRoles('admin'), async (
         `${selectArmazem} WHERE p.colaborador_id = ? AND p.competencia = ? AND p.funcao_armazem = ?`,
         [payload.colaborador_id, payload.competencia, payload.funcao_armazem]
       );
-    return res.json({ message: 'Lancamento manual do armazem criado.', registro: inserted });
+    return res.json({ message: 'Lancamento manual do armazem criado.', registro: shapeArmazemRow(inserted) });
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao salvar lancamento manual do armazem' });
   }
@@ -378,16 +419,84 @@ router.put('/admin/registro/:id', authenticateToken, authorizeRoles('admin'), as
     );
 
     const updated = await db.get(`${selectArmazem} WHERE p.id = ?`, [id]);
-    return res.json({ message: 'Produtividade do armazem atualizada manualmente.', registro: updated });
+    return res.json({ message: 'Produtividade do armazem atualizada manualmente.', registro: shapeArmazemRow(updated) });
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao atualizar produtividade do armazem' });
   }
 });
 
-router.post('/importar', authenticateToken, authorizeRoles('admin'), (req, res) => {
-  return res.status(410).json({
-    error: 'Importacao da RV do Armazem desativada. Preencha a variavel manualmente.'
-  });
+router.post('/importar', authenticateToken, authorizeRoles('admin'), uploadCsv, async (req, res) => {
+  const temporaryFile = path.join(os.tmpdir(), `yuri-ondemand-${crypto.randomUUID()}.csv`);
+  try {
+    await fs.promises.writeFile(temporaryFile, req.file.buffer);
+    const report = await importOnDemand(temporaryFile, {
+      competencia: trim(req.body.competencia) || undefined,
+      createMissing: false,
+      activateModule: false,
+      allowMissingValues: false,
+      dryRun: true,
+      originalFilename: path.basename(req.file.originalname),
+      createdBy: req.user.id
+    });
+    const staged = createPreview({
+      type: 'armazem',
+      userId: req.user.id,
+      buffer: Buffer.from(req.file.buffer),
+      originalName: path.basename(req.file.originalname),
+      competencia: report.competencia
+    });
+    return res.json({
+      status: 'aguardando_confirmacao',
+      preview_token: staged.token,
+      expira_em_minutos: staged.expiresInMinutes,
+      message: `On Demand lido: ${report.crossed.length} vínculo(s) confirmado(s) e ${report.ignored} ignorado(s). Confira antes de publicar.`,
+      report: {
+        competencia: report.competencia,
+        periodo: report.periodo,
+        linhas_csv: report.linhasCsv,
+        colaboradores_no_csv: report.colaboradoresNoCsv,
+        criados: 0,
+        atualizados: 0,
+        ignorados: report.ignored,
+        nao_encontrados: report.notFound,
+        tarefas_sem_valor: report.missingValues,
+        cruzamentos: report.crossed,
+        linhas: report.preview
+      }
+    });
+  } catch (error) {
+    console.error('ERRO IMPORTAR ON DEMAND:', error);
+    return res.status(400).json({ error: error.message || 'Erro ao importar o arquivo On Demand.' });
+  } finally {
+    await fs.promises.unlink(temporaryFile).catch(() => {});
+  }
+});
+
+router.post('/importar/aprovar', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+  const staged = consumePreview(req.body.preview_token, req.user.id, 'armazem');
+  if (!staged) return res.status(410).json({ error: 'A conferencia expirou ou ja foi utilizada. Leia o arquivo novamente.' });
+  const temporaryFile = path.join(os.tmpdir(), `yuri-ondemand-${crypto.randomUUID()}.csv`);
+  try {
+    await fs.promises.writeFile(temporaryFile, staged.buffer);
+    const report = await importOnDemand(temporaryFile, {
+      competencia: staged.competencia,
+      createMissing: false,
+      activateModule: false,
+      allowMissingValues: false,
+      originalFilename: staged.originalName,
+      createdBy: req.user.id
+    });
+    return res.json({
+      status: 'publicado',
+      message: `On Demand publicado: ${report.created} criado(s), ${report.updated} atualizado(s) e ${report.ignored} ignorado(s).`,
+      report
+    });
+  } catch (error) {
+    console.error('ERRO APROVAR ON DEMAND:', error);
+    return res.status(400).json({ error: error.message || 'Erro ao publicar o On Demand conferido.' });
+  } finally {
+    await fs.promises.unlink(temporaryFile).catch(() => {});
+  }
 });
 
 module.exports = router;
