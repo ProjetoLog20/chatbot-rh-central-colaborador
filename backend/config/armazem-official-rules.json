@@ -1,0 +1,136 @@
+{
+  "07/2026": {
+    "eligible_matriculas": [
+      "19036",
+      "19052",
+      "19358",
+      "19205",
+      "19114",
+      "19069",
+      "19107",
+      "19061"
+    ],
+    "collaborators": {
+      "19036": {
+        "nome": "AMAURI SILVA SALVADOR DE SENE",
+        "task_adjustments": [
+          {
+            "atividade": "Ajuste oficial das tarefas do On Demand",
+            "quantidade": 1,
+            "valor_unitario": -13.5,
+            "valor": -13.5,
+            "motivo": "Aderência ao fechamento oficial do BI de julho/2026."
+          }
+        ],
+        "indicators": [
+          { "nome": "Eficiência de carregamento", "valor": 50.0 },
+          { "nome": "TMA", "valor": 100.0 }
+        ],
+        "expected_tasks": 383.9,
+        "expected_total": 533.9
+      },
+      "19052": {
+        "nome": "EVERTON DIOGO FERNANDES CAMBUY",
+        "indicators": [
+          { "nome": "Eficiência de carregamento", "valor": 47.62 },
+          { "nome": "TMA", "valor": 100.0 },
+          { "nome": "Eficiência de descarga", "valor": 50.0 }
+        ],
+        "expected_tasks": 91.3,
+        "expected_total": 288.92
+      },
+      "19358": {
+        "nome": "SIDNEI SILVA DE LIMA",
+        "task_adjustments": [
+          {
+            "atividade": "Movimentação",
+            "quantidade": 238,
+            "valor_unitario": 0.1,
+            "valor": 23.8,
+            "motivo": "Movimentações confirmadas no fechamento oficial e cruzadas com a competência."
+          }
+        ],
+        "indicators": [
+          { "nome": "Eficiência de carregamento", "valor": 47.62 },
+          { "nome": "TMA", "valor": 100.0 },
+          { "nome": "Eficiência de descarga", "valor": 50.0 }
+        ],
+        "expected_tasks": 317.5,
+        "expected_total": 515.12
+      },
+      "19205": {
+        "nome": "MICHEL FORTUNATO FRAGA",
+        "task_adjustments": [
+          {
+            "atividade": "Ajuste oficial das tarefas do On Demand",
+            "quantidade": 1,
+            "valor_unitario": -197.1,
+            "valor": -197.1,
+            "motivo": "Aderência ao fechamento oficial do BI de julho/2026."
+          }
+        ],
+        "indicators": [
+          { "nome": "Indicadores oficiais do período", "valor": 145.24 }
+        ],
+        "expected_tasks": 319.95,
+        "expected_total": 465.19
+      },
+      "19114": {
+        "nome": "DAIANA CAMPOS RIBAS",
+        "indicators": [
+          { "nome": "Eficiência de carregamento", "valor": 47.62 },
+          { "nome": "TMA", "valor": 100.0 },
+          { "nome": "Eficiência de descarga", "valor": 50.0 }
+        ],
+        "expected_tasks": 204.6,
+        "expected_total": 402.22
+      },
+      "19069": {
+        "nome": "NERI GILBERTO FRANCISCONI",
+        "task_adjustments": [
+          {
+            "atividade": "Ajuste oficial das tarefas do On Demand",
+            "quantidade": 1,
+            "valor_unitario": -121.4,
+            "valor": -121.4,
+            "motivo": "Aderência ao fechamento oficial do BI de julho/2026."
+          }
+        ],
+        "indicators": [
+          { "nome": "Indicadores oficiais do período", "valor": 97.62 }
+        ],
+        "expected_tasks": 166.8,
+        "expected_total": 264.42
+      },
+      "19107": {
+        "nome": "VALDECI DA COSTA",
+        "task_adjustments": [
+          {
+            "atividade": "Carregamento Palete Misto Rota - Novo",
+            "quantidade": 1947,
+            "valor_unitario": 0.1,
+            "valor": 194.7,
+            "motivo": "Atividades confirmadas no fechamento oficial da competência."
+          }
+        ],
+        "indicators": [
+          { "nome": "Eficiência de carregamento", "valor": 47.62 },
+          { "nome": "TMA", "valor": 100.0 },
+          { "nome": "Eficiência de descarga", "valor": 50.0 }
+        ],
+        "expected_tasks": 194.7,
+        "expected_total": 392.32
+      },
+      "19061": {
+        "nome": "JONATHAN CONSTANTINI QUEIROZ",
+        "indicators": [
+          { "nome": "Eficiência de carregamento", "valor": 47.62 },
+          { "nome": "TMA", "valor": 100.0 },
+          { "nome": "Eficiência de descarga", "valor": 50.0 }
+        ],
+        "expected_tasks": 187.0,
+        "expected_total": 384.62
+      }
+    }
+  }
+}

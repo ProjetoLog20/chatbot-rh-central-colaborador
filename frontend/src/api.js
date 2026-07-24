@@ -295,10 +295,11 @@ export async function approveProdutividadeImport(previewToken) {
   });
 }
 
-export async function importOnDemandArmazemFile(file, competencia = '') {
+export async function importOnDemandArmazemFile(file, operatorFile, competencia = '') {
   const token = localStorage.getItem('token');
   const formData = new FormData();
   formData.append('file', file);
+  formData.append('operator_file', operatorFile);
   if (competencia) formData.append('competencia', competencia);
   const res = await fetch(`${API_BASE}/produtividade-armazem/importar`, {
     method: 'POST',

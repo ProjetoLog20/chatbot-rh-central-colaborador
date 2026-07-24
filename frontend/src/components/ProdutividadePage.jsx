@@ -616,7 +616,7 @@ function ImportConference({ variant, data, publishing, onApprove, onCancel }) {
     ? (report?.cruzamentos || []).reduce((sum, item) => sum + asNumber(item.valor_total_previsto), 0)
     : report?.totalPremioProdutividade || 0;
   const issues = isArmazem
-    ? [...(report?.nao_encontrados || []), ...(report?.tarefas_sem_valor || [])]
+    ? [...(report?.nao_encontrados || []), ...(report?.tarefas_sem_valor || []), ...(report?.excluidos_regra_oficial || [])]
     : [...(report?.notFound || []), ...(report?.errors || []), ...(report?.periodAlerts || [])];
 
   return (
@@ -636,13 +636,13 @@ function ImportConference({ variant, data, publishing, onApprove, onCancel }) {
       {issues.length ? <div className="prod-warning">Existem {issues.length} inconsistência(s). Linhas sem vínculo não serão publicadas.</div> : null}
       <div className="table-scroll import-conference-table">
         <table>
-          <thead><tr><th>Situação</th><th>Matrícula</th><th>Nome</th><th>Função</th><th>Competência</th>{isArmazem ? <th>Tarefas/Pontos</th> : <><th>Caixas</th><th>Entregas</th><th>Mapas</th></>}<th>Valor</th></tr></thead>
+          <thead><tr><th>Situação</th><th>Matrícula</th><th>Nome</th><th>Função</th><th>Competência</th>{isArmazem ? <><th>Tarefas/Pontos</th><th>Valor tarefas</th><th>Indicadores</th><th>Ajustes</th></> : <><th>Caixas</th><th>Entregas</th><th>Mapas</th></>}<th>Valor final</th></tr></thead>
           <tbody>
             {rows.map((row, index) => (
               <tr className={row.vinculado ? '' : 'conference-row-error'} key={`${row.matricula || row.nome_completo}-${index}`}>
                 <td><span className={`conference-status ${row.vinculado ? 'ok' : 'error'}`}>{row.vinculado ? 'Pronto' : 'Ignorado'}</span></td>
                 <td>{row.matricula || '-'}</td><td>{row.nome_completo}</td><td>{formatArmazemFuncao(row.funcao_armazem || row.funcao_rv)}</td><td>{row.competencia}</td>
-                {isArmazem ? <td>{formatNumber(row.pontos)}</td> : <><td>{formatNumber(row.caixas)}</td><td>{formatNumber(row.entregas)}</td><td>{formatNumber(row.mapas)}</td></>}
+                {isArmazem ? <><td>{formatNumber(row.pontos)}</td><td>{formatMoney(row.valor_tarefas)}</td><td>{formatMoney(row.valor_indicadores)}</td><td>{row.ajustes?.length ? row.ajustes.map((item) => `${item.atividade}: ${formatMoney(item.total)}`).join('; ') : '-'}</td></> : <><td>{formatNumber(row.caixas)}</td><td>{formatNumber(row.entregas)}</td><td>{formatNumber(row.mapas)}</td></>}
                 <td>{formatMoney(row.valor_total_previsto)}</td>
               </tr>
             ))}
@@ -838,6 +838,8 @@ function AdminArmazemPanel() {
   const [importReport, setImportReport] = useState(null);
   const [pendingImport, setPendingImport] = useState(null);
   const [publishingImport, setPublishingImport] = useState(false);
+  const [onDemandFile, setOnDemandFile] = useState(null);
+  const [operatorFile, setOperatorFile] = useState(null);
 
   const options = useMemo(() => {
     const uniq = (key) => [...new Set(rows.map((row) => row[key]).filter(Boolean))].sort();
@@ -920,15 +922,18 @@ function AdminArmazemPanel() {
     }
   }
 
-  async function importOnDemand(files) {
-    if (!files?.length) return;
+  async function importOnDemand() {
+    if (!onDemandFile || !operatorFile) {
+      setMessage('Selecione o On Demand e o relatório Monitorar Tarefas.');
+      return;
+    }
     setImporting(true);
     setImportReport(null);
     try {
-      const result = await importOnDemandArmazemFile(files[0]);
+      const result = await importOnDemandArmazemFile(onDemandFile, operatorFile);
       setImportReport(result.report || null);
       setPendingImport(result);
-      setMessage(result.message || 'Arquivo On Demand importado.');
+      setMessage(result.message || 'Arquivos lidos e cruzados. Confira antes de publicar.');
     } catch (err) {
       setMessage(err.error || 'Erro ao importar o arquivo On Demand.');
     } finally {
@@ -951,9 +956,14 @@ function AdminArmazemPanel() {
     <>
       <div className="prod-actions">
         <label className={`prod-file-action ${importing ? 'disabled' : ''}`}>
-          {importing ? 'Processando On Demand...' : 'Importar On Demand (.csv)'}
-          <input type="file" accept=".csv,text/csv" disabled={importing} onChange={(event) => importOnDemand(event.target.files)} />
+          {onDemandFile ? `On Demand: ${onDemandFile.name}` : 'Selecionar On Demand (.csv)'}
+          <input type="file" accept=".csv,text/csv" disabled={importing} onChange={(event) => setOnDemandFile(event.target.files?.[0] || null)} />
         </label>
+        <label className={`prod-file-action ${importing ? 'disabled' : ''}`}>
+          {operatorFile ? `Atividades: ${operatorFile.name}` : 'Selecionar Monitorar Tarefas (.csv)'}
+          <input type="file" accept=".csv,text/csv" disabled={importing} onChange={(event) => setOperatorFile(event.target.files?.[0] || null)} />
+        </label>
+        <button type="button" disabled={importing || !onDemandFile || !operatorFile} onClick={importOnDemand}>{importing ? 'Cruzando arquivos...' : 'Conferir RV completa'}</button>
         <button type="button" onClick={() => { setDetail(null); setEditing(false); setCreating(true); }}>Novo lançamento manual</button>
         <button onClick={() => exportAdminProdutividadeArmazem(filters)}>Exportar relatório</button>
       </div>

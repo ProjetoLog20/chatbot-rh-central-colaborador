@@ -4,7 +4,13 @@ const assert = require('node:assert/strict');
 process.env.DATABASE_URL = '';
 process.env.NODE_ENV = 'test';
 
-const { buildRows, canonicalActivity, applyCollaboratorRoleRules } = require('../scripts/importOnDemandArmazemCsv');
+const {
+  buildRows,
+  canonicalActivity,
+  applyCollaboratorRoleRules,
+  buildOperatorActivities,
+  applyCombinedRules
+} = require('../scripts/importOnDemandArmazemCsv');
 
 test('leitor On Demand reconhece as tarefas e aplica os valores cadastrados no Yuri', () => {
   const source = [
@@ -48,4 +54,58 @@ test('operador recebe regra de R$ 0,10 por tarefa depois do cruzamento com o cad
   assert.equal(row.funcao_armazem, 'Operador de Empilhadeira');
   assert.equal(row.valor_total_previsto, 1.5);
   assert.deepEqual(JSON.parse(row.dados_originais_json).atividades.map((task) => task.valuePerUnit), [0.1, 0.1]);
+});
+
+test('relatorio Monitorar Tarefas usa Data de Criacao e agrupa os tipos do operador', () => {
+  const result = buildOperatorActivities([
+    { usuario: 'OPERADOR TESTE', status: 'Completa', tipo: 'Retorno de Rota (Descarregamento)', data_de_criacao: '21/06/2026 08:00' },
+    { usuario: 'OPERADOR TESTE', status: 'Completa', tipo: 'Retorno de Rota (Baixar Palete)', data_de_criacao: '20/07/2026 08:00' },
+    { usuario: 'OPERADOR TESTE', status: 'Completa', tipo: 'Carregamento AG - Novo', data_de_criacao: '20/07/2026 09:00' },
+    { usuario: 'OPERADOR TESTE', status: 'Completa', tipo: 'Descarregamento', data_de_criacao: '21/07/2026 08:00' }
+  ], '07/2026');
+
+  assert.equal(result.validRows, 3);
+  assert.equal(result.users, 1);
+  assert.deepEqual(result.buckets.get('operador teste').atividades, [
+    { atividade: 'Descarregamento', quantidade: 2, valuePerUnit: 0.1, total: 0.2 },
+    { atividade: 'Carregamento AG - Novo', quantidade: 1, valuePerUnit: 0.1, total: 0.1 }
+  ]);
+});
+
+test('calculo combinado separa tarefas, ajustes e indicadores e audita o total esperado', () => {
+  const row = buildRows([
+    { usuario: 'OPERADOR TESTE', atividade: 'Retrabalho/PTL', observacao: '10', finalizacao: '01/07/2026 08:00', status_tarefa: 'Finalizado' }
+  ], { competencia: '07/2026' }).rows[0];
+  applyCollaboratorRoleRules(row, { matricula: '123', cargo: 'Operador de Empilhadeira' });
+
+  const operatorContext = buildOperatorActivities([
+    { usuario: 'OPERADOR TESTE', status: 'Completa', tipo: 'Descarregamento', data_de_criacao: '01/07/2026 08:00' }
+  ], '07/2026');
+  const officialRules = {
+    collaborators: {
+      123: {
+        task_adjustments: [{ atividade: 'Movimentação', quantidade: 2, valor_unitario: 0.1, valor: 0.2, motivo: 'Conferência' }],
+        indicators: [{ nome: 'TMA', valor: 1.5 }],
+        expected_total: 2.8
+      }
+    }
+  };
+
+  const totals = applyCombinedRules(row, { matricula: '123' }, operatorContext, officialRules, null);
+  assert.deepEqual(totals, {
+    tasksTotal: 1.3,
+    indicatorsTotal: 1.5,
+    total: 2.8,
+    expectedTotal: 2.8,
+    difference: 0,
+    adjustments: [{
+      atividade: 'Movimentação',
+      quantidade: 2,
+      valuePerUnit: 0.1,
+      total: 0.2,
+      origem: 'ajuste_oficial',
+      motivo: 'Conferência'
+    }]
+  });
+  assert.equal(row.status_auditoria, 'ok');
 });

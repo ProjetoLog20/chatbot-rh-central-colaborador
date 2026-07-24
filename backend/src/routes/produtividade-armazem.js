@@ -20,10 +20,16 @@ const upload = multer({
 });
 
 function uploadCsv(req, res, next) {
-  upload.single('file')(req, res, (error) => {
+  upload.fields([
+    { name: 'file', maxCount: 1 },
+    { name: 'operator_file', maxCount: 1 }
+  ])(req, res, (error) => {
     if (error?.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: 'O CSV excede o limite de 8 MB.' });
     if (error) return res.status(400).json({ error: 'Erro ao receber o arquivo On Demand.' });
+    req.file = req.files?.file?.[0];
+    req.operatorFile = req.files?.operator_file?.[0];
     if (!req.file) return res.status(400).json({ error: 'Envie um arquivo On Demand no formato CSV.' });
+    if (!req.operatorFile) return res.status(400).json({ error: 'Envie também o relatório Monitorar Tarefas no formato CSV.' });
     next();
   });
 }
@@ -427,9 +433,12 @@ router.put('/admin/registro/:id', authenticateToken, authorizeRoles('admin'), as
 
 router.post('/importar', authenticateToken, authorizeRoles('admin'), uploadCsv, async (req, res) => {
   const temporaryFile = path.join(os.tmpdir(), `yuri-ondemand-${crypto.randomUUID()}.csv`);
+  const temporaryOperatorFile = path.join(os.tmpdir(), `yuri-operadores-${crypto.randomUUID()}.csv`);
   try {
     await fs.promises.writeFile(temporaryFile, req.file.buffer);
+    await fs.promises.writeFile(temporaryOperatorFile, req.operatorFile.buffer);
     const report = await importOnDemand(temporaryFile, {
+      operatorFile: temporaryOperatorFile,
       competencia: trim(req.body.competencia) || undefined,
       createMissing: false,
       activateModule: false,
@@ -442,23 +451,29 @@ router.post('/importar', authenticateToken, authorizeRoles('admin'), uploadCsv, 
       type: 'armazem',
       userId: req.user.id,
       buffer: Buffer.from(req.file.buffer),
+      operatorBuffer: Buffer.from(req.operatorFile.buffer),
       originalName: path.basename(req.file.originalname),
+      operatorOriginalName: path.basename(req.operatorFile.originalname),
       competencia: report.competencia
     });
     return res.json({
       status: 'aguardando_confirmacao',
       preview_token: staged.token,
       expira_em_minutos: staged.expiresInMinutes,
-      message: `On Demand lido: ${report.crossed.length} vínculo(s) confirmado(s) e ${report.ignored} ignorado(s). Confira antes de publicar.`,
+      message: `RV combinada lida: ${report.crossed.length} vínculo(s) confirmado(s) e ${report.ignored} ignorado(s). Confira tarefas, indicadores e ajustes antes de publicar.`,
       report: {
         competencia: report.competencia,
         periodo: report.periodo,
         linhas_csv: report.linhasCsv,
+        linhas_operadores_csv: report.linhasOperadoresCsv,
+        linhas_operadores_validas: report.linhasOperadoresValidas,
+        usuarios_operadores: report.usuariosOperadores,
         colaboradores_no_csv: report.colaboradoresNoCsv,
         criados: 0,
         atualizados: 0,
         ignorados: report.ignored,
         nao_encontrados: report.notFound,
+        excluidos_regra_oficial: report.excludedByOfficialRules,
         tarefas_sem_valor: report.missingValues,
         cruzamentos: report.crossed,
         linhas: report.preview
@@ -469,6 +484,7 @@ router.post('/importar', authenticateToken, authorizeRoles('admin'), uploadCsv, 
     return res.status(400).json({ error: error.message || 'Erro ao importar o arquivo On Demand.' });
   } finally {
     await fs.promises.unlink(temporaryFile).catch(() => {});
+    await fs.promises.unlink(temporaryOperatorFile).catch(() => {});
   }
 });
 
@@ -476,9 +492,12 @@ router.post('/importar/aprovar', authenticateToken, authorizeRoles('admin'), asy
   const staged = consumePreview(req.body.preview_token, req.user.id, 'armazem');
   if (!staged) return res.status(410).json({ error: 'A conferencia expirou ou ja foi utilizada. Leia o arquivo novamente.' });
   const temporaryFile = path.join(os.tmpdir(), `yuri-ondemand-${crypto.randomUUID()}.csv`);
+  const temporaryOperatorFile = path.join(os.tmpdir(), `yuri-operadores-${crypto.randomUUID()}.csv`);
   try {
     await fs.promises.writeFile(temporaryFile, staged.buffer);
+    await fs.promises.writeFile(temporaryOperatorFile, staged.operatorBuffer);
     const report = await importOnDemand(temporaryFile, {
+      operatorFile: temporaryOperatorFile,
       competencia: staged.competencia,
       createMissing: false,
       activateModule: false,
@@ -488,7 +507,7 @@ router.post('/importar/aprovar', authenticateToken, authorizeRoles('admin'), asy
     });
     return res.json({
       status: 'publicado',
-      message: `On Demand publicado: ${report.created} criado(s), ${report.updated} atualizado(s) e ${report.ignored} ignorado(s).`,
+      message: `RV do armazém publicada: ${report.created} criado(s), ${report.updated} atualizado(s) e ${report.ignored} ignorado(s).`,
       report
     });
   } catch (error) {
@@ -496,6 +515,7 @@ router.post('/importar/aprovar', authenticateToken, authorizeRoles('admin'), asy
     return res.status(400).json({ error: error.message || 'Erro ao publicar o On Demand conferido.' });
   } finally {
     await fs.promises.unlink(temporaryFile).catch(() => {});
+    await fs.promises.unlink(temporaryOperatorFile).catch(() => {});
   }
 });
 

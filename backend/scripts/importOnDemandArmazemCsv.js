@@ -6,6 +6,7 @@ const bcrypt = require('bcrypt');
 const { parse } = require('csv-parse/sync');
 const db = require('../src/db');
 const DEFAULT_TASK_VALUES_FILE = path.join(__dirname, '../config/armazem-task-values.json');
+const DEFAULT_OFFICIAL_RULES_FILE = path.join(__dirname, '../config/armazem-official-rules.json');
 
 const armazemColumns = [
   'importacao_id',
@@ -49,6 +50,8 @@ function parseArgs(argv) {
     if (arg === '--file') args.file = argv[++index];
     else if (arg === '--competencia') args.competencia = argv[++index];
     else if (arg === '--task-values') args.taskValues = argv[++index];
+    else if (arg === '--operator-file') args.operatorFile = argv[++index];
+    else if (arg === '--official-rules') args.officialRules = argv[++index];
     else if (arg === '--default-value') args.defaultValue = Number(argv[++index]);
     else if (arg === '--dry-run') args.dryRun = true;
     else if (arg === '--create-missing') args.createMissing = true;
@@ -151,6 +154,200 @@ function readTaskValues(file) {
     ? raw.map((item) => [item.task_name || item.atividade || item.name, item.value ?? item.valor])
     : Object.entries(raw);
   return Object.fromEntries(entries.map(([key, value]) => [normalizeName(canonicalActivity(key)), numberValue(value)]));
+}
+
+function readOfficialRules(file, competencia) {
+  const source = file ? path.resolve(file) : DEFAULT_OFFICIAL_RULES_FILE;
+  if (!fs.existsSync(source)) return { eligibleMatriculas: [], collaborators: {} };
+  const raw = JSON.parse(fs.readFileSync(source, 'utf8'));
+  const rules = raw[competencia] || {};
+  return {
+    eligibleMatriculas: (rules.eligible_matriculas || []).map(trim),
+    collaborators: rules.collaborators || {}
+  };
+}
+
+function canonicalOperatorActivity(value) {
+  const text = normalizeName(value);
+  if (text.includes('retorno de rota') && (text.includes('descarregamento') || text.includes('baixar palete'))) {
+    return 'Descarregamento';
+  }
+  if (text === 'descarregamento') return 'Descarregamento';
+  if (text.includes('carregamento ag')) return 'Carregamento AG - Novo';
+  if (text.includes('palete misto')) return 'Carregamento Palete Misto Rota - Novo';
+  if (text.includes('palete fechado')) return 'Carregamento Palete Fechado Rota - Novo';
+  if (text.includes('movimentacao')) return 'Movimentação';
+  return trim(value) || 'Atividade operacional';
+}
+
+function buildOperatorActivities(csvRows, competencia) {
+  const period = officialPeriodForCompetencia(competencia);
+  const buckets = new Map();
+  let validRows = 0;
+
+  for (const row of csvRows) {
+    const date = parseDate(row.data_de_criacao);
+    if (!date || date < period.inicio || date > period.fim) continue;
+    if (normalizeName(row.status) !== 'completa') continue;
+    const usuario = trim(row.usuario).toUpperCase();
+    if (!usuario) continue;
+    validRows += 1;
+    const activity = canonicalOperatorActivity(row.tipo);
+    const bucket = buckets.get(normalizeName(usuario)) || { usuario, atividades: new Map(), registros: 0 };
+    const item = bucket.atividades.get(activity) || { atividade: activity, quantidade: 0, valuePerUnit: 0.1, total: 0 };
+    item.quantidade += 1;
+    item.total = Number((item.quantidade * item.valuePerUnit).toFixed(2));
+    bucket.atividades.set(activity, item);
+    bucket.registros += 1;
+    buckets.set(normalizeName(usuario), bucket);
+  }
+
+  return {
+    period,
+    validRows,
+    users: buckets.size,
+    buckets: new Map([...buckets].map(([key, bucket]) => [
+      key,
+      { ...bucket, atividades: [...bucket.atividades.values()] }
+    ]))
+  };
+}
+
+function emptyCombinedRow(nome, competencia, period) {
+  return {
+    sourceIndex: 0,
+    competencia,
+    periodo_inicio: period.inicio,
+    periodo_fim: period.fim,
+    matricula: '',
+    nome_completo: nome,
+    cpf: '',
+    funcao_armazem: 'Operador de Empilhadeira',
+    cargo: 'Operador de Empilhadeira',
+    setor: 'Armazem',
+    tipo_colaborador: 'Interno',
+    perfil: 'colaborador',
+    usuario_wms: nome,
+    codigo_operacional: '',
+    pontos: 0,
+    faixa: 'Sem premio',
+    rv_antiga: 0,
+    rv_nova: 0,
+    erros: 0,
+    valor_total_previsto: 0,
+    indicador_1: '',
+    indicador_2: '',
+    indicador_3: '',
+    status_produtividade: 'Sem premio',
+    origem_calculo: 'rv_armazem_combinada',
+    status_auditoria: 'ok',
+    metodo_cruzamento: 'nome_usuario_relatorio',
+    confianca_cruzamento: 0.8,
+    observacao_cruzamento: '',
+    mensagem_rh: '',
+    dados_originais_json: JSON.stringify({ usuario: nome, atividades: [], registros: 0 })
+  };
+}
+
+function ensureCombinedRows(context, operatorContext, officialRules) {
+  const byName = new Map(context.rows.map((row) => [normalizeName(row.nome_completo), row]));
+  const officialNames = new Set(
+    Object.values(officialRules.collaborators)
+      .map((rule) => normalizeName(rule.nome))
+      .filter(Boolean)
+  );
+  if (operatorContext) {
+    for (const bucket of operatorContext.buckets.values()) {
+      if (officialRules.eligibleMatriculas.length && !officialNames.has(normalizeName(bucket.usuario))) continue;
+      if (!byName.has(normalizeName(bucket.usuario))) {
+        const row = emptyCombinedRow(bucket.usuario, context.competencia, context.period);
+        context.rows.push(row);
+        byName.set(normalizeName(bucket.usuario), row);
+      }
+    }
+  }
+  for (const rule of Object.values(officialRules.collaborators)) {
+    if (!rule.nome || byName.has(normalizeName(rule.nome))) continue;
+    const row = emptyCombinedRow(rule.nome, context.competencia, context.period);
+    context.rows.push(row);
+    byName.set(normalizeName(rule.nome), row);
+  }
+}
+
+function parseOriginal(row) {
+  try {
+    return JSON.parse(row.dados_originais_json || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function applyCombinedRules(row, colaborador, operatorContext, officialRules, existing) {
+  const matricula = trim(colaborador.matricula);
+  const rule = officialRules.collaborators[matricula] || {};
+  const original = parseOriginal(row);
+  const onDemandActivities = Array.isArray(original.atividades) ? original.atividades : [];
+  const operatorBucket = operatorContext?.buckets.get(normalizeName(row.nome_completo));
+  const operatorActivities = operatorBucket?.atividades || [];
+  const adjustments = (rule.task_adjustments || []).map((item) => ({
+    atividade: trim(item.atividade) || 'Ajuste oficial',
+    quantidade: numberValue(item.quantidade),
+    valuePerUnit: numberValue(item.valor_unitario),
+    total: Number(numberValue(item.valor).toFixed(2)),
+    origem: 'ajuste_oficial',
+    motivo: trim(item.motivo)
+  }));
+  const activities = [
+    ...onDemandActivities.map((item) => ({ ...item, origem: item.origem || 'on_demand' })),
+    ...operatorActivities.map((item) => ({ ...item, origem: 'relatorio_monitorar_tarefas' })),
+    ...adjustments
+  ];
+
+  let indicators = Array.isArray(rule.indicators) ? rule.indicators : [];
+  if (!indicators.length && existing) {
+    const previous = parseOriginal(existing);
+    if (Array.isArray(previous.indicators)) indicators = previous.indicators;
+  }
+  indicators = indicators.map((item) => ({
+    nome: trim(item.nome || item.type),
+    valor: Number(numberValue(item.valor ?? item.value).toFixed(2))
+  }));
+
+  const tasksTotal = Number(activities.reduce((sum, item) => sum + numberValue(item.total), 0).toFixed(2));
+  const indicatorsTotal = Number(indicators.reduce((sum, item) => sum + item.valor, 0).toFixed(2));
+  const total = Number((tasksTotal + indicatorsTotal).toFixed(2));
+  const expectedTotal = rule.expected_total === undefined ? null : numberValue(rule.expected_total);
+  const difference = expectedTotal === null ? 0 : Number((total - expectedTotal).toFixed(2));
+  const taskPoints = activities.reduce((sum, item) => sum + Math.max(numberValue(item.quantidade), 0), 0);
+
+  row.pontos = Number(taskPoints.toFixed(2));
+  row.rv_nova = total;
+  row.valor_total_previsto = total;
+  row.faixa = total > 0 ? 'Elegivel' : 'Sem premio';
+  row.status_produtividade = total > 0 ? 'Elegivel' : 'Sem premio';
+  row.indicador_1 = indicators[0] ? `${indicators[0].nome}: R$ ${indicators[0].valor.toFixed(2)}` : '';
+  row.indicador_2 = indicators[1] ? `${indicators[1].nome}: R$ ${indicators[1].valor.toFixed(2)}` : '';
+  row.indicador_3 = indicators[2] ? `${indicators[2].nome}: R$ ${indicators[2].valor.toFixed(2)}` : '';
+  row.origem_calculo = 'on_demand+monitorar_tarefas+indicadores_yuri';
+  row.status_auditoria = Math.abs(difference) < 0.01 ? 'ok' : 'divergencia_bi';
+  row.observacao_cruzamento = Math.abs(difference) < 0.01
+    ? 'Cruzamento conferido com o fechamento oficial.'
+    : `Diferença de R$ ${difference.toFixed(2)} em relação ao fechamento oficial.`;
+  row.mensagem_rh = `RV do armazém: tarefas R$ ${tasksTotal.toFixed(2)} + indicadores R$ ${indicatorsTotal.toFixed(2)}.`;
+  row.dados_originais_json = JSON.stringify({
+    ...original,
+    atividades: activities,
+    registros_operadores: operatorBucket?.registros || 0,
+    tarefasTotal: tasksTotal,
+    indicatorsTotal,
+    indicators,
+    adjustments,
+    expectedTasks: rule.expected_tasks ?? null,
+    expectedTotal,
+    difference,
+    fontes: ['on_demand', ...(operatorContext ? ['relatorio_monitorar_tarefas'] : []), 'indicadores_yuri']
+  });
+  return { tasksTotal, indicatorsTotal, total, expectedTotal, difference, adjustments };
 }
 
 function buildRows(csvRows, options) {
@@ -323,6 +520,16 @@ async function findColaborador(row) {
   return null;
 }
 
+async function findExistingArmazem(colaboradorId, competencia) {
+  return db.get(
+    `SELECT * FROM produtividade_armazem_colaboradores
+     WHERE colaborador_id = ? AND competencia = ?
+     ORDER BY updated_at DESC, id DESC
+     LIMIT 1`,
+    [colaboradorId, competencia]
+  );
+}
+
 function applyCollaboratorRoleRules(row, colaborador) {
   const role = normalizeName(`${colaborador.cargo || ''} ${colaborador.tipo_colaborador || ''}`);
   if (role.includes('operador') || role.includes('empilhadeira')) {
@@ -443,12 +650,22 @@ async function upsertArmazem(row, colaborador, importacaoId) {
 async function importOnDemand(file, options = {}) {
   const csvRows = readCsv(file);
   const context = buildRows(csvRows, options);
+  const officialRules = readOfficialRules(options.officialRules, context.competencia);
+  const operatorCsvRows = options.operatorFile ? readCsv(options.operatorFile) : [];
+  const operatorContext = options.operatorFile
+    ? buildOperatorActivities(operatorCsvRows, context.competencia)
+    : null;
+  ensureCombinedRows(context, operatorContext, officialRules);
   const report = {
     file,
+    operatorFile: options.operatorFile || null,
     competencia: context.competencia,
     periodo: context.period,
     linhasCsv: csvRows.length,
     linhasValidasPeriodo: context.validRows.length,
+    linhasOperadoresCsv: operatorCsvRows.length,
+    linhasOperadoresValidas: operatorContext?.validRows || 0,
+    usuariosOperadores: operatorContext?.users || 0,
     colaboradoresNoCsv: context.rows.length,
     missingValues: context.missingValues,
     createdCollaborators: 0,
@@ -456,6 +673,7 @@ async function importOnDemand(file, options = {}) {
     updated: 0,
     ignored: 0,
     notFound: [],
+    excludedByOfficialRules: [],
     crossed: [],
     dryRun: Boolean(options.dryRun)
   };
@@ -472,7 +690,30 @@ async function importOnDemand(file, options = {}) {
         report.ignored += 1;
         report.notFound.push(row.nome_completo);
       } else {
+        const eligible = !officialRules.eligibleMatriculas.length
+          || officialRules.eligibleMatriculas.includes(trim(match.colaborador.matricula));
+        if (!eligible) {
+          report.ignored += 1;
+          report.excludedByOfficialRules.push({
+            matricula: match.colaborador.matricula,
+            nome_completo: match.colaborador.nome_completo,
+            motivo: 'Não consta no fechamento oficial desta competência.'
+          });
+          report.preview.push({
+            nome_completo: match.colaborador.nome_completo,
+            pontos: row.pontos,
+            valor_total_previsto: 0,
+            funcao_armazem: row.funcao_armazem,
+            vinculado: false,
+            matricula: match.colaborador.matricula,
+            metodo_cruzamento: match.metodo,
+            motivo_ignorado: 'Não consta no fechamento oficial desta competência.'
+          });
+          continue;
+        }
         applyCollaboratorRoleRules(row, match.colaborador);
+        const existing = await findExistingArmazem(match.colaborador.id, context.competencia);
+        const totals = applyCombinedRules(row, match.colaborador, operatorContext, officialRules, existing);
         report.crossed.push({
           colaborador_id: match.colaborador.id,
           matricula: match.colaborador.matricula,
@@ -480,7 +721,12 @@ async function importOnDemand(file, options = {}) {
           usuario_on_demand: row.nome_completo,
           metodo: match.metodo,
           confianca: match.confianca,
-          valor_total_previsto: row.valor_total_previsto
+          valor_tarefas: totals.tasksTotal,
+          valor_indicadores: totals.indicatorsTotal,
+          ajustes: totals.adjustments,
+          valor_total_previsto: row.valor_total_previsto,
+          valor_esperado: totals.expectedTotal,
+          diferenca: totals.difference
         });
       }
       report.preview.push({
@@ -493,7 +739,10 @@ async function importOnDemand(file, options = {}) {
         metodo_cruzamento: match?.metodo || null,
         indicador_1: row.indicador_1,
         indicador_2: row.indicador_2,
-        indicador_3: row.indicador_3
+        indicador_3: row.indicador_3,
+        valor_tarefas: match ? parseOriginal(row).tarefasTotal : 0,
+        valor_indicadores: match ? parseOriginal(row).indicatorsTotal : 0,
+        ajustes: match ? parseOriginal(row).adjustments : []
       });
     }
     return report;
@@ -515,11 +764,24 @@ async function importOnDemand(file, options = {}) {
       report.notFound.push(row.nome_completo);
       continue;
     }
+    const eligible = !officialRules.eligibleMatriculas.length
+      || officialRules.eligibleMatriculas.includes(trim(match.colaborador.matricula));
+    if (!eligible) {
+      report.ignored += 1;
+      report.excludedByOfficialRules.push({
+        matricula: match.colaborador.matricula,
+        nome_completo: match.colaborador.nome_completo,
+        motivo: 'Não consta no fechamento oficial desta competência.'
+      });
+      continue;
+    }
     row.metodo_cruzamento = match.metodo;
     row.confianca_cruzamento = match.confianca;
     row.status_auditoria = context.missingValues.length ? 'revisar_valores_atividade' : 'ok';
     row.observacao_cruzamento = `Cruzamento ${match.metodo} com o cadastro ativo do Yuri.`;
     applyCollaboratorRoleRules(row, match.colaborador);
+    const existing = await findExistingArmazem(match.colaborador.id, context.competencia);
+    const totals = applyCombinedRules(row, match.colaborador, operatorContext, officialRules, existing);
     const result = await upsertArmazem(row, match.colaborador, importacaoId);
     if (result === 'created') report.created += 1;
     if (result === 'updated') report.updated += 1;
@@ -530,8 +792,24 @@ async function importOnDemand(file, options = {}) {
       usuario_on_demand: row.nome_completo,
       metodo: match.metodo,
       confianca: match.confianca,
-      valor_total_previsto: row.valor_total_previsto
+      valor_tarefas: totals.tasksTotal,
+      valor_indicadores: totals.indicatorsTotal,
+      ajustes: totals.adjustments,
+      valor_total_previsto: row.valor_total_previsto,
+      valor_esperado: totals.expectedTotal,
+      diferenca: totals.difference
     });
+  }
+
+  if (officialRules.eligibleMatriculas.length) {
+    const includedIds = report.crossed.map((item) => item.colaborador_id);
+    const placeholders = includedIds.map(() => '?').join(', ');
+    const exclusionSql = placeholders ? `AND colaborador_id NOT IN (${placeholders})` : '';
+    await db.run(
+      `DELETE FROM produtividade_armazem_colaboradores
+       WHERE competencia = ? AND origem_calculo = 'on_demand_csv' ${exclusionSql}`,
+      [context.competencia, ...includedIds]
+    );
   }
 
   await db.run(
@@ -545,7 +823,14 @@ async function importOnDemand(file, options = {}) {
       report.ignored,
       Number(report.crossed.reduce((sum, item) => sum + numberValue(item.valor_total_previsto), 0).toFixed(2)),
       Number(report.crossed.reduce((sum, item) => sum + numberValue(item.valor_total_previsto), 0).toFixed(2)),
-      JSON.stringify({ origem: 'on_demand_csv', missing_values: report.missingValues, not_found: report.notFound, crossed: report.crossed }),
+      JSON.stringify({
+        origem: 'rv_armazem_combinada',
+        missing_values: report.missingValues,
+        not_found: report.notFound,
+        excluded_by_official_rules: report.excludedByOfficialRules,
+        operator_rows: report.linhasOperadoresValidas,
+        crossed: report.crossed
+      }),
       importacaoId
     ]
   );
@@ -563,7 +848,7 @@ async function importOnDemand(file, options = {}) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  if (!args.file) throw new Error('Uso: npm run import:ondemand -- --file caminho.csv --competencia MM/AAAA [--task-values valores.json] [--create-missing] [--activate-module] [--dry-run]');
+  if (!args.file) throw new Error('Uso: npm run import:ondemand -- --file on-demand.csv [--operator-file atividades.csv] --competencia MM/AAAA [--task-values valores.json] [--create-missing] [--activate-module] [--dry-run]');
   const report = await importOnDemand(path.resolve(args.file), args);
   console.log(JSON.stringify(report, null, 2));
 }
@@ -582,5 +867,8 @@ module.exports = {
   buildRows,
   canonicalActivity,
   applyCollaboratorRoleRules,
+  buildOperatorActivities,
+  applyCombinedRules,
+  readOfficialRules,
   officialPeriodForCompetencia
 };
