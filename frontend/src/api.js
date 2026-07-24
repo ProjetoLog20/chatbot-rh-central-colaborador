@@ -299,7 +299,6 @@ export async function importOnDemandArmazemFile(file, competencia = '') {
   const token = localStorage.getItem('token');
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('tipo', tipo);
   if (competencia) formData.append('competencia', competencia);
   const res = await fetch(`${API_BASE}/produtividade-armazem/importar`, {
     method: 'POST',
