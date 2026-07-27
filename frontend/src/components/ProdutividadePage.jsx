@@ -923,8 +923,8 @@ function AdminArmazemPanel() {
   }
 
   async function importOnDemand() {
-    if (!onDemandFile || !operatorFile) {
-      setMessage('Selecione o On Demand e o relatório Monitorar Tarefas.');
+    if (!onDemandFile) {
+      setMessage('Selecione o relatório de produtividade do armazém.');
       return;
     }
     setImporting(true);
@@ -956,14 +956,14 @@ function AdminArmazemPanel() {
     <>
       <div className="prod-actions">
         <label className={`prod-file-action ${importing ? 'disabled' : ''}`}>
-          {onDemandFile ? `On Demand: ${onDemandFile.name}` : 'Selecionar On Demand (.csv)'}
+          {onDemandFile ? `Arquivo principal: ${onDemandFile.name}` : 'Selecionar Separação WMS ou On Demand (.csv)'}
           <input type="file" accept=".csv,text/csv" disabled={importing} onChange={(event) => setOnDemandFile(event.target.files?.[0] || null)} />
         </label>
         <label className={`prod-file-action ${importing ? 'disabled' : ''}`}>
-          {operatorFile ? `Atividades: ${operatorFile.name}` : 'Selecionar Monitorar Tarefas (.csv)'}
+          {operatorFile ? `Atividades: ${operatorFile.name}` : 'Monitorar Tarefas — opcional (.csv)'}
           <input type="file" accept=".csv,text/csv" disabled={importing} onChange={(event) => setOperatorFile(event.target.files?.[0] || null)} />
         </label>
-        <button type="button" disabled={importing || !onDemandFile || !operatorFile} onClick={importOnDemand}>{importing ? 'Cruzando arquivos...' : 'Conferir RV completa'}</button>
+        <button type="button" disabled={importing || !onDemandFile} onClick={importOnDemand}>{importing ? 'Calculando RV...' : 'Conferir RV antes de publicar'}</button>
         <button type="button" onClick={() => { setDetail(null); setEditing(false); setCreating(true); }}>Novo lançamento manual</button>
         <button onClick={() => exportAdminProdutividadeArmazem(filters)}>Exportar relatório</button>
       </div>

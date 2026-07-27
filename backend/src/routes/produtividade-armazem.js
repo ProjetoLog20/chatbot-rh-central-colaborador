@@ -28,8 +28,7 @@ function uploadCsv(req, res, next) {
     if (error) return res.status(400).json({ error: 'Erro ao receber o arquivo On Demand.' });
     req.file = req.files?.file?.[0];
     req.operatorFile = req.files?.operator_file?.[0];
-    if (!req.file) return res.status(400).json({ error: 'Envie um arquivo On Demand no formato CSV.' });
-    if (!req.operatorFile) return res.status(400).json({ error: 'Envie também o relatório Monitorar Tarefas no formato CSV.' });
+    if (!req.file) return res.status(400).json({ error: 'Envie o arquivo de produtividade do armazém no formato CSV.' });
     next();
   });
 }
@@ -436,9 +435,9 @@ router.post('/importar', authenticateToken, authorizeRoles('admin'), uploadCsv, 
   const temporaryOperatorFile = path.join(os.tmpdir(), `yuri-operadores-${crypto.randomUUID()}.csv`);
   try {
     await fs.promises.writeFile(temporaryFile, req.file.buffer);
-    await fs.promises.writeFile(temporaryOperatorFile, req.operatorFile.buffer);
+    if (req.operatorFile) await fs.promises.writeFile(temporaryOperatorFile, req.operatorFile.buffer);
     const report = await importOnDemand(temporaryFile, {
-      operatorFile: temporaryOperatorFile,
+      operatorFile: req.operatorFile ? temporaryOperatorFile : undefined,
       competencia: trim(req.body.competencia) || undefined,
       createMissing: false,
       activateModule: false,
@@ -451,9 +450,9 @@ router.post('/importar', authenticateToken, authorizeRoles('admin'), uploadCsv, 
       type: 'armazem',
       userId: req.user.id,
       buffer: Buffer.from(req.file.buffer),
-      operatorBuffer: Buffer.from(req.operatorFile.buffer),
+      operatorBuffer: req.operatorFile ? Buffer.from(req.operatorFile.buffer) : null,
       originalName: path.basename(req.file.originalname),
-      operatorOriginalName: path.basename(req.operatorFile.originalname),
+      operatorOriginalName: req.operatorFile ? path.basename(req.operatorFile.originalname) : null,
       competencia: report.competencia
     });
     return res.json({
@@ -495,9 +494,9 @@ router.post('/importar/aprovar', authenticateToken, authorizeRoles('admin'), asy
   const temporaryOperatorFile = path.join(os.tmpdir(), `yuri-operadores-${crypto.randomUUID()}.csv`);
   try {
     await fs.promises.writeFile(temporaryFile, staged.buffer);
-    await fs.promises.writeFile(temporaryOperatorFile, staged.operatorBuffer);
+    if (staged.operatorBuffer) await fs.promises.writeFile(temporaryOperatorFile, staged.operatorBuffer);
     const report = await importOnDemand(temporaryFile, {
-      operatorFile: temporaryOperatorFile,
+      operatorFile: staged.operatorBuffer ? temporaryOperatorFile : undefined,
       competencia: staged.competencia,
       createMissing: false,
       activateModule: false,

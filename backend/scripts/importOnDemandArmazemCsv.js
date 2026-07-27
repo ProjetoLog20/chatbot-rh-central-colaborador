@@ -7,6 +7,12 @@ const { parse } = require('csv-parse/sync');
 const db = require('../src/db');
 const DEFAULT_TASK_VALUES_FILE = path.join(__dirname, '../config/armazem-task-values.json');
 const DEFAULT_OFFICIAL_RULES_FILE = path.join(__dirname, '../config/armazem-official-rules.json');
+const WMS_DAILY_RV_RANGES = [
+  { faixa: 'Faixa 1', min: 1, max: 12500, rate: 0.0014 },
+  { faixa: 'Faixa 2', min: 12501, max: 16625, rate: 0.001862 },
+  { faixa: 'Faixa 3', min: 16626, max: 20750, rate: 0.002324 },
+  { faixa: 'Faixa 4', min: 20751, max: Number.POSITIVE_INFINITY, rate: 0.002786 }
+];
 
 const armazemColumns = [
   'importacao_id',
@@ -180,6 +186,138 @@ function canonicalOperatorActivity(value) {
   return trim(value) || 'Atividade operacional';
 }
 
+function wmsDailyRange(points) {
+  const numericPoints = Math.max(numberValue(points), 0);
+  return WMS_DAILY_RV_RANGES.find((range) => numericPoints >= range.min && numericPoints <= range.max)
+    || WMS_DAILY_RV_RANGES[0];
+}
+
+function isWmsSeparationCsv(csvRows) {
+  const first = csvRows[0] || {};
+  return Object.prototype.hasOwnProperty.call(first, 'usuario_finalizou_palete')
+    && Object.prototype.hasOwnProperty.call(first, 'pontuacao')
+    && Object.prototype.hasOwnProperty.call(first, 'data_de_entrega');
+}
+
+function buildWmsSeparationRows(csvRows, options = {}) {
+  const parsedRows = csvRows
+    .map((row) => ({
+      ...row,
+      date: parseDate(row.data_de_entrega),
+      usuario: trim(row.usuario_finalizou_palete),
+      pontos: numberValue(row.pontuacao),
+      esforco: numberValue(row.esforco)
+    }))
+    .filter((row) => row.date && row.usuario && row.pontos >= 0);
+
+  const competencia = options.competencia || (parsedRows[0] ? competenciaFromDate(parsedRows[0].date) : null);
+  const period = officialPeriodForCompetencia(competencia);
+  if (!period.inicio || !period.fim) throw new Error('Competencia invalida. Informe a competencia no formato MM/AAAA.');
+
+  const buckets = new Map();
+  for (const row of parsedRows) {
+    if (row.date < period.inicio || row.date > period.fim) continue;
+    const bucket = buckets.get(row.usuario) || {
+      usuario: row.usuario,
+      pontos: 0,
+      esforco: 0,
+      registros: 0,
+      dias: new Map()
+    };
+    const day = bucket.dias.get(row.date) || { data: row.date, pontos: 0, esforco: 0, registros: 0 };
+    day.pontos += row.pontos;
+    day.esforco += row.esforco;
+    day.registros += 1;
+    bucket.pontos += row.pontos;
+    bucket.esforco += row.esforco;
+    bucket.registros += 1;
+    bucket.dias.set(row.date, day);
+    buckets.set(row.usuario, bucket);
+  }
+
+  const rows = [...buckets.values()].map((bucket, index) => {
+    const dias = [...bucket.dias.values()]
+      .sort((a, b) => a.data.localeCompare(b.data))
+      .map((day) => {
+        const range = wmsDailyRange(day.pontos);
+        return {
+          ...day,
+          faixa: range.faixa,
+          valor_por_ponto: range.rate,
+          valor_rv: Number((day.pontos * range.rate).toFixed(6))
+        };
+      });
+    const rvAntiga = Number((bucket.pontos * WMS_DAILY_RV_RANGES[0].rate).toFixed(6));
+    const rvNova = Number(dias.reduce((sum, day) => sum + day.valor_rv, 0).toFixed(6));
+    const rangeCounts = Object.fromEntries(WMS_DAILY_RV_RANGES.map(({ faixa }) => [
+      faixa,
+      dias.filter((day) => day.faixa === faixa).length
+    ]));
+    const usedRanges = Object.entries(rangeCounts).filter(([, count]) => count > 0);
+    const faixa = usedRanges.length === 1
+      ? usedRanges[0][0]
+      : usedRanges.map(([name, count]) => `${name}: ${count} dia(s)`).join(' | ');
+
+    return {
+      sourceIndex: index,
+      competencia,
+      periodo_inicio: period.inicio,
+      periodo_fim: period.fim,
+      matricula: '',
+      nome_completo: bucket.usuario,
+      cpf: '',
+      funcao_armazem: 'Ajudante',
+      cargo: 'Ajudante',
+      setor: 'Armazem',
+      tipo_colaborador: 'Interno',
+      perfil: 'colaborador',
+      usuario_wms: bucket.usuario,
+      codigo_operacional: bucket.usuario,
+      pontos: Number(bucket.pontos.toFixed(2)),
+      faixa: faixa || 'Sem movimentacao',
+      rv_antiga: rvAntiga,
+      rv_nova: rvNova,
+      erros: 0,
+      valor_total_previsto: rvNova,
+      indicador_1: `${dias.length} dia(s) com movimentacao`,
+      indicador_2: `PPA: ${Number(bucket.pontos.toFixed(2))}`,
+      indicador_3: bucket.esforco > 0 ? `PPS: ${(bucket.pontos / bucket.esforco).toFixed(4)}` : 'PPS: 0',
+      status_produtividade: rvNova > 0 ? 'Elegivel' : 'Sem premio',
+      origem_calculo: 'wms_separacao_faixas_diarias',
+      status_auditoria: 'pendente_conferencia_erros',
+      metodo_cruzamento: 'usuario_wms_exato',
+      confianca_cruzamento: 1,
+      observacao_cruzamento: 'RV calculada pelas faixas diarias oficiais. O CSV de separacao nao contem ocorrencias de conferencia para desconto.',
+      mensagem_rh: `RV calculada por dia a partir da pontuacao WMS. Valor bruto: R$ ${rvNova.toFixed(2)}.`,
+      dados_originais_json: JSON.stringify({
+        fonte: 'tempo_separacao_por_palete',
+        usuario_wms: bucket.usuario,
+        registros: bucket.registros,
+        pontos: bucket.pontos,
+        esforco: bucket.esforco,
+        pps: bucket.esforco > 0 ? bucket.pontos / bucket.esforco : 0,
+        faixas: rangeCounts,
+        dias,
+        regras: WMS_DAILY_RV_RANGES.map(({ faixa: name, min, max, rate }) => ({
+          faixa: name,
+          min,
+          max: Number.isFinite(max) ? max : null,
+          valor_por_ponto: rate
+        }))
+      })
+    };
+  });
+
+  return {
+    sourceType: 'wms_separacao',
+    competencia,
+    period,
+    rows,
+    missingValues: [],
+    validRows: parsedRows.filter((row) => row.date >= period.inicio && row.date <= period.fim)
+  };
+}
+
 function buildOperatorActivities(csvRows, competencia) {
   const period = officialPeriodForCompetencia(competencia);
   const buckets = new Map();
@@ -351,6 +489,7 @@ function applyCombinedRules(row, colaborador, operatorContext, officialRules, ex
 }
 
 function buildRows(csvRows, options) {
+  if (isWmsSeparationCsv(csvRows)) return buildWmsSeparationRows(csvRows, options);
   const validRows = csvRows
     .map((row) => {
       const date = parseDate(row.finalizacao || row.criacao);
@@ -437,7 +576,7 @@ function buildRows(csvRows, options) {
     };
   });
 
-  return { competencia, period, rows, missingValues: [...missingValues].sort(), validRows };
+  return { sourceType: 'on_demand', competencia, period, rows, missingValues: [...missingValues].sort(), validRows };
 }
 
 async function ensureArmazemTables() {
@@ -650,12 +789,13 @@ async function upsertArmazem(row, colaborador, importacaoId) {
 async function importOnDemand(file, options = {}) {
   const csvRows = readCsv(file);
   const context = buildRows(csvRows, options);
+  const isWmsSeparation = context.sourceType === 'wms_separacao';
   const officialRules = readOfficialRules(options.officialRules, context.competencia);
   const operatorCsvRows = options.operatorFile ? readCsv(options.operatorFile) : [];
-  const operatorContext = options.operatorFile
+  const operatorContext = options.operatorFile && !isWmsSeparation
     ? buildOperatorActivities(operatorCsvRows, context.competencia)
     : null;
-  ensureCombinedRows(context, operatorContext, officialRules);
+  if (!isWmsSeparation) ensureCombinedRows(context, operatorContext, officialRules);
   const report = {
     file,
     operatorFile: options.operatorFile || null,
@@ -711,9 +851,18 @@ async function importOnDemand(file, options = {}) {
           });
           continue;
         }
-        applyCollaboratorRoleRules(row, match.colaborador);
+        if (!isWmsSeparation) applyCollaboratorRoleRules(row, match.colaborador);
         const existing = await findExistingArmazem(match.colaborador.id, context.competencia);
-        const totals = applyCombinedRules(row, match.colaborador, operatorContext, officialRules, existing);
+        const totals = isWmsSeparation
+          ? {
+              tasksTotal: row.rv_nova,
+              indicatorsTotal: 0,
+              total: row.valor_total_previsto,
+              expectedTotal: null,
+              difference: 0,
+              adjustments: []
+            }
+          : applyCombinedRules(row, match.colaborador, operatorContext, officialRules, existing);
         report.crossed.push({
           colaborador_id: match.colaborador.id,
           matricula: match.colaborador.matricula,
@@ -740,9 +889,9 @@ async function importOnDemand(file, options = {}) {
         indicador_1: row.indicador_1,
         indicador_2: row.indicador_2,
         indicador_3: row.indicador_3,
-        valor_tarefas: match ? parseOriginal(row).tarefasTotal : 0,
-        valor_indicadores: match ? parseOriginal(row).indicatorsTotal : 0,
-        ajustes: match ? parseOriginal(row).adjustments : []
+        valor_tarefas: match ? (isWmsSeparation ? row.rv_nova : parseOriginal(row).tarefasTotal) : 0,
+        valor_indicadores: match ? (isWmsSeparation ? 0 : parseOriginal(row).indicatorsTotal) : 0,
+        ajustes: match ? (isWmsSeparation ? [] : parseOriginal(row).adjustments) : []
       });
     }
     return report;
@@ -777,11 +926,24 @@ async function importOnDemand(file, options = {}) {
     }
     row.metodo_cruzamento = match.metodo;
     row.confianca_cruzamento = match.confianca;
-    row.status_auditoria = context.missingValues.length ? 'revisar_valores_atividade' : 'ok';
-    row.observacao_cruzamento = `Cruzamento ${match.metodo} com o cadastro ativo do Yuri.`;
-    applyCollaboratorRoleRules(row, match.colaborador);
+    row.status_auditoria = isWmsSeparation
+      ? 'pendente_conferencia_erros'
+      : (context.missingValues.length ? 'revisar_valores_atividade' : 'ok');
+    row.observacao_cruzamento = isWmsSeparation
+      ? `Cruzamento ${match.metodo} confirmado. Valor bruto calculado; o CSV não contém ocorrências de conferência para desconto.`
+      : `Cruzamento ${match.metodo} com o cadastro ativo do Yuri.`;
+    if (!isWmsSeparation) applyCollaboratorRoleRules(row, match.colaborador);
     const existing = await findExistingArmazem(match.colaborador.id, context.competencia);
-    const totals = applyCombinedRules(row, match.colaborador, operatorContext, officialRules, existing);
+    const totals = isWmsSeparation
+      ? {
+          tasksTotal: row.rv_nova,
+          indicatorsTotal: 0,
+          total: row.valor_total_previsto,
+          expectedTotal: null,
+          difference: 0,
+          adjustments: []
+        }
+      : applyCombinedRules(row, match.colaborador, operatorContext, officialRules, existing);
     const result = await upsertArmazem(row, match.colaborador, importacaoId);
     if (result === 'created') report.created += 1;
     if (result === 'updated') report.updated += 1;
@@ -865,6 +1027,10 @@ if (require.main === module) {
 module.exports = {
   importOnDemand,
   buildRows,
+  buildWmsSeparationRows,
+  isWmsSeparationCsv,
+  wmsDailyRange,
+  WMS_DAILY_RV_RANGES,
   canonicalActivity,
   applyCollaboratorRoleRules,
   buildOperatorActivities,
