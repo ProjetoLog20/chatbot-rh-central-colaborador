@@ -671,7 +671,7 @@ function connectSqlite() {
       ['indicadores_rota', 'Indicadores da Rota', 'Acompanhe as metas e entenda os indicadores que ajudam sua rota a ser mais produtiva, organizada e segura.', 1, 0, null, 1, 1, 0, 55],
       ['premio_produtividade_armazem', 'Prêmio de Produtividade do Armazém', 'RV e prêmio de produtividade para Ajudante, Operador de Empilhadeira e Amarrador.', 0, 1, 'Estamos ajustando os dados deste painel para garantir que as informações sejam apresentadas corretamente. Em breve ele estará disponível.', 1, 1, 1, 56],
       ['rotograma_seguro', 'Rotograma Seguro', 'Consulte rotas, pontos de risco, telefones de emergência e orientações de segurança da operação.', 1, 0, null, 1, 1, 1, 57],
-      ['prontuario_motorista', 'Prontuario do Motorista', 'Pontuacao, faixa atual e ocorrencias registradas.', 1, 0, null, 1, 1, 1, 60],
+      ['prontuario_motorista', 'Prontuario do Colaborador', 'Pontuacao, faixa atual e ocorrencias registradas.', 1, 0, null, 1, 1, 1, 60],
       ['ouvidoria', 'Ouvidoria', 'Canal oficial para solicitacoes, duvidas ou relatos.', 1, 0, null, 1, 1, 1, 70],
       ['assistente_rh', 'Yuri, Assistente de RH', 'Atendimento virtual da Central do Colaborador.', 1, 0, null, 1, 1, 1, 80]
     ];

@@ -71,7 +71,7 @@ const generalCards = [
   {
     id: 'prontuario_motorista',
     icon: '🚚',
-    title: 'Prontuário do Motorista',
+    title: 'Prontuário do Colaborador',
     description: 'Consulte sua pontuação, faixa atual e ocorrências registradas.',
     action: 'Ver prontuário',
     color: '#E87522',

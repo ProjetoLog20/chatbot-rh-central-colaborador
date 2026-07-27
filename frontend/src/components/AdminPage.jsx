@@ -83,7 +83,7 @@ const importOptions = [
   },
   {
     type: 'prontuario_motoristas',
-    title: 'Prontuario dos motoristas',
+    title: 'Prontuario dos colaboradores',
     description: 'Importe a planilha analitica limpa com CPF, pontuacao, faixa e ocorrencias.',
     path: '/prontuario/importar'
   },

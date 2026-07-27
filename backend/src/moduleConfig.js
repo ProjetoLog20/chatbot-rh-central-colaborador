@@ -12,7 +12,7 @@ const MODULE_DEFAULTS = [
   ['indicadores_rota', 'Indicadores da Rota', 'Acompanhe as metas e entenda os indicadores que ajudam sua rota a ser mais produtiva, organizada e segura.', true, false, null, true, true, false, 55],
   ['premio_produtividade_armazem', 'Prêmio de Produtividade do Armazém', 'RV e prêmio de produtividade para Ajudante, Operador de Empilhadeira e Amarrador.', false, true, DEFAULT_MAINTENANCE_MESSAGE, true, true, true, 56],
   ['rotograma_seguro', 'Rotograma Seguro', 'Consulte rotas, pontos de risco, telefones de emergência e orientações de segurança da operação.', true, false, null, true, true, true, 57],
-  ['prontuario_motorista', 'Prontuário do Motorista', 'Pontuação, faixa atual e ocorrências registradas.', true, false, null, true, true, true, 60],
+  ['prontuario_motorista', 'Prontuário do Colaborador', 'Pontuação, faixa atual e ocorrências registradas.', true, false, null, true, true, true, 60],
   ['ouvidoria', 'Ouvidoria', 'Canal oficial para solicitações, dúvidas ou relatos.', true, false, null, true, true, true, 70],
   ['assistente_rh', 'Yuri, Assistente de RH', 'Atendimento virtual da Central do Colaborador.', true, false, null, true, true, true, 80]
 ];
@@ -85,6 +85,18 @@ async function ensureModuleConfigTable() {
       'Assistente RH',
       'IA Assistente RH',
       'Assistente RH Log20'
+    ]
+  );
+
+  await db.run(
+    `UPDATE configuracoes_modulos
+     SET nome = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE chave = ? AND nome IN (?, ?)`,
+    [
+      'Prontuário do Colaborador',
+      'prontuario_motorista',
+      'Prontuario do Motorista',
+      'Prontuário do Motorista'
     ]
   );
 

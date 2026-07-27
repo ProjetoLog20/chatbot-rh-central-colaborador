@@ -195,9 +195,9 @@ function buildUserContext(user) {
 
   if (user.prontuario) {
     lines.push(
-      `Prontuário do motorista - pontuação ponderada: ${user.prontuario.pontuacao_ponderada ?? 'não informada'}`,
-      `Prontuário do motorista - faixa: ${user.prontuario.faixa || 'não informada'}`,
-      `Prontuario motorista - cor da faixa: ${user.prontuario.cor_faixa || 'sem_faixa'}`
+      `Prontuário do colaborador - pontuação ponderada: ${user.prontuario.pontuacao_ponderada ?? 'não informada'}`,
+      `Prontuário do colaborador - faixa: ${user.prontuario.faixa || 'não informada'}`,
+      `Prontuário do colaborador - cor da faixa: ${user.prontuario.cor_faixa || 'sem_faixa'}`
     );
   }
 
@@ -224,7 +224,7 @@ async function askOpenAI({ question, knowledgeBase, user, previousResponseId }) 
       'Use linguagem simples, tom de apoio ao colaborador e evite termos tecnicos.',
       'Responda em portugues do Brasil, com tom claro, acolhedor e objetivo.',
       'Priorize as respostas oficiais cadastradas pelo RH na base de conhecimento.',
-      'Ajude com Pesquisa de Clima, SKAP, Campeão de Segurança, 3Rs, Prêmio de Produtividade, Prontuário do Motorista, Ouvidoria, primeiro acesso, senha temporária e informações gerais da Central.',
+      'Ajude com Pesquisa de Clima, SKAP, Campeão de Segurança, 3Rs, Prêmio de Produtividade, Prontuário do Colaborador, Ouvidoria, primeiro acesso, senha temporária e informações gerais da Central.',
       'Use o contexto do usuário apenas para personalizar orientações permitidas.',
       'Não mostre dados de outro colaborador e respeite as regras de perfil do sistema.',
       'Não prometa alterar dados sozinho.',
