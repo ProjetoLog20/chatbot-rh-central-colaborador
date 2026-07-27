@@ -383,6 +383,22 @@ export async function getAdminAccessMetrics() {
   return request('/admin/acessos');
 }
 
+export async function getSatisfacaoYuriStatus() {
+  return request('/satisfacao-yuri/status');
+}
+
+export async function responderSatisfacaoYuri(payload) {
+  return request('/satisfacao-yuri/responder', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function getAdminSatisfacaoYuri(ciclo = '') {
+  const query = ciclo ? `?ciclo=${encodeURIComponent(ciclo)}` : '';
+  return request(`/satisfacao-yuri/admin/resumo${query}`);
+}
+
 export async function getNotifications() {
   return request('/notificacoes');
 }

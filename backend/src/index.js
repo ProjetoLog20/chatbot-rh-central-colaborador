@@ -21,6 +21,7 @@ const modulosRoutes = require('./routes/modulos');
 const campeoesSegurancaRoutes = require('./routes/campeoes-seguranca');
 const rotogramasRoutes = require('./routes/rotogramas');
 const notificacoesRoutes = require('./routes/notificacoes');
+const satisfacaoYuriRoutes = require('./routes/satisfacao-yuri');
 const { incrementAccessCounter, getAccessMetrics } = require('./accessCounter');
 const { authenticateToken, authorizeRoles } = require('./authMiddleware');
 const errorHandler = require('./errorHandler');
@@ -120,6 +121,7 @@ app.use('/api', modulosRoutes);
 app.use('/api/campeoes-seguranca', campeoesSegurancaRoutes);
 app.use('/api/rotogramas', rotogramasRoutes);
 app.use('/api/notificacoes', notificacoesRoutes);
+app.use('/api/satisfacao-yuri', satisfacaoYuriRoutes);
 
 // Serve static files from frontend dist
 const frontendDist = path.resolve(__dirname, "../../frontend/dist");

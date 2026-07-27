@@ -19,7 +19,8 @@ import {
   resetCollaboratorPassword,
   getAdminModulos,
   updateAdminModulo,
-  getAdminAccessMetrics
+  getAdminAccessMetrics,
+  getAdminSatisfacaoYuri
 } from '../api.js';
 import AdminCampeoesSeguranca from './AdminCampeoesSeguranca.jsx';
 import AdminNotifications from './AdminNotifications.jsx';
@@ -285,6 +286,7 @@ export default function AdminPage() {
   const [acoes, setAcoes] = useState([]);
   const [modulos, setModulos] = useState([]);
   const [accessMetrics, setAccessMetrics] = useState(null);
+  const [satisfactionMetrics, setSatisfactionMetrics] = useState(null);
   const [message, setMessage] = useState('');
   const [collaboratorForm, setCollaboratorForm] = useState(emptyCollaboratorForm);
   const [editingCollaboratorId, setEditingCollaboratorId] = useState(null);
@@ -325,13 +327,14 @@ export default function AdminPage() {
   }, []);
 
   async function refresh() {
-    const [col, pr, resp, acoesData, modulosData, accessData] = await Promise.allSettled([
+    const [col, pr, resp, acoesData, modulosData, accessData, satisfactionData] = await Promise.allSettled([
       getCollaborators(),
       getProntuarios(),
       getRespostas(),
       getAdminAcoes(),
       getAdminModulos(),
-      getAdminAccessMetrics()
+      getAdminAccessMetrics(),
+      getAdminSatisfacaoYuri()
     ]);
 
     if (col.status === 'fulfilled') setColaboradores(col.value);
@@ -340,6 +343,7 @@ export default function AdminPage() {
     if (acoesData.status === 'fulfilled') setAcoes(acoesData.value);
     if (modulosData.status === 'fulfilled') setModulos(modulosData.value);
     if (accessData.status === 'fulfilled') setAccessMetrics(accessData.value);
+    if (satisfactionData.status === 'fulfilled') setSatisfactionMetrics(satisfactionData.value);
 
     const failed = [
       col.status === 'rejected' ? 'colaboradores' : null,
@@ -347,7 +351,8 @@ export default function AdminPage() {
       resp.status === 'rejected' ? 'chatbot' : null,
       acoesData.status === 'rejected' ? 'acoes' : null,
       modulosData.status === 'rejected' ? 'modulos' : null,
-      accessData.status === 'rejected' ? 'contador de acessos' : null
+      accessData.status === 'rejected' ? 'contador de acessos' : null,
+      satisfactionData.status === 'rejected' ? 'satisfação do Yuri' : null
     ].filter(Boolean);
 
     if (failed.length) {
@@ -647,6 +652,44 @@ export default function AdminPage() {
           hourlyHistory={accessMetrics?.hourly_history || []}
           summary={accessMetrics?.resumo || {}}
         />
+      </section>
+
+      <section className="admin-section satisfaction-results">
+        <div className="satisfaction-results-heading">
+          <div>
+            <span className="access-counter-eyebrow">Pesquisa mensal obrigatória</span>
+            <h2>Satisfação com o Yuri</h2>
+            <p>Resultados do ciclo {satisfactionMetrics?.ciclo || 'atual'}, disponíveis somente para administradores.</p>
+          </div>
+          <span className="access-counter-private">Somente administradores</span>
+        </div>
+        <div className="satisfaction-summary-grid">
+          <article>
+            <small>Índice geral</small>
+            <strong>{Number(satisfactionMetrics?.indice_geral_percentual || 0).toLocaleString('pt-BR')}%</strong>
+            <span>Média convertida para percentual</span>
+          </article>
+          <article>
+            <small>Avaliações positivas</small>
+            <strong>{Number(satisfactionMetrics?.satisfacao_percentual || 0).toLocaleString('pt-BR')}%</strong>
+            <span>Percentual de notas 4 e 5</span>
+          </article>
+          <article>
+            <small>Participações</small>
+            <strong>{Number(satisfactionMetrics?.total_respostas || 0).toLocaleString('pt-BR')}</strong>
+            <span>Respostas registradas no ciclo</span>
+          </article>
+        </div>
+        <div className="satisfaction-distribution" aria-label="Distribuição percentual das notas">
+          {(satisfactionMetrics?.distribuicao || [1, 2, 3, 4, 5].map((nota) => ({ nota, percentual: 0, quantidade: 0 }))).map((item) => (
+            <div className="satisfaction-distribution-row" key={item.nota}>
+              <span>Nota {item.nota}</span>
+              <div><i style={{ width: `${Math.max(0, Math.min(100, Number(item.percentual || 0)))}%` }} /></div>
+              <strong>{Number(item.percentual || 0).toLocaleString('pt-BR')}%</strong>
+              <small>{item.quantidade} resposta(s)</small>
+            </div>
+          ))}
+        </div>
       </section>
 
       <div className="admin-tabs" role="tablist" aria-label="Areas administrativas">

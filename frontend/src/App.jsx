@@ -18,6 +18,7 @@ import CampeaoSegurancaPage from './components/CampeaoSegurancaPage.jsx';
 import IndicadoresRotaPage from './components/IndicadoresRotaPage.jsx';
 import RotogramaSeguroPage from './components/RotogramaSeguroPage.jsx';
 import NotificationBell from './components/NotificationBell.jsx';
+import MandatorySatisfaction from './components/MandatorySatisfaction.jsx';
 
 function normalizePerfil(perfil) {
   return String(perfil || '').trim().toLowerCase();
@@ -162,6 +163,7 @@ function App() {
       </main>
 
       {shouldShowChatAssistant ? <ChatAssistant user={user} /> : null}
+      {user && token && !isPublicRoute ? <MandatorySatisfaction user={user} /> : null}
     </div>
   );
 }

@@ -423,6 +423,18 @@ function connectSqlite() {
       FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE CASCADE
     )`);
 
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS satisfacao_yuri (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      colaborador_id INTEGER NOT NULL,
+      ciclo TEXT NOT NULL,
+      nota INTEGER NOT NULL CHECK (nota BETWEEN 1 AND 5),
+      comentario TEXT,
+      respondido_em TEXT DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (colaborador_id, ciclo),
+      FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE CASCADE
+    )`);
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_satisfacao_yuri_ciclo ON satisfacao_yuri(ciclo)');
+
     sqliteDb.run(`CREATE TABLE IF NOT EXISTS notificacoes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       titulo TEXT NOT NULL,
