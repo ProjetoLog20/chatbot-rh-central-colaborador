@@ -6181,6 +6181,41 @@ tr:not(:last-child) td {
   font-size: 30px;
 }
 
+.satisfaction-summary-grid .satisfaction-participation-card {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 16px;
+}
+
+.satisfaction-participation-chart {
+  --participation: 0%;
+  position: relative;
+  display: grid;
+  width: 88px;
+  height: 88px;
+  flex: 0 0 88px;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(#ef7b20 var(--participation), #e4ebf0 0);
+}
+
+.satisfaction-participation-chart::after {
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #fff;
+  content: '';
+}
+
+.satisfaction-participation-chart span {
+  position: relative;
+  z-index: 1;
+  color: #064a78;
+  font-size: 17px;
+  font-weight: 900;
+}
+
 .satisfaction-distribution {
   display: grid;
   gap: 11px;

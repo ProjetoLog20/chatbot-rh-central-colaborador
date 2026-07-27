@@ -664,6 +664,24 @@ export default function AdminPage() {
           <span className="access-counter-private">Somente administradores</span>
         </div>
         <div className="satisfaction-summary-grid">
+          <article className="satisfaction-participation-card">
+            <div
+              className="satisfaction-participation-chart"
+              style={{ '--participation': `${Math.max(0, Math.min(100, Number(satisfactionMetrics?.participacao_percentual || 0)))}%` }}
+              role="img"
+              aria-label={`${Number(satisfactionMetrics?.participacao_percentual || 0).toLocaleString('pt-BR')}% dos usuários ativos responderam`}
+            >
+              <span>{Number(satisfactionMetrics?.participacao_percentual || 0).toLocaleString('pt-BR')}%</span>
+            </div>
+            <div>
+              <small>Participação dos usuários</small>
+              <strong>{Number(satisfactionMetrics?.participacao_percentual || 0).toLocaleString('pt-BR')}%</strong>
+              <span>
+                {Number(satisfactionMetrics?.total_respostas || 0).toLocaleString('pt-BR')} de{' '}
+                {Number(satisfactionMetrics?.total_usuarios_ativos || 0).toLocaleString('pt-BR')} usuários ativos
+              </span>
+            </div>
+          </article>
           <article>
             <small>Índice geral</small>
             <strong>{Number(satisfactionMetrics?.indice_geral_percentual || 0).toLocaleString('pt-BR')}%</strong>
@@ -673,11 +691,6 @@ export default function AdminPage() {
             <small>Avaliações positivas</small>
             <strong>{Number(satisfactionMetrics?.satisfacao_percentual || 0).toLocaleString('pt-BR')}%</strong>
             <span>Percentual de notas 4 e 5</span>
-          </article>
-          <article>
-            <small>Participações</small>
-            <strong>{Number(satisfactionMetrics?.total_respostas || 0).toLocaleString('pt-BR')}</strong>
-            <span>Respostas registradas no ciclo</span>
           </article>
         </div>
         <div className="satisfaction-distribution" aria-label="Distribuição percentual das notas">

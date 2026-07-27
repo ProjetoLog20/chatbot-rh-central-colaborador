@@ -84,21 +84,31 @@ router.get('/admin/resumo', authenticateToken, authorizeRoles('admin'), async (r
     }
 
     const respostas = await db.all(
-      `SELECT nota, COUNT(*) AS quantidade
-       FROM satisfacao_yuri
-       WHERE ciclo = ?
-       GROUP BY nota
+      `SELECT s.nota, COUNT(*) AS quantidade
+       FROM satisfacao_yuri s
+       INNER JOIN colaboradores c ON c.id = s.colaborador_id
+       WHERE s.ciclo = ?
+         AND COALESCE(LOWER(TRIM(c.status)), 'ativo') NOT IN ('desligado', 'removido', 'inativo')
+       GROUP BY s.nota
        ORDER BY nota`,
       [ciclo]
     );
     const summary = await db.get(
-      `SELECT COUNT(*) AS total, AVG(nota) AS media
-       FROM satisfacao_yuri
-       WHERE ciclo = ?`,
+      `SELECT COUNT(*) AS total, AVG(s.nota) AS media
+       FROM satisfacao_yuri s
+       INNER JOIN colaboradores c ON c.id = s.colaborador_id
+       WHERE s.ciclo = ?
+         AND COALESCE(LOWER(TRIM(c.status)), 'ativo') NOT IN ('desligado', 'removido', 'inativo')`,
       [ciclo]
+    );
+    const audience = await db.get(
+      `SELECT COUNT(*) AS total
+       FROM colaboradores
+       WHERE COALESCE(LOWER(TRIM(status)), 'ativo') NOT IN ('desligado', 'removido', 'inativo')`
     );
 
     const total = Number(summary?.total || 0);
+    const totalUsuariosAtivos = Number(audience?.total || 0);
     const media = Number(summary?.media || 0);
     const porNota = Object.fromEntries([1, 2, 3, 4, 5].map((nota) => [nota, 0]));
     respostas.forEach((item) => {
@@ -110,6 +120,10 @@ router.get('/admin/resumo', authenticateToken, authorizeRoles('admin'), async (r
     res.json({
       ciclo,
       total_respostas: total,
+      total_usuarios_ativos: totalUsuariosAtivos,
+      participacao_percentual: totalUsuariosAtivos
+        ? Number(((total / totalUsuariosAtivos) * 100).toFixed(1))
+        : 0,
       indice_geral_percentual: total ? Number(((media / 5) * 100).toFixed(1)) : 0,
       satisfacao_percentual: total ? Number(((satisfeitos / total) * 100).toFixed(1)) : 0,
       distribuicao: [1, 2, 3, 4, 5].map((nota) => ({
