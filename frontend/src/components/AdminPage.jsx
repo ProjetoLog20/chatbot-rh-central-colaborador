@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import '../access-counter.css';
 import {
   getCollaborators,
   createCollaborator,
@@ -93,31 +94,96 @@ const importOptions = [
   }
 ];
 
-function AccessChart({ history = [] }) {
+function formatAccessDate(value) {
+  if (!value) return '—';
+  const [year, month, day] = String(value).split('-');
+  return `${day}/${month}/${year}`;
+}
+
+function AccessChart({ history = [], hourlyHistory = [], summary = {} }) {
   const values = history.map((item) => Number(item.total || 0));
   const maxValue = Math.max(...values, 1);
+  const hourlyMax = Math.max(...hourlyHistory.map((item) => Number(item.total || 0)), 1);
+  const recentHistory = history.slice(-14);
+  const hasDailySeries = recentHistory.length > 1;
 
   if (!history.length) {
     return <p>Nenhum dado de acesso registrado ainda.</p>;
   }
 
   return (
-    <div style={{ marginTop: '0.75rem' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: '0.6rem', alignItems: 'end' }}>
-        {history.slice(-7).map((item) => {
-          const height = Math.max(10, (Number(item.total || 0) / maxValue) * 100);
-          return (
-            <div key={item.data} style={{ textAlign: 'center' }}>
-              <div style={{ height: '90px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-                <div style={{ width: '100%', maxWidth: '36px', height: `${height}%`, background: '#2563eb', borderRadius: '6px 6px 0 0' }} />
-              </div>
-              <div style={{ fontSize: '0.75rem', marginTop: '0.35rem', color: '#475569' }}>{item.data}</div>
-              <div style={{ fontWeight: 600 }}>{item.total}</div>
-            </div>
-          );
-        })}
+    <div className="access-analytics">
+      <div className="access-summary-grid">
+        <article><small>Melhor dia</small><strong>{formatAccessDate(summary.melhor_dia?.data)}</strong><span>{summary.melhor_dia?.total || 0} acessos</span></article>
+        <article><small>Média diária</small><strong>{summary.media_acessos_dia || 0}</strong><span>acessos por dia</span></article>
+        <article><small>Horário de pico</small><strong>{summary.horario_pico ? `${String(summary.horario_pico.hora).padStart(2, '0')}h` : 'Em formação'}</strong><span>{summary.horario_pico?.total || 0} acessos detalhados</span></article>
+        <article><small>Dias registrados</small><strong>{summary.dias_registrados || history.length}</strong><span>{summary.dias_com_detalhamento_horario || 0} com horários</span></article>
       </div>
-      <p style={{ marginTop: '0.6rem', color: '#64748b', fontSize: '0.9rem' }}>Histórico retroativo a partir do momento em que o contador passou a ser registrado.</p>
+
+      <section className="access-chart-card">
+        <div className="access-chart-heading">
+          <div><small>Evolução</small><h3>Acessos por dia</h3></div>
+          <span>Últimos {recentHistory.length} dias registrados</span>
+        </div>
+        {hasDailySeries ? (
+          <div className="access-daily-chart">
+            {recentHistory.map((item) => {
+              const height = Math.max(5, (Number(item.total || 0) / maxValue) * 100);
+              return (
+                <div className="access-bar-column" key={item.data} title={`${formatAccessDate(item.data)}: ${item.total} acessos`}>
+                  <strong>{item.total}</strong>
+                  <div className="access-bar-track"><span style={{ height: `${height}%` }} /></div>
+                  <small>{String(item.data).slice(5).replace('-', '/')}</small>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="access-series-empty">
+            <span className="access-series-empty-icon" aria-hidden="true">▥</span>
+            <div>
+              <strong>Histórico diário em formação</strong>
+              <p>O total geral foi preservado. A comparação entre dias aparecerá automaticamente após novos dias de uso.</p>
+            </div>
+            {recentHistory[0] && (
+              <div className="access-series-first-day">
+                <small>Primeiro registro</small>
+                <strong>{recentHistory[0].total}</strong>
+                <span>{formatAccessDate(recentHistory[0].data)}</span>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      <section className="access-chart-card">
+        <div className="access-chart-heading">
+          <div><small>Comportamento</small><h3>Acessos por horário</h3></div>
+          <span>Horário de Brasília</span>
+        </div>
+        {summary.dias_com_detalhamento_horario ? (
+          <div className="access-hourly-chart">
+            {hourlyHistory.map((item) => (
+              <div className="access-hour-column" key={item.hora} title={`${String(item.hora).padStart(2, '0')}h: ${item.total} acessos`}>
+                <div className="access-hour-track">
+                  <span style={{ height: `${Math.max(item.total ? 4 : 0, (Number(item.total || 0) / hourlyMax) * 100)}%` }} />
+                </div>
+                {item.hora % 3 === 0 ? <small>{String(item.hora).padStart(2, '0')}h</small> : <small aria-hidden="true">&nbsp;</small>}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="access-hourly-empty">
+            <strong>Detalhamento por horário em formação</strong>
+            <p>Os acessos antigos não possuem horário individual. Este gráfico será preenchido a partir da ativação da nova medição.</p>
+          </div>
+        )}
+      </section>
+
+      <div className="access-data-note">
+        <strong>Leitura dos dados</strong>
+        <p>O histórico diário anterior foi preservado. A distribuição por horário considera somente os acessos registrados após a nova medição, no fuso de Brasília.</p>
+      </div>
     </div>
   );
 }
@@ -541,24 +607,46 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <section className="admin-section">
-        <h2>Contador de acessos</h2>
-        <p>Dados de uso do aplicativo disponíveis somente para administradores.</p>
-        <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
-          <div style={{ border: '1px solid #e5e7eb', borderRadius: '10px', padding: '0.9rem' }}>
-            <strong>Total de acessos</strong>
-            <div style={{ fontSize: '1.5rem', marginTop: '0.3rem' }}>{accessMetrics?.total_acessos ?? 0}</div>
+      <section className="admin-section access-counter-section">
+        <div className="access-counter-heading">
+          <div>
+            <span className="access-counter-eyebrow">Visão administrativa</span>
+            <h2>Uso da plataforma</h2>
+            <p>Acompanhe o volume e os horários de acesso ao Yuri.</p>
           </div>
-          <div style={{ border: '1px solid #e5e7eb', borderRadius: '10px', padding: '0.9rem' }}>
-            <strong>Acessos hoje</strong>
-            <div style={{ fontSize: '1.5rem', marginTop: '0.3rem' }}>{accessMetrics?.total_acessos_hoje ?? 0}</div>
-          </div>
-          <div style={{ border: '1px solid #e5e7eb', borderRadius: '10px', padding: '0.9rem' }}>
-            <strong>Última atualização</strong>
-            <div style={{ fontSize: '1rem', marginTop: '0.3rem' }}>{accessMetrics?.ultima_data ? accessMetrics.ultima_data : 'Sem dados'}</div>
-          </div>
+          <span className="access-counter-private">Somente administradores</span>
         </div>
-        <AccessChart history={accessMetrics?.history || []} />
+        <div className="access-primary-grid">
+          <article className="access-primary-card access-primary-card-total">
+            <span className="access-primary-icon" aria-hidden="true">↗</span>
+            <div>
+              <small>Total acumulado</small>
+              <strong>{Number(accessMetrics?.total_acessos || 0).toLocaleString('pt-BR')}</strong>
+              <span>acessos desde o início da medição</span>
+            </div>
+          </article>
+          <article className="access-primary-card">
+            <span className="access-primary-icon access-primary-icon-today" aria-hidden="true">●</span>
+            <div>
+              <small>Movimento de hoje</small>
+              <strong>{Number(accessMetrics?.total_acessos_hoje || 0).toLocaleString('pt-BR')}</strong>
+              <span>acessos registrados hoje</span>
+            </div>
+          </article>
+          <article className="access-primary-card">
+            <span className="access-primary-icon access-primary-icon-date" aria-hidden="true">▣</span>
+            <div>
+              <small>Dados atualizados em</small>
+              <strong className="access-primary-date">{formatAccessDate(accessMetrics?.ultima_data)}</strong>
+              <span>fuso horário de Brasília</span>
+            </div>
+          </article>
+        </div>
+        <AccessChart
+          history={accessMetrics?.history || []}
+          hourlyHistory={accessMetrics?.hourly_history || []}
+          summary={accessMetrics?.resumo || {}}
+        />
       </section>
 
       <div className="admin-tabs" role="tablist" aria-label="Areas administrativas">

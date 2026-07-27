@@ -19,12 +19,37 @@ async function ensureAccessCounterTable() {
   `);
 
   await db.run(`
+    CREATE TABLE IF NOT EXISTS acessos_horarios (
+      data TEXT NOT NULL,
+      hora INTEGER NOT NULL,
+      total INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (data, hora)
+    )
+  `);
+
+  await db.run(`
     INSERT INTO acessos_app (id, total_acessos, total_acessos_hoje, ultima_data, ultimo_acesso_em)
     VALUES (1, 0, 0, NULL, CURRENT_TIMESTAMP)
     ON CONFLICT(id) DO NOTHING
   `);
 
   await backfillRetroactiveHistory();
+}
+
+function getSaoPauloDateTime() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(new Date());
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return {
+    date: `${value.year}-${value.month}-${value.day}`,
+    hour: Number(value.hour)
+  };
 }
 
 async function backfillRetroactiveHistory() {
@@ -34,7 +59,7 @@ async function backfillRetroactiveHistory() {
   const count = await db.get('SELECT COUNT(*) AS total FROM acessos_diarios');
   if (Number(count?.total || 0) > 0) return;
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getSaoPauloDateTime().date;
   const baseCount = Number(row.total_acessos_hoje || row.total_acessos || 0);
   const initialCount = Math.max(1, baseCount);
 
@@ -45,7 +70,7 @@ async function backfillRetroactiveHistory() {
 }
 
 async function incrementAccessCounter(req) {
-  const today = new Date().toISOString().slice(0, 10);
+  const { date: today, hour } = getSaoPauloDateTime();
   const path = req.originalUrl || req.url || '/';
 
   try {
@@ -59,6 +84,10 @@ async function incrementAccessCounter(req) {
         [today]
       );
       await db.run('INSERT INTO acessos_diarios (data, total) VALUES (?, ?) ON CONFLICT(data) DO UPDATE SET total = total + 1', [today, 1]);
+      await db.run(
+        'INSERT INTO acessos_horarios (data, hora, total) VALUES (?, ?, 1) ON CONFLICT(data, hora) DO UPDATE SET total = total + 1',
+        [today, hour]
+      );
       return;
     }
 
@@ -83,6 +112,10 @@ async function incrementAccessCounter(req) {
     }
 
     await db.run('INSERT INTO acessos_diarios (data, total) VALUES (?, 1) ON CONFLICT(data) DO UPDATE SET total = total + 1', [today]);
+    await db.run(
+      'INSERT INTO acessos_horarios (data, hora, total) VALUES (?, ?, 1) ON CONFLICT(data, hora) DO UPDATE SET total = total + 1',
+      [today, hour]
+    );
 
     if (process.env.NODE_ENV !== 'production') {
       console.log(`[acessos] ${req.method} ${path}`);
@@ -97,16 +130,43 @@ async function getAccessMetrics() {
 
   const row = await db.get('SELECT total_acessos, total_acessos_hoje, ultima_data, ultimo_acesso_em FROM acessos_app WHERE id = 1');
   const historyRows = await db.all('SELECT data, total FROM acessos_diarios ORDER BY data ASC');
+  const hourlyRows = await db.all(
+    'SELECT hora, SUM(total) AS total FROM acessos_horarios GROUP BY hora ORDER BY hora ASC'
+  );
+  const detailedDaysRow = await db.get('SELECT COUNT(DISTINCT data) AS total FROM acessos_horarios');
+  const history = historyRows.map((item) => ({
+    data: item.data,
+    total: Number(item.total || 0)
+  }));
+  const hourlyHistory = Array.from({ length: 24 }, (_, hour) => ({
+    hora: hour,
+    total: Number(hourlyRows.find((item) => Number(item.hora) === hour)?.total || 0)
+  }));
+  const bestDay = history.reduce(
+    (best, item) => (!best || item.total > best.total ? item : best),
+    null
+  );
+  const bestHour = hourlyHistory.reduce(
+    (best, item) => (item.total > (best?.total || 0) ? item : best),
+    null
+  );
+  const totalDays = history.length;
 
   return {
     total_acessos: Number(row?.total_acessos || 0),
     total_acessos_hoje: Number(row?.total_acessos_hoje || 0),
     ultima_data: row?.ultima_data || null,
     ultimo_acesso_em: row?.ultimo_acesso_em || null,
-    history: historyRows.map((item) => ({
-      data: item.data,
-      total: Number(item.total || 0)
-    }))
+    history,
+    hourly_history: hourlyHistory,
+    resumo: {
+      dias_registrados: totalDays,
+      media_acessos_dia: totalDays ? Number((history.reduce((sum, item) => sum + item.total, 0) / totalDays).toFixed(1)) : 0,
+      melhor_dia: bestDay,
+      horario_pico: bestHour?.total ? bestHour : null,
+      dias_com_detalhamento_horario: Number(detailedDaysRow?.total || 0),
+      fuso_horario: 'America/Sao_Paulo'
+    }
   };
 }
 
