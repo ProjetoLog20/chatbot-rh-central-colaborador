@@ -89,6 +89,7 @@ router.get('/admin/resumo', authenticateToken, authorizeRoles('admin'), async (r
        INNER JOIN colaboradores c ON c.id = s.colaborador_id
        WHERE s.ciclo = ?
          AND COALESCE(LOWER(TRIM(c.status)), 'ativo') NOT IN ('desligado', 'removido', 'inativo')
+         AND c.matricula NOT IN ('1000', '2000', '3000', '99999')
        GROUP BY s.nota
        ORDER BY nota`,
       [ciclo]
@@ -98,13 +99,15 @@ router.get('/admin/resumo', authenticateToken, authorizeRoles('admin'), async (r
        FROM satisfacao_yuri s
        INNER JOIN colaboradores c ON c.id = s.colaborador_id
        WHERE s.ciclo = ?
-         AND COALESCE(LOWER(TRIM(c.status)), 'ativo') NOT IN ('desligado', 'removido', 'inativo')`,
+         AND COALESCE(LOWER(TRIM(c.status)), 'ativo') NOT IN ('desligado', 'removido', 'inativo')
+         AND c.matricula NOT IN ('1000', '2000', '3000', '99999')`,
       [ciclo]
     );
     const audience = await db.get(
       `SELECT COUNT(*) AS total
        FROM colaboradores
-       WHERE COALESCE(LOWER(TRIM(status)), 'ativo') NOT IN ('desligado', 'removido', 'inativo')`
+       WHERE COALESCE(LOWER(TRIM(status)), 'ativo') NOT IN ('desligado', 'removido', 'inativo')
+         AND matricula NOT IN ('1000', '2000', '3000', '99999')`
     );
 
     const total = Number(summary?.total || 0);
