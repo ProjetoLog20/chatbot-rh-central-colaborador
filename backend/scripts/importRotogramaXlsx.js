@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
 const db = require('../src/db');
+const { normalizeCoordinatePair } = require('../src/utils/rotogramaCoordinates');
 
 const DEFAULT_FILE = path.join(__dirname, '../data/Rotograma atualizado Cdd Cascavel 2026.xlsx');
 
@@ -280,8 +281,8 @@ function rowLooksLikeRiskPoint(row) {
 
 function findCoordinate(values, start = 0) {
   for (let index = start; index < values.length; index += 1) {
-    const value = clean(values[index]).replace(',', '.');
-    if (/^-?\d{1,3}\.\d+/.test(value)) return { value, index };
+    const value = clean(values[index]);
+    if (/^-?[\d.,]+$/.test(value) && /[.,]/.test(value)) return { value, index };
   }
   return { value: '', index: -1 };
 }
@@ -305,6 +306,7 @@ function extractRiskPoints(rows, sheetName, fallbackCity) {
     const orientacao = values.slice(tipoIndex + 4, tipoIndex + 8).find((value) => value && !/^-?\d/.test(value)) || values[tipoIndex + 4] || '';
     const firstCoord = findCoordinate(values, tipoIndex + 4);
     const secondCoord = findCoordinate(values, firstCoord.index + 1);
+    const coordinates = normalizeCoordinatePair(firstCoord.value, secondCoord.value);
     const speedValues = values.filter((value) => /\bkm\/?h?\b/i.test(value));
 
     points.push({
@@ -313,8 +315,8 @@ function extractRiskPoints(rows, sheetName, fallbackCity) {
       nivel_risco: nivel,
       rodovia_endereco: rodovia,
       orientacao,
-      latitude: firstCoord.value,
-      longitude: secondCoord.value,
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
       velocidade_permitida: speedValues[0] || '',
       velocidade_segura: speedValues[1] || speedValues[0] || '',
       cidade: cityCandidate || fallbackCity,
