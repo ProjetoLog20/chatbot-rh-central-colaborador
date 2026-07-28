@@ -45,7 +45,7 @@ const rotaDetailFields = [
   ['valor_total_previsto', 'Valor a receber', 'money'],
   ['status_produtividade', 'Status produtividade'],
   ['status_auditoria', 'Auditoria', 'auditoria'],
-  ['metodo_cruzamento', 'Metodo cruzamento'],
+  ['metodo_cruzamento', 'Metodo cruzamento', 'sourceLabel'],
   ['confianca_cruzamento', 'Confiança do cruzamento', 'confidencePercent'],
   ['mensagem_rh', 'Mensagem RH']
 ];
@@ -209,6 +209,7 @@ function formatValue(value, type) {
 function formatSourceLabel(value) {
   if (!value) return '-';
   return String(value)
+    .replace(/one[ _-]?pager/gi, 'On Demand')
     .replace(/wms/gi, 'On Demand')
     .replace(/_/g, ' ');
 }

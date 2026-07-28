@@ -449,8 +449,8 @@ function officialRow({ competencia, codigo, nome, funcao, caixas, entregas, devo
     status_produtividade: premio > 0 ? 'Elegivel' : 'Sem premio',
     metodo_cruzamento: metodo,
     confianca_cruzamento: 1,
-    observacao_cruzamento: 'Valor final calculado diretamente pelas regras do One Pager oficial.',
-    mensagem_rh: 'Valor final conforme detalhamento oficial do One Pager.'
+    observacao_cruzamento: 'Valor final calculado diretamente pelas regras oficiais do On Demand.',
+    mensagem_rh: 'Valor final conforme detalhamento oficial do On Demand.'
   });
 }
 
@@ -715,7 +715,7 @@ function readOfficialWorkbookRows(source, isBuffer) {
 function previewOfficialWorkbook({ filePath, buffer } = {}) {
   const resolvedPath = filePath ? path.resolve(filePath) : DEFAULT_FILE;
   const rows = readOfficialWorkbookRows(buffer || resolvedPath, Boolean(buffer));
-  if (!rows) throw new Error('Formato oficial com One Pager e Tabelão não reconhecido.');
+  if (!rows) throw new Error('Formato oficial do On Demand não reconhecido.');
   return rows;
 }
 
