@@ -98,9 +98,9 @@ async function incrementAccessCounter(req) {
          VALUES (1, 1, 1, ?, CURRENT_TIMESTAMP)`,
         [today]
       );
-      await db.run('INSERT INTO acessos_diarios (data, total) VALUES (?, ?) ON CONFLICT(data) DO UPDATE SET total = total + 1', [today, 1]);
+      await db.run('INSERT INTO acessos_diarios (data, total) VALUES (?, ?) ON CONFLICT(data) DO UPDATE SET total = acessos_diarios.total + 1', [today, 1]);
       await db.run(
-        'INSERT INTO acessos_horarios (data, hora, total) VALUES (?, ?, 1) ON CONFLICT(data, hora) DO UPDATE SET total = total + 1',
+        'INSERT INTO acessos_horarios (data, hora, total) VALUES (?, ?, 1) ON CONFLICT(data, hora) DO UPDATE SET total = acessos_horarios.total + 1',
         [today, hour]
       );
       return;
@@ -126,9 +126,9 @@ async function incrementAccessCounter(req) {
       );
     }
 
-    await db.run('INSERT INTO acessos_diarios (data, total) VALUES (?, 1) ON CONFLICT(data) DO UPDATE SET total = total + 1', [today]);
+    await db.run('INSERT INTO acessos_diarios (data, total) VALUES (?, 1) ON CONFLICT(data) DO UPDATE SET total = acessos_diarios.total + 1', [today]);
     await db.run(
-      'INSERT INTO acessos_horarios (data, hora, total) VALUES (?, ?, 1) ON CONFLICT(data, hora) DO UPDATE SET total = total + 1',
+      'INSERT INTO acessos_horarios (data, hora, total) VALUES (?, ?, 1) ON CONFLICT(data, hora) DO UPDATE SET total = acessos_horarios.total + 1',
       [today, hour]
     );
 
