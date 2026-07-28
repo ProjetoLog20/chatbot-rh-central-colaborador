@@ -299,6 +299,7 @@ router.get('/meu', authenticateToken, async (req, res) => {
     const rows = await db.all(
       `${selectArmazem}
        WHERE p.colaborador_id = ?
+         AND COALESCE(p.publicado, true) = true
        ORDER BY p.competencia DESC, p.funcao_armazem, p.created_at DESC`,
       [req.user.id]
     );

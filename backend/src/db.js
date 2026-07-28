@@ -371,10 +371,17 @@ function connectSqlite() {
       observacao_cruzamento TEXT,
       mensagem_rh TEXT,
       dados_originais_json TEXT,
+      publicado INTEGER DEFAULT 1,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE CASCADE
     )`);
+
+    sqliteDb.all('PRAGMA table_info(produtividade_armazem_colaboradores)', [], (err, columns) => {
+      if (!err && !columns.some((column) => column.name === 'publicado')) {
+        sqliteDb.run('ALTER TABLE produtividade_armazem_colaboradores ADD COLUMN publicado INTEGER DEFAULT 1');
+      }
+    });
 
     sqliteDb.run(`CREATE TABLE IF NOT EXISTS historico_pontuacao (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
