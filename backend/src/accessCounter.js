@@ -28,6 +28,21 @@ async function ensureAccessCounterTable() {
   `);
 
   await db.run(`
+    CREATE TABLE IF NOT EXISTS acessos_importacoes_retroativas (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      origem TEXT NOT NULL,
+      referencia TEXT,
+      arquivo TEXT,
+      hash_sha256 TEXT,
+      periodo_inicio TEXT,
+      periodo_fim TEXT,
+      total_acessos INTEGER NOT NULL DEFAULT 0,
+      registros_horarios INTEGER NOT NULL DEFAULT 0,
+      importado_em TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await db.run(`
     INSERT INTO acessos_app (id, total_acessos, total_acessos_hoje, ultima_data, ultimo_acesso_em)
     VALUES (1, 0, 0, NULL, CURRENT_TIMESTAMP)
     ON CONFLICT(id) DO NOTHING
@@ -133,6 +148,12 @@ async function getAccessMetrics() {
   const hourlyRows = await db.all(
     'SELECT hora, SUM(total) AS total FROM acessos_horarios GROUP BY hora ORDER BY hora ASC'
   );
+  const retroactiveSource = await db.get(
+    `SELECT origem, referencia, arquivo, hash_sha256, periodo_inicio, periodo_fim,
+            total_acessos, registros_horarios, importado_em
+       FROM acessos_importacoes_retroativas
+      WHERE id = 1`
+  );
   const detailedDaysRow = await db.get('SELECT COUNT(DISTINCT data) AS total FROM acessos_horarios');
   const history = historyRows.map((item) => ({
     data: item.data,
@@ -151,6 +172,13 @@ async function getAccessMetrics() {
     null
   );
   const totalDays = history.length;
+  const monthlyMap = new Map();
+  for (const item of history) {
+    const month = String(item.data || '').slice(0, 7);
+    if (!month) continue;
+    monthlyMap.set(month, (monthlyMap.get(month) || 0) + item.total);
+  }
+  const monthlyHistory = [...monthlyMap.entries()].map(([mes, total]) => ({ mes, total }));
 
   return {
     total_acessos: Number(row?.total_acessos || 0),
@@ -158,7 +186,9 @@ async function getAccessMetrics() {
     ultima_data: row?.ultima_data || null,
     ultimo_acesso_em: row?.ultimo_acesso_em || null,
     history,
+    monthly_history: monthlyHistory,
     hourly_history: hourlyHistory,
+    fonte_retroativa: retroactiveSource || null,
     resumo: {
       dias_registrados: totalDays,
       media_acessos_dia: totalDays ? Number((history.reduce((sum, item) => sum + item.total, 0) / totalDays).toFixed(1)) : 0,

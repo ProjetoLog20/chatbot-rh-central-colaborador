@@ -101,12 +101,24 @@ function formatAccessDate(value) {
   return `${day}/${month}/${year}`;
 }
 
-function AccessChart({ history = [], hourlyHistory = [], summary = {} }) {
+function formatAccessNumber(value, maximumFractionDigits = 0) {
+  return Number(value || 0).toLocaleString('pt-BR', { maximumFractionDigits });
+}
+
+function AccessChart({
+  history = [],
+  monthlyHistory = [],
+  hourlyHistory = [],
+  summary = {},
+  retroactiveSource = null,
+  totalAccesses = 0
+}) {
   const values = history.map((item) => Number(item.total || 0));
   const maxValue = Math.max(...values, 1);
   const hourlyMax = Math.max(...hourlyHistory.map((item) => Number(item.total || 0)), 1);
   const recentHistory = history.slice(-14);
   const hasDailySeries = recentHistory.length > 1;
+  const monthlyMax = Math.max(...monthlyHistory.map((item) => Number(item.total || 0)), 1);
 
   if (!history.length) {
     return <p>Nenhum dado de acesso registrado ainda.</p>;
@@ -115,11 +127,36 @@ function AccessChart({ history = [], hourlyHistory = [], summary = {} }) {
   return (
     <div className="access-analytics">
       <div className="access-summary-grid">
-        <article><small>Melhor dia</small><strong>{formatAccessDate(summary.melhor_dia?.data)}</strong><span>{summary.melhor_dia?.total || 0} acessos</span></article>
-        <article><small>Média diária</small><strong>{summary.media_acessos_dia || 0}</strong><span>acessos por dia</span></article>
-        <article><small>Horário de pico</small><strong>{summary.horario_pico ? `${String(summary.horario_pico.hora).padStart(2, '0')}h` : 'Em formação'}</strong><span>{summary.horario_pico?.total || 0} acessos detalhados</span></article>
-        <article><small>Dias registrados</small><strong>{summary.dias_registrados || history.length}</strong><span>{summary.dias_com_detalhamento_horario || 0} com horários</span></article>
+        <article><small>Melhor dia</small><strong>{formatAccessDate(summary.melhor_dia?.data)}</strong><span>{formatAccessNumber(summary.melhor_dia?.total)} acessos</span></article>
+        <article><small>Média diária</small><strong>{formatAccessNumber(summary.media_acessos_dia, 1)}</strong><span>acessos por dia</span></article>
+        <article><small>Horário de pico</small><strong>{summary.horario_pico ? `${String(summary.horario_pico.hora).padStart(2, '0')}h` : 'Em formação'}</strong><span>{formatAccessNumber(summary.horario_pico?.total)} acessos detalhados</span></article>
+        <article><small>Dias registrados</small><strong>{formatAccessNumber(summary.dias_registrados || history.length)}</strong><span>{formatAccessNumber(summary.dias_com_detalhamento_horario)} com horários</span></article>
       </div>
+
+      {monthlyHistory.length > 1 ? (
+        <section className="access-chart-card access-monthly-card">
+          <div className="access-chart-heading">
+            <div><small>Visão executiva</small><h3>Evolução mensal dos acessos</h3></div>
+            <span>{formatAccessDate(retroactiveSource?.periodo_inicio)} a {formatAccessDate(retroactiveSource?.periodo_fim)}</span>
+          </div>
+          <div className="access-monthly-chart">
+            {monthlyHistory.map((item) => {
+              const [year, month] = String(item.mes).split('-');
+              const monthLabel = new Intl.DateTimeFormat('pt-BR', { month: 'short' })
+                .format(new Date(Number(year), Number(month) - 1, 1))
+                .replace('.', '');
+              const width = Math.max(6, (Number(item.total || 0) / monthlyMax) * 100);
+              return (
+                <div className="access-monthly-row" key={item.mes}>
+                  <strong>{monthLabel}</strong>
+                  <div className="access-monthly-track"><span style={{ width: `${width}%` }} /></div>
+                  <b>{formatAccessNumber(item.total)}</b>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
 
       <section className="access-chart-card">
         <div className="access-chart-heading">
@@ -181,9 +218,35 @@ function AccessChart({ history = [], hourlyHistory = [], summary = {} }) {
         )}
       </section>
 
-      <div className="access-data-note">
-        <strong>Leitura dos dados</strong>
-        <p>O histórico diário anterior foi preservado. A distribuição por horário considera somente os acessos registrados após a nova medição, no fuso de Brasília.</p>
+      <div className="access-data-disclosures">
+        <details className="access-data-note access-data-note-total">
+          <summary>
+            <span>
+              <small>Acumulado total</small>
+              <strong>{formatAccessNumber(totalAccesses)} acessos</strong>
+            </span>
+            <span className="access-disclosure-arrow" aria-hidden="true">⌄</span>
+          </summary>
+          <p>
+            Soma consolidada do histórico do chamado com os acessos reais registrados após
+            o encerramento do período retroativo, sem duplicidade.
+          </p>
+        </details>
+
+        <details className="access-data-note">
+          <summary>
+            <span>
+              <small>Acessos do chamado</small>
+              <strong>{formatAccessNumber(retroactiveSource?.total_acessos)} acessos</strong>
+            </span>
+            <span className="access-disclosure-arrow" aria-hidden="true">⌄</span>
+          </summary>
+          <p>
+            {retroactiveSource
+              ? `${retroactiveSource.referencia}: ${formatAccessNumber(retroactiveSource.registros_horarios)} registros horários entre ${formatAccessDate(retroactiveSource.periodo_inicio)} e ${formatAccessDate(retroactiveSource.periodo_fim)}. Origem registrada: ${retroactiveSource.origem}.`
+              : 'Nenhum histórico retroativo foi importado.'}
+          </p>
+        </details>
       </div>
     </div>
   );
@@ -627,7 +690,7 @@ export default function AdminPage() {
             <div>
               <small>Total acumulado</small>
               <strong>{Number(accessMetrics?.total_acessos || 0).toLocaleString('pt-BR')}</strong>
-              <span>acessos desde o início da medição</span>
+              <span>acessos desde abril de 2026</span>
             </div>
           </article>
           <article className="access-primary-card">
@@ -649,8 +712,11 @@ export default function AdminPage() {
         </div>
         <AccessChart
           history={accessMetrics?.history || []}
+          monthlyHistory={accessMetrics?.monthly_history || []}
           hourlyHistory={accessMetrics?.hourly_history || []}
           summary={accessMetrics?.resumo || {}}
+          retroactiveSource={accessMetrics?.fonte_retroativa || null}
+          totalAccesses={accessMetrics?.total_acessos || 0}
         />
       </section>
 

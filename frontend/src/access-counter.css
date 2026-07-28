@@ -47,8 +47,24 @@
 .access-series-first-day{display:grid;min-width:112px;padding:12px;text-align:center;background:#fff;border:1px solid #dce6ee;border-radius:10px}
 .access-series-first-day small,.access-series-first-day span{color:#718094;font-size:.65rem}
 .access-series-first-day strong{color:#e87522;font-size:1.45rem}
-.access-data-note{padding:13px 15px;color:#75511d;background:#fff8eb;border-left:4px solid #e87522;border-radius:8px}
-.access-data-note p{margin:3px 0 0;font-size:.78rem}
+.access-monthly-card{background:linear-gradient(145deg,#f8fbfe,#fff)}
+.access-monthly-chart{display:grid;gap:10px}
+.access-monthly-row{display:grid;grid-template-columns:42px minmax(0,1fr) 62px;align-items:center;gap:10px;color:#153e62;font-size:.78rem}
+.access-monthly-row>strong{text-transform:capitalize}
+.access-monthly-row>b{text-align:right}
+.access-monthly-track{height:12px;overflow:hidden;background:#eaf1f6;border-radius:999px}
+.access-monthly-track span{display:block;height:100%;background:linear-gradient(90deg,#0b5c91,#1694df);border-radius:inherit}
+.access-data-disclosures{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:10px}
+.access-data-note{padding:0;color:#75511d;background:#fff8eb;border:1px solid #f2dfbd;border-left:4px solid #e87522;border-radius:10px}
+.access-data-note-total{color:#0b4776;background:#eff8fe;border-color:#cee4f2;border-left-color:#0b75b8}
+.access-data-note summary{display:flex;min-height:72px;padding:13px 15px;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;list-style:none}
+.access-data-note summary::-webkit-details-marker{display:none}
+.access-data-note summary>span:first-child{display:grid;gap:2px}
+.access-data-note summary small{font-size:.68rem;font-weight:900;letter-spacing:.05em;text-transform:uppercase;opacity:.78}
+.access-data-note summary strong{font-size:1.05rem}
+.access-disclosure-arrow{display:grid;width:30px;height:30px;place-items:center;color:#0b4776;font-size:1.25rem;font-weight:900;background:rgba(255,255,255,.72);border:1px solid rgba(11,71,118,.14);border-radius:50%;transition:transform .2s ease}
+.access-data-note[open] .access-disclosure-arrow{transform:rotate(180deg)}
+.access-data-note p{margin:0;padding:0 15px 14px;font-size:.78rem;line-height:1.5}
 @media(max-width:900px){
   .access-counter-section{padding:17px}
   .access-counter-heading{display:grid}
@@ -56,6 +72,7 @@
   .access-primary-grid{grid-template-columns:1fr}
   .access-primary-card{min-height:106px}
   .access-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .access-data-disclosures{grid-template-columns:1fr}
   .access-daily-chart{grid-template-columns:repeat(14,minmax(34px,1fr))}
   .access-hourly-chart{grid-template-columns:repeat(24,minmax(20px,1fr))}
   .access-series-empty{grid-template-columns:auto 1fr}
