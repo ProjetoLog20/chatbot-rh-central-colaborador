@@ -3,7 +3,7 @@ import {
   createCampeaoSeguranca,
   deleteCampeaoSeguranca,
   getAdminCampeoesSeguranca,
-  getCollaborators,
+  getCampeoesSegurancaCollaborators,
   updateCampeaoSeguranca
 } from '../api.js';
 import { CampeaoSegurancaCard, campeaoCriteria, formatCompetencia } from './CampeaoSegurancaPage.jsx';
@@ -51,9 +51,13 @@ export default function AdminCampeoesSeguranca() {
   }, []);
 
   async function refresh() {
-    const [champions, users] = await Promise.all([getAdminCampeoesSeguranca(), getCollaborators()]);
-    setItems(champions);
-    setColaboradores(users);
+    try {
+      const [champions, users] = await Promise.all([getAdminCampeoesSeguranca(), getCampeoesSegurancaCollaborators()]);
+      setItems(champions);
+      setColaboradores(users);
+    } catch (error) {
+      setMessage(error?.error || 'Você não possui permissão para gerenciar os Campeões de Segurança.');
+    }
   }
 
   function resetForm() {

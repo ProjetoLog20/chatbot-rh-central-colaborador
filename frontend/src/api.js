@@ -455,6 +455,14 @@ export async function getCampeoesSegurancaPublicos() {
   return request('/campeoes-seguranca/publicos');
 }
 
+export async function getCampeoesSegurancaPermissions() {
+  return request('/campeoes-seguranca/permissoes');
+}
+
+export async function getCampeoesSegurancaCollaborators() {
+  return request('/campeoes-seguranca/admin/colaboradores');
+}
+
 export async function getRotogramas(filters = {}) {
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {

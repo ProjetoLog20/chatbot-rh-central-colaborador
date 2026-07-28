@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getCampeoesSegurancaPublicos } from '../api.js';
+import { getCampeoesSegurancaPermissions, getCampeoesSegurancaPublicos } from '../api.js';
 
 const criteria = [
   ['log_on_100', 'Log On 100%'],
@@ -24,10 +24,6 @@ function formatCompetencia(value) {
   const [year, month] = String(value).split('-');
   if (year?.length === 4 && month) return `${month}/${year}`;
   return value;
-}
-
-function isAdminUser(user) {
-  return String(user?.perfil || '').trim().toLowerCase() === 'admin';
 }
 
 function CampeaoPhoto({ item }) {
@@ -91,14 +87,20 @@ function InfoCard({ title, text, icon = '✓' }) {
 export default function CampeaoSegurancaPage({ user }) {
   const [items, setItems] = useState([]);
   const [message, setMessage] = useState('');
+  const [canManage, setCanManage] = useState(false);
   const sorted = useMemo(() => [...items].sort((a, b) => String(b.competencia).localeCompare(String(a.competencia))), [items]);
-  const isAdmin = isAdminUser(user);
 
   useEffect(() => {
     getCampeoesSegurancaPublicos()
       .then(setItems)
       .catch((err) => setMessage(err.error || 'Erro ao carregar campeões de segurança.'));
   }, []);
+
+  useEffect(() => {
+    getCampeoesSegurancaPermissions()
+      .then((result) => setCanManage(Boolean(result?.pode_editar)))
+      .catch(() => setCanManage(false));
+  }, [user?.id]);
 
   return (
     <div className="champion-page">
@@ -108,10 +110,9 @@ export default function CampeaoSegurancaPage({ user }) {
           <h1>Campeão de Segurança</h1>
           <p>Colaboradores reconhecidos por atitude segura, disciplina operacional e exemplo para o time.</p>
         </div>
-        {isAdmin ? (
+        {canManage ? (
           <div className="champion-admin-actions">
-            <Link to="/admin">Cadastrar Campeão</Link>
-            <Link to="/admin">Gerenciar Campeões</Link>
+            <Link to="/campeao-seguranca/gerenciar">Gerenciar Campeões</Link>
           </div>
         ) : null}
       </section>

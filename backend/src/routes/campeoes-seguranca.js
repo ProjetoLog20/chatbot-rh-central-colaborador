@@ -46,6 +46,32 @@ function runDb(sql, params = []) {
   return db.run(sql, params);
 }
 
+function isAdmin(user) {
+  return String(user?.perfil || '').trim().toLowerCase() === 'admin';
+}
+
+async function canManageChampions(user) {
+  if (!user?.id) return false;
+  if (isAdmin(user)) return true;
+  const permission = await db.get(
+    `SELECT id FROM permissoes_colaboradores
+     WHERE colaborador_id = ? AND permissao = ? AND COALESCE(ativo, true) = true`,
+    [user.id, 'campeoes_seguranca_editar']
+  );
+  return Boolean(permission);
+}
+
+async function requireChampionEditor(req, res, next) {
+  try {
+    if (!await canManageChampions(req.user)) {
+      return res.status(403).json({ error: 'Acesso negado ao gerenciamento dos Campeões de Segurança.' });
+    }
+    return next();
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao validar permissão dos Campeões de Segurança.' });
+  }
+}
+
 function deleteLocalPhoto(fotoUrl) {
   if (!fotoUrl?.startsWith('/uploads/campeoes/')) return;
   const filePath = path.join(__dirname, '../../', fotoUrl.replace(/^\/+/, ''));
@@ -120,7 +146,29 @@ router.get('/publicos', authenticateToken, async (req, res) => {
   }
 });
 
-router.get('/admin', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+router.get('/permissoes', authenticateToken, async (req, res) => {
+  try {
+    return res.json({ pode_editar: await canManageChampions(req.user) });
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao consultar permissão dos Campeões de Segurança.' });
+  }
+});
+
+router.get('/admin/colaboradores', authenticateToken, requireChampionEditor, async (req, res) => {
+  try {
+    const rows = await db.all(
+      `SELECT id, matricula, nome_completo, nome_preferido, cargo, setor
+       FROM colaboradores
+       WHERE COALESCE(LOWER(TRIM(status)), 'ativo') NOT IN ('desligado', 'removido', 'inativo')
+       ORDER BY nome_completo`
+    );
+    return res.json(rows);
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao listar colaboradores.' });
+  }
+});
+
+router.get('/admin', authenticateToken, requireChampionEditor, async (req, res) => {
   try {
     const rows = await db.all(
       `SELECT *
@@ -133,7 +181,7 @@ router.get('/admin', authenticateToken, authorizeRoles('admin'), async (req, res
   }
 });
 
-router.post('/admin', authenticateToken, authorizeRoles('admin'), upload.single('foto'), handleUploadError, async (req, res) => {
+router.post('/admin', authenticateToken, requireChampionEditor, upload.single('foto'), handleUploadError, async (req, res) => {
   try {
     const payload = payloadFromBody(req.body, req.file, null, req.user);
     if (!payload.competencia || !payload.nome_colaborador || !payload.motivo_reconhecimento) {
@@ -172,7 +220,7 @@ router.post('/admin', authenticateToken, authorizeRoles('admin'), upload.single(
   }
 });
 
-router.put('/admin/:id', authenticateToken, authorizeRoles('admin'), upload.single('foto'), handleUploadError, async (req, res) => {
+router.put('/admin/:id', authenticateToken, requireChampionEditor, upload.single('foto'), handleUploadError, async (req, res) => {
   const id = Number(req.params.id);
 
   try {
@@ -215,7 +263,7 @@ router.put('/admin/:id', authenticateToken, authorizeRoles('admin'), upload.sing
   }
 });
 
-router.delete('/admin/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+router.delete('/admin/:id', authenticateToken, requireChampionEditor, async (req, res) => {
   const id = Number(req.params.id);
 
   try {
