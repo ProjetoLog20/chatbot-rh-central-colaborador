@@ -48,23 +48,24 @@ async function importRetroactiveAccess(file) {
   await db.run('DELETE FROM acessos_horarios WHERE data >= ? AND data <= ?', [periodStart, periodEnd]);
   await db.run('DELETE FROM acessos_diarios WHERE data >= ? AND data <= ?', [periodStart, periodEnd]);
 
-  for (const row of rows) {
-    await db.run(
-      `INSERT INTO acessos_horarios (data, hora, total)
-       VALUES (?, ?, ?)
-       ON CONFLICT(data, hora) DO UPDATE SET total = excluded.total`,
-      [row.date, row.hour, row.quantity]
-    );
-  }
+  const hourlyPlaceholders = rows.map(() => '(?, ?, ?)').join(', ');
+  const hourlyParams = rows.flatMap((row) => [row.date, row.hour, row.quantity]);
+  await db.run(
+    `INSERT INTO acessos_horarios (data, hora, total)
+     VALUES ${hourlyPlaceholders}
+     ON CONFLICT(data, hora) DO UPDATE SET total = excluded.total`,
+    hourlyParams
+  );
 
-  for (const [date, quantity] of daily) {
-    await db.run(
-      `INSERT INTO acessos_diarios (data, total)
-       VALUES (?, ?)
-       ON CONFLICT(data) DO UPDATE SET total = excluded.total`,
-      [date, quantity]
-    );
-  }
+  const dailyRows = [...daily.entries()];
+  const dailyPlaceholders = dailyRows.map(() => '(?, ?)').join(', ');
+  const dailyParams = dailyRows.flatMap(([date, quantity]) => [date, quantity]);
+  await db.run(
+    `INSERT INTO acessos_diarios (data, total)
+     VALUES ${dailyPlaceholders}
+     ON CONFLICT(data) DO UPDATE SET total = excluded.total`,
+    dailyParams
+  );
 
   if (liveCounter?.ultima_data > periodEnd && Number(liveCounter.total_acessos_hoje || 0) > 0) {
     await db.run(
