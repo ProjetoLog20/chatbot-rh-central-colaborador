@@ -46,7 +46,7 @@ const rotaDetailFields = [
   ['status_produtividade', 'Status produtividade'],
   ['status_auditoria', 'Auditoria', 'auditoria'],
   ['metodo_cruzamento', 'Metodo cruzamento'],
-  ['confianca_cruzamento', 'Confiança do cruzamento', 'percent'],
+  ['confianca_cruzamento', 'Confiança do cruzamento', 'confidencePercent'],
   ['mensagem_rh', 'Mensagem RH']
 ];
 
@@ -74,7 +74,7 @@ const armazemDetailFields = [
   ['origem_calculo', 'Origem do calculo'],
   ['status_auditoria', 'Auditoria', 'auditoria'],
   ['metodo_cruzamento', 'Metodo cruzamento'],
-  ['confianca_cruzamento', 'Confiança do cruzamento', 'percent'],
+  ['confianca_cruzamento', 'Confiança do cruzamento', 'confidencePercent'],
   ['usuario_wms', 'Usuário WMS'],
   ['codigo_operacional', 'Código operacional'],
   ['mensagem_rh', 'Mensagem RH']
@@ -185,6 +185,11 @@ function formatPercent(value) {
   return `${asNumber(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
 }
 
+function formatConfidencePercent(value) {
+  if (value === null || value === undefined || value === '') return '-';
+  return `${(asNumber(value) * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`;
+}
+
 function formatDate(value) {
   if (!value) return '-';
   return String(value).slice(0, 10).split('-').reverse().join('/');
@@ -193,6 +198,7 @@ function formatDate(value) {
 function formatValue(value, type) {
   if (type === 'money') return formatMoney(value);
   if (type === 'percent') return formatPercent(value);
+  if (type === 'confidencePercent') return formatConfidencePercent(value);
   if (type === 'number') return formatNumber(value);
   if (type === 'date') return formatDate(value);
   if (type === 'devolucao') return value ? 'Dentro da meta' : 'Fora da meta';
