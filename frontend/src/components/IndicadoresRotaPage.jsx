@@ -35,9 +35,8 @@ const indicadores = [
   {
     id: 'rqi',
     icon: '🚚',
-    title: 'RQI',
+    title: 'RQI - IV CRÍTICO',
     meta: '280 pontos',
-    criticalAlert: 'IV CRÍTICO',
     text: 'Este indicador é crítico 😐. Precisamos cuidar da qualidade dos produtos para evitar solicitações de troca, aumentando também o NPS, que mede a satisfação do cliente.',
     explanation: 'RQI é o volume de trocas que você realiza pelo volume entregue do seu caminhão. Quanto menor o volume do caminhão, maior pode ser o percentual de RQI caso existam trocas. Lembre-se: 1 lata tem volume menor que 1 caixa.',
     conclusion: 'Vale a pena garantir este indicador. É gratificante ser reconhecido por um bom trabalho ❤️',
@@ -71,16 +70,6 @@ export default function IndicadoresRotaPage() {
                 <span className="route-indicator-meta">Meta: {indicador.meta}</span>
               </div>
             </div>
-
-            {indicador.criticalAlert ? (
-              <div className="route-indicator-critical-alert" role="alert">
-                <span aria-hidden="true">⚠</span>
-                <div>
-                  <strong>{indicador.criticalAlert}</strong>
-                  <small>Atenção: este indicador exige acompanhamento imediato.</small>
-                </div>
-              </div>
-            ) : null}
 
             <p>{indicador.text}</p>
 
