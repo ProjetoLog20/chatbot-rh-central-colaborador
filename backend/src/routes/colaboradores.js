@@ -87,7 +87,7 @@ router.post('/', authenticateToken, authorizeRoles('admin'), async (req, res) =>
     return res.status(201).json({ colaborador: created, senha_temporaria: text(req.body.senha) || 'log20' });
   } catch (error) {
     if (/unique|duplicate/i.test(error.message || '')) {
-      return res.status(409).json({ error: 'Matricula, usuario WMS ou codigo operacional ja cadastrado.' });
+      return res.status(409).json({ error: 'Matricula, usuario On Demand ou codigo operacional ja cadastrado.' });
     }
     console.error('ERRO CRIAR COLABORADOR:', error);
     return res.status(500).json({ error: 'Erro ao salvar colaborador' });
@@ -163,7 +163,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
   } catch (error) {
     if (error.status) return res.status(error.status).json({ error: error.message });
     if (/unique|duplicate/i.test(error.message || '')) {
-      return res.status(409).json({ error: 'Matricula, usuario WMS ou codigo operacional ja cadastrado.' });
+      return res.status(409).json({ error: 'Matricula, usuario On Demand ou codigo operacional ja cadastrado.' });
     }
     console.error('ERRO ATUALIZAR COLABORADOR:', error);
     return res.status(500).json({ error: 'Erro atualizando colaborador' });

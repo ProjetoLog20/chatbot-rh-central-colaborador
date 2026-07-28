@@ -71,11 +71,11 @@ const armazemDetailFields = [
   ['erros', 'Erros', 'number'],
   ['valor_total_previsto', 'Valor total previsto', 'money'],
   ['status_produtividade', 'Status produtividade'],
-  ['origem_calculo', 'Origem do calculo'],
+  ['origem_calculo', 'Origem do calculo', 'sourceLabel'],
   ['status_auditoria', 'Auditoria', 'auditoria'],
-  ['metodo_cruzamento', 'Metodo cruzamento'],
+  ['metodo_cruzamento', 'Metodo cruzamento', 'sourceLabel'],
   ['confianca_cruzamento', 'Confiança do cruzamento', 'confidencePercent'],
-  ['usuario_wms', 'Usuário WMS'],
+  ['usuario_wms', 'Usuário On Demand'],
   ['codigo_operacional', 'Código operacional'],
   ['mensagem_rh', 'Mensagem RH']
 ];
@@ -199,10 +199,18 @@ function formatValue(value, type) {
   if (type === 'money') return formatMoney(value);
   if (type === 'percent') return formatPercent(value);
   if (type === 'confidencePercent') return formatConfidencePercent(value);
+  if (type === 'sourceLabel') return formatSourceLabel(value);
   if (type === 'number') return formatNumber(value);
   if (type === 'date') return formatDate(value);
   if (type === 'devolucao') return value ? 'Dentro da meta' : 'Fora da meta';
   return value || '-';
+}
+
+function formatSourceLabel(value) {
+  if (!value) return '-';
+  return String(value)
+    .replace(/wms/gi, 'On Demand')
+    .replace(/_/g, ' ');
 }
 
 function formatRotaFuncao(value) {
@@ -393,7 +401,7 @@ const armazemManualFields = [
   ['erros', 'Erros', 'number'],
   ['valor_total_previsto', 'Valor total previsto', 'number'],
   ['status_produtividade', 'Status', 'text'],
-  ['usuario_wms', 'Usuário WMS', 'text'],
+  ['usuario_wms', 'Usuário On Demand', 'text'],
   ['codigo_operacional', 'Código operacional', 'text']
 ];
 
@@ -962,7 +970,7 @@ function AdminArmazemPanel() {
     <>
       <div className="prod-actions">
         <label className={`prod-file-action ${importing ? 'disabled' : ''}`}>
-          {onDemandFile ? `Arquivo principal: ${onDemandFile.name}` : 'Selecionar Separação WMS ou On Demand (.csv)'}
+          {onDemandFile ? `Arquivo principal: ${onDemandFile.name}` : 'Selecionar arquivo On Demand (.csv)'}
           <input type="file" accept=".csv,text/csv" disabled={importing} onChange={(event) => setOnDemandFile(event.target.files?.[0] || null)} />
         </label>
         <label className={`prod-file-action ${importing ? 'disabled' : ''}`}>
@@ -1013,12 +1021,12 @@ function AdminArmazemPanel() {
         {summaryCards.map(([label, value, type]) => <div key={label}><span>{label}</span><strong>{formatValue(value, type)}</strong></div>)}
       </section>
       <section className="prod-filters">
-        <label>Buscar por nome, matrícula, CPF, competência, usuário WMS ou código operacional<input value={filters.busca} onChange={(event) => setFilters({ ...filters, busca: event.target.value })} /></label>
+        <label>Buscar por nome, matrícula, CPF, competência, usuário On Demand ou código operacional<input value={filters.busca} onChange={(event) => setFilters({ ...filters, busca: event.target.value })} /></label>
         <label>Competência<select value={filters.competencia} onChange={(event) => setFilters({ ...filters, competencia: event.target.value })}><option value="">Todas</option>{options.competencia.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
         <label>Função<select value={filters.funcao_armazem} onChange={(event) => setFilters({ ...filters, funcao_armazem: event.target.value })}><option value="">Todas</option><option value="Ajudante">Ajudante</option><option value="Operador de Empilhadeira">Operador de Empilhadeira</option><option value="Amarrador">Amarrador</option>{options.funcao_armazem.filter((option) => !['ajudante', 'operador de empilhadeira', 'amarrador'].includes(String(option).toLowerCase())).map((option) => <option key={option} value={option}>{formatArmazemFuncao(option)}</option>)}</select></label>
         <label>Status<select value={filters.status_produtividade} onChange={(event) => setFilters({ ...filters, status_produtividade: event.target.value })}><option value="">Todos</option>{options.status_produtividade.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
         <label>Auditoria<select value={filters.status_auditoria} onChange={(event) => setFilters({ ...filters, status_auditoria: event.target.value })}><option value="">Todas</option>{options.status_auditoria.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
-        <label>Origem do cálculo<select value={filters.origem_calculo} onChange={(event) => setFilters({ ...filters, origem_calculo: event.target.value })}><option value="">Todas</option>{options.origem_calculo.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
+        <label>Origem do cálculo<select value={filters.origem_calculo} onChange={(event) => setFilters({ ...filters, origem_calculo: event.target.value })}><option value="">Todas</option>{options.origem_calculo.map((option) => <option key={option} value={option}>{formatSourceLabel(option)}</option>)}</select></label>
       </section>
       {summary.total_baixa_confianca ? <div className="prod-warning">Existem {summary.total_baixa_confianca} registro(s) com baixa confiança de cruzamento para revisão.</div> : null}
       {loading ? <p>Carregando produtividade do armazém...</p> : null}

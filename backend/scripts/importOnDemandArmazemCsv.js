@@ -288,7 +288,7 @@ function buildWmsSeparationRows(csvRows, options = {}) {
       metodo_cruzamento: 'usuario_wms_exato',
       confianca_cruzamento: 1,
       observacao_cruzamento: 'RV calculada pelas faixas diarias oficiais. O CSV de separacao nao contem ocorrencias de conferencia para desconto.',
-      mensagem_rh: `RV calculada por dia a partir da pontuacao WMS. Valor bruto: R$ ${rvNova.toFixed(2)}.`,
+      mensagem_rh: `RV calculada por dia a partir da pontuação do On Demand. Valor bruto: R$ ${rvNova.toFixed(2)}.`,
       dados_originais_json: JSON.stringify({
         fonte: 'tempo_separacao_por_palete',
         usuario_wms: bucket.usuario,

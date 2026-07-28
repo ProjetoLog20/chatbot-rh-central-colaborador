@@ -814,7 +814,7 @@ export default function AdminPage() {
                 <label>E-mail<input type="email" value={collaboratorForm.email} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, email: e.target.value })} /></label>
                 <label>Data de admissão<input type="date" value={collaboratorForm.data_admissao || ''} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, data_admissao: e.target.value })} /></label>
                 <label>Status<select value={collaboratorForm.status} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, status: e.target.value })}><option value="Ativo">Ativo</option><option value="Afastado">Afastado</option><option value="Desligado">Desligado</option></select></label>
-                <label>Usuário WMS<input value={collaboratorForm.usuario_wms} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, usuario_wms: e.target.value })} /></label>
+                <label>Usuário On Demand<input value={collaboratorForm.usuario_wms} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, usuario_wms: e.target.value })} /></label>
                 <label>Código operacional<input value={collaboratorForm.codigo_operacional} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, codigo_operacional: e.target.value })} /></label>
                 <label>Senha temporária<input type="password" placeholder={editingCollaboratorId ? 'Vazio mantém a senha atual' : 'Padrão: log20'} value={collaboratorForm.senha} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, senha: e.target.value })} /></label>
               </div>
@@ -833,7 +833,7 @@ export default function AdminPage() {
               </div>
             </form>
             <div className="user-list-tools">
-              <input aria-label="Buscar usuário" placeholder="Buscar por nome, matrícula, cargo ou WMS" value={collaboratorSearch} onChange={(e) => setCollaboratorSearch(e.target.value)} />
+              <input aria-label="Buscar usuário" placeholder="Buscar por nome, matrícula, cargo ou On Demand" value={collaboratorSearch} onChange={(e) => setCollaboratorSearch(e.target.value)} />
               <select aria-label="Filtrar status" value={collaboratorStatusFilter} onChange={(e) => setCollaboratorStatusFilter(e.target.value)}><option value="ativos">Ativos</option><option value="inativos">Desligados e removidos</option><option value="todos">Todos</option></select>
               <span>{filteredCollaborators.length} cadastro(s)</span>
             </div>
