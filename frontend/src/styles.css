@@ -4558,6 +4558,165 @@ tr:not(:last-child) td {
   font-weight: 950;
 }
 
+.rotograma-editor-panel {
+  margin: 18px 0;
+  border: 2px solid #f58220;
+  border-radius: 16px;
+  background: #fffaf5;
+  overflow: hidden;
+}
+
+.rotograma-editor-panel > summary {
+  padding: 16px 20px;
+  color: #073b66;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.rotograma-editor-note,
+.rotograma-manual-form,
+.rotograma-editor-points-heading,
+.rotograma-editor-point-list {
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+.rotograma-editor-note {
+  color: #6b7280;
+}
+
+.rotograma-manual-form {
+  margin-bottom: 20px;
+  padding: 18px;
+  border: 1px solid #d9e2ec;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.rotograma-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.rotograma-manual-form label {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+  color: #17324d;
+  font-weight: 700;
+}
+
+.rotograma-manual-form input,
+.rotograma-manual-form select,
+.rotograma-manual-form textarea {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #bcccdc;
+  border-radius: 9px;
+  background: #fff;
+  color: #17202a;
+  font: inherit;
+}
+
+.rotograma-editor-actions,
+.rotograma-editor-points-heading,
+.rotograma-editor-point-list article {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rotograma-editor-actions button,
+.rotograma-editor-points-heading button,
+.rotograma-editor-point-list article > button {
+  padding: 10px 15px;
+  border: 0;
+  border-radius: 9px;
+  background: #074b78;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.rotograma-editor-actions .secondary {
+  background: #64748b;
+}
+
+.rotograma-editor-actions .danger {
+  margin-left: auto;
+  background: #b42318;
+}
+
+.rotograma-editor-status {
+  margin: 12px 0 0;
+  color: #074b78;
+  font-weight: 700;
+}
+
+.rotograma-map-preview {
+  display: inline-block;
+  margin-bottom: 14px;
+}
+
+.rotograma-editor-points-heading {
+  justify-content: space-between;
+  margin-top: 24px;
+  margin-bottom: 12px;
+}
+
+.rotograma-editor-point-list {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.rotograma-editor-point-list article {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border: 1px solid #d9e2ec;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.rotograma-editor-point-list article > div {
+  display: grid;
+  gap: 3px;
+}
+
+.rotograma-editor-point-list article > div span {
+  color: #6b7280;
+}
+
+.rotograma-editor-point-list .rotograma-manual-form {
+  flex-basis: 100%;
+  margin: 8px 0 0;
+}
+
+@media (max-width: 700px) {
+  .rotograma-editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rotograma-editor-note,
+  .rotograma-manual-form,
+  .rotograma-editor-points-heading,
+  .rotograma-editor-point-list {
+    margin-left: 12px;
+    margin-right: 12px;
+  }
+
+  .rotograma-editor-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .rotograma-editor-actions .danger {
+    margin-left: 0;
+  }
+}
+
 .rotograma-summary-grid,
 .risk-point-grid,
 .emergency-phone-grid,

@@ -4,6 +4,7 @@ const db = require('../db');
 const { authenticateToken, authorizeRoles } = require('../authMiddleware');
 const { ensureModuleAvailable, maintenancePayload } = require('../moduleConfig');
 const { importWorkbook } = require('../../scripts/importRotogramaXlsx');
+const { normalizeCoordinatePair } = require('../utils/rotogramaCoordinates');
 
 const router = express.Router();
 const upload = multer({
@@ -42,6 +43,48 @@ function boolValue(value) {
 
 function isAdminUser(user) {
   return String(user?.perfil || '').trim().toLowerCase() === 'admin';
+}
+
+async function canEditRotograma(user) {
+  if (!user?.id) return false;
+  const permission = await db.get(
+    `SELECT id FROM permissoes_colaboradores
+     WHERE colaborador_id = ? AND permissao = ? AND COALESCE(ativo, true) = true`,
+    [user.id, 'rotograma_editar']
+  );
+  return Boolean(permission);
+}
+
+async function requireRotogramaEditor(req, res, next) {
+  try {
+    if (!await canEditRotograma(req.user)) {
+      return res.status(403).json({ error: 'Edição do Rotograma não autorizada para esta matrícula.' });
+    }
+    return next();
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao validar permissão de edição do Rotograma.' });
+  }
+}
+
+function text(value, max = 500) {
+  return String(value ?? '').trim().slice(0, max);
+}
+
+async function auditChange(req, entidade, entidadeId, acao, before, after) {
+  await db.run(
+    `INSERT INTO rotograma_auditoria
+      (colaborador_id, matricula, entidade, entidade_id, acao, antes_json, depois_json)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      req.user.id,
+      req.user.matricula,
+      entidade,
+      entidadeId,
+      acao,
+      before ? JSON.stringify(before) : null,
+      after ? JSON.stringify(after) : null
+    ]
+  );
 }
 
 function buildListWhere(query, isAdmin = false) {
@@ -231,6 +274,152 @@ router.get('/admin/resumo', authenticateToken, authorizeRoles('admin'), async (r
     });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao carregar resumo de importacao dos rotogramas' });
+  }
+});
+
+router.get('/permissoes', authenticateToken, async (req, res) => {
+  try {
+    res.json({ pode_editar: await canEditRotograma(req.user) });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao consultar permissão do Rotograma.' });
+  }
+});
+
+router.put('/:id/manual', authenticateToken, requireRotogramaEditor, async (req, res) => {
+  try {
+    const before = await db.get(
+      'SELECT * FROM rotogramas WHERE id = ? AND COALESCE(ativo, true) = true',
+      [req.params.id]
+    );
+    if (!before) return res.status(404).json({ error: 'Rotograma não encontrado.' });
+
+    const classification = text(req.body.classificacao_rota, 30).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+    if (!['ATENCAO', 'OK'].includes(classification)) {
+      return res.status(400).json({ error: 'Classificação deve ser ATENÇÃO ou OK.' });
+    }
+    const storedClassification = classification === 'ATENCAO' ? 'ATENÃ‡ÃƒO' : 'OK';
+
+    await db.run(
+      `UPDATE rotogramas SET
+        nome = ?, origem = ?, destino = ?, cidade = ?, classificacao_rota = ?,
+        nivel_risco = ?, observacao = ?, data_atualizacao = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [
+        text(req.body.nome, 160),
+        text(req.body.origem, 160),
+        text(req.body.destino, 160),
+        text(req.body.cidade, 160),
+        storedClassification,
+        text(req.body.nivel_risco, 50),
+        text(req.body.observacao, 1000),
+        new Date().toISOString().slice(0, 10),
+        req.params.id
+      ]
+    );
+    const after = await db.get('SELECT * FROM rotogramas WHERE id = ?', [req.params.id]);
+    await auditChange(req, 'rotograma', Number(req.params.id), 'atualizar', before, after);
+    return res.json(after);
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao atualizar o Rotograma.' });
+  }
+});
+
+router.post('/:id/pontos/manual', authenticateToken, requireRotogramaEditor, async (req, res) => {
+  try {
+    const route = await db.get(
+      'SELECT id, cidade FROM rotogramas WHERE id = ? AND COALESCE(ativo, true) = true',
+      [req.params.id]
+    );
+    if (!route) return res.status(404).json({ error: 'Rotograma não encontrado.' });
+
+    const coordinates = normalizeCoordinatePair(req.body.latitude, req.body.longitude);
+    if ((req.body.latitude || req.body.longitude) && !coordinates.valid) {
+      return res.status(400).json({ error: 'Latitude ou longitude inválida para a região atendida.' });
+    }
+    const result = await db.run(
+      `INSERT INTO rotograma_pontos_risco
+        (rotograma_id, tipo_ponto, descricao, nivel_risco, rodovia_endereco, orientacao,
+         latitude, longitude, velocidade_permitida, velocidade_segura, cidade, origem_aba)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        req.params.id,
+        text(req.body.tipo_ponto, 80),
+        text(req.body.descricao, 300),
+        text(req.body.nivel_risco, 50),
+        text(req.body.rodovia_endereco, 300),
+        text(req.body.orientacao, 1000),
+        coordinates.valid ? coordinates.latitude : '',
+        coordinates.valid ? coordinates.longitude : '',
+        text(req.body.velocidade_permitida, 50),
+        text(req.body.velocidade_segura, 50),
+        text(req.body.cidade || route.cidade, 160),
+        'Edição manual'
+      ]
+    );
+    const created = await db.get(
+      'SELECT * FROM rotograma_pontos_risco WHERE id = ?',
+      [result.lastID]
+    );
+    await auditChange(req, 'ponto_risco', created.id, 'criar', null, created);
+    return res.status(201).json(shapePoint(created));
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao adicionar ponto de risco.' });
+  }
+});
+
+router.put('/:id/pontos/:pointId/manual', authenticateToken, requireRotogramaEditor, async (req, res) => {
+  try {
+    const before = await db.get(
+      'SELECT * FROM rotograma_pontos_risco WHERE id = ? AND rotograma_id = ?',
+      [req.params.pointId, req.params.id]
+    );
+    if (!before) return res.status(404).json({ error: 'Ponto de risco não encontrado.' });
+
+    const coordinates = normalizeCoordinatePair(req.body.latitude, req.body.longitude);
+    if ((req.body.latitude || req.body.longitude) && !coordinates.valid) {
+      return res.status(400).json({ error: 'Latitude ou longitude inválida para a região atendida.' });
+    }
+    await db.run(
+      `UPDATE rotograma_pontos_risco SET
+        tipo_ponto = ?, descricao = ?, nivel_risco = ?, rodovia_endereco = ?, orientacao = ?,
+        latitude = ?, longitude = ?, velocidade_permitida = ?, velocidade_segura = ?,
+        cidade = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND rotograma_id = ?`,
+      [
+        text(req.body.tipo_ponto, 80),
+        text(req.body.descricao, 300),
+        text(req.body.nivel_risco, 50),
+        text(req.body.rodovia_endereco, 300),
+        text(req.body.orientacao, 1000),
+        coordinates.valid ? coordinates.latitude : '',
+        coordinates.valid ? coordinates.longitude : '',
+        text(req.body.velocidade_permitida, 50),
+        text(req.body.velocidade_segura, 50),
+        text(req.body.cidade, 160),
+        req.params.pointId,
+        req.params.id
+      ]
+    );
+    const after = await db.get('SELECT * FROM rotograma_pontos_risco WHERE id = ?', [req.params.pointId]);
+    await auditChange(req, 'ponto_risco', after.id, 'atualizar', before, after);
+    return res.json(shapePoint(after));
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao atualizar ponto de risco.' });
+  }
+});
+
+router.delete('/:id/pontos/:pointId/manual', authenticateToken, requireRotogramaEditor, async (req, res) => {
+  try {
+    const before = await db.get(
+      'SELECT * FROM rotograma_pontos_risco WHERE id = ? AND rotograma_id = ?',
+      [req.params.pointId, req.params.id]
+    );
+    if (!before) return res.status(404).json({ error: 'Ponto de risco não encontrado.' });
+    await auditChange(req, 'ponto_risco', before.id, 'excluir', before, null);
+    await db.run('DELETE FROM rotograma_pontos_risco WHERE id = ? AND rotograma_id = ?', [req.params.pointId, req.params.id]);
+    return res.json({ ok: true });
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao excluir ponto de risco.' });
   }
 });
 

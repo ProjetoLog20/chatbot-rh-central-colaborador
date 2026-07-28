@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getAdminRotogramaResumo, getRotogramaDetail, getRotogramaOpcoes, getRotogramas, importRotogramaFile } from '../api.js';
+import {
+  createRotogramaPointManual,
+  deleteRotogramaPointManual,
+  getAdminRotogramaResumo,
+  getRotogramaDetail,
+  getRotogramaOpcoes,
+  getRotogramaPermissions,
+  getRotogramas,
+  importRotogramaFile,
+  updateRotogramaManual,
+  updateRotogramaPointManual
+} from '../api.js';
 
 const filtersInitialState = {
   origem: '',
@@ -101,6 +112,163 @@ function DetailSection({ title, children }) {
   );
 }
 
+const emptyPoint = {
+  tipo_ponto: 'Ponto',
+  descricao: '',
+  nivel_risco: 'Moderado',
+  rodovia_endereco: '',
+  orientacao: '',
+  latitude: '',
+  longitude: '',
+  velocidade_permitida: '',
+  velocidade_segura: '',
+  cidade: ''
+};
+
+function Field({ label, children }) {
+  return <label><span>{label}</span>{children}</label>;
+}
+
+function PointEditor({ point, rotogramaId, onSaved, onCancel }) {
+  const [form, setForm] = useState(point || emptyPoint);
+  const [status, setStatus] = useState('');
+  const isNew = !point?.id;
+
+  function change(field, value) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  async function save(event) {
+    event.preventDefault();
+    setStatus('Salvando...');
+    try {
+      if (isNew) await createRotogramaPointManual(rotogramaId, form);
+      else await updateRotogramaPointManual(rotogramaId, point.id, form);
+      setStatus('');
+      await onSaved();
+    } catch (error) {
+      setStatus(error?.error || 'Não foi possível salvar o ponto.');
+    }
+  }
+
+  async function remove() {
+    if (!window.confirm('Excluir este ponto de risco? A alteração ficará registrada no histórico.')) return;
+    setStatus('Excluindo...');
+    try {
+      await deleteRotogramaPointManual(rotogramaId, point.id);
+      await onSaved();
+    } catch (error) {
+      setStatus(error?.error || 'Não foi possível excluir o ponto.');
+    }
+  }
+
+  return (
+    <form className="rotograma-manual-form point" onSubmit={save}>
+      <div className="rotograma-editor-grid">
+        <Field label="Tipo"><input value={form.tipo_ponto || ''} onChange={(e) => change('tipo_ponto', e.target.value)} /></Field>
+        <Field label="Nível de risco">
+          <select value={form.nivel_risco || ''} onChange={(e) => change('nivel_risco', e.target.value)}>
+            <option value="Baixo">Baixo</option>
+            <option value="Moderado">Moderado</option>
+            <option value="Alto">Alto</option>
+          </select>
+        </Field>
+        <Field label="Descrição"><input required value={form.descricao || ''} onChange={(e) => change('descricao', e.target.value)} /></Field>
+        <Field label="Rodovia/endereço"><input value={form.rodovia_endereco || ''} onChange={(e) => change('rodovia_endereco', e.target.value)} /></Field>
+        <Field label="Latitude"><input value={form.latitude || ''} onChange={(e) => change('latitude', e.target.value)} placeholder="-24.000000" /></Field>
+        <Field label="Longitude"><input value={form.longitude || ''} onChange={(e) => change('longitude', e.target.value)} placeholder="-53.000000" /></Field>
+        <Field label="Velocidade permitida"><input value={form.velocidade_permitida || ''} onChange={(e) => change('velocidade_permitida', e.target.value)} /></Field>
+        <Field label="Velocidade segura"><input value={form.velocidade_segura || ''} onChange={(e) => change('velocidade_segura', e.target.value)} /></Field>
+      </div>
+      <Field label="Orientação"><textarea rows="3" value={form.orientacao || ''} onChange={(e) => change('orientacao', e.target.value)} /></Field>
+      {form.latitude && form.longitude ? (
+        <a className="rotograma-map-preview" href={`https://www.google.com/maps?q=${encodeURIComponent(form.latitude)},${encodeURIComponent(form.longitude)}`} target="_blank" rel="noreferrer">
+          Conferir coordenadas no Maps
+        </a>
+      ) : null}
+      <div className="rotograma-editor-actions">
+        <button type="submit">Salvar ponto</button>
+        <button type="button" className="secondary" onClick={onCancel}>Cancelar</button>
+        {!isNew ? <button type="button" className="danger" onClick={remove}>Excluir ponto</button> : null}
+      </div>
+      {status ? <p className="rotograma-editor-status">{status}</p> : null}
+    </form>
+  );
+}
+
+function RotogramaManualEditor({ detail, onSaved }) {
+  const [routeForm, setRouteForm] = useState(detail.resumo);
+  const [editingPoint, setEditingPoint] = useState(null);
+  const [addingPoint, setAddingPoint] = useState(false);
+  const [status, setStatus] = useState('');
+
+  async function saveRoute(event) {
+    event.preventDefault();
+    setStatus('Salvando alterações...');
+    try {
+      await updateRotogramaManual(detail.resumo.id, routeForm);
+      setStatus('Alterações salvas e registradas no histórico.');
+      await onSaved();
+    } catch (error) {
+      setStatus(error?.error || 'Não foi possível atualizar a rota.');
+    }
+  }
+
+  async function refreshPoints() {
+    setEditingPoint(null);
+    setAddingPoint(false);
+    await onSaved();
+  }
+
+  return (
+    <details className="rotograma-editor-panel">
+      <summary>Editar Rotograma</summary>
+      <p className="rotograma-editor-note">Acesso exclusivo da matrícula autorizada. Todas as alterações são auditadas.</p>
+      <form className="rotograma-manual-form" onSubmit={saveRoute}>
+        <div className="rotograma-editor-grid">
+          {[
+            ['nome', 'Nome da rota'],
+            ['origem', 'Origem'],
+            ['destino', 'Destino'],
+            ['cidade', 'Cidade'],
+            ['nivel_risco', 'Nível de risco']
+          ].map(([field, label]) => (
+            <Field label={label} key={field}>
+              <input value={routeForm[field] || ''} onChange={(e) => setRouteForm((current) => ({ ...current, [field]: e.target.value }))} />
+            </Field>
+          ))}
+          <Field label="Classificação">
+            <select value={String(routeForm.classificacao_rota || '').includes('OK') ? 'OK' : 'ATENCAO'} onChange={(e) => setRouteForm((current) => ({ ...current, classificacao_rota: e.target.value }))}>
+              <option value="ATENCAO">ATENÇÃO</option>
+              <option value="OK">OK</option>
+            </select>
+          </Field>
+        </div>
+        <Field label="Observação">
+          <textarea rows="3" value={routeForm.observacao || ''} onChange={(e) => setRouteForm((current) => ({ ...current, observacao: e.target.value }))} />
+        </Field>
+        <div className="rotograma-editor-actions"><button type="submit">Salvar dados da rota</button></div>
+        {status ? <p className="rotograma-editor-status">{status}</p> : null}
+      </form>
+
+      <div className="rotograma-editor-points-heading">
+        <h3>Pontos de risco</h3>
+        <button type="button" onClick={() => { setAddingPoint(true); setEditingPoint(null); }}>Adicionar ponto</button>
+      </div>
+      {addingPoint ? <PointEditor rotogramaId={detail.resumo.id} onSaved={refreshPoints} onCancel={() => setAddingPoint(false)} /> : null}
+      <div className="rotograma-editor-point-list">
+        {detail.pontos.map((point) => (
+          <article key={point.id}>
+            <div><strong>{point.descricao || point.tipo_ponto}</strong><span>{point.rodovia_endereco || 'Sem endereço'}</span></div>
+            <button type="button" onClick={() => { setEditingPoint(point); setAddingPoint(false); }}>Editar</button>
+            {editingPoint?.id === point.id ? <PointEditor point={point} rotogramaId={detail.resumo.id} onSaved={refreshPoints} onCancel={() => setEditingPoint(null)} /> : null}
+          </article>
+        ))}
+      </div>
+    </details>
+  );
+}
+
 function AdminResumo({ resumo }) {
   if (!resumo) return null;
 
@@ -116,7 +284,7 @@ function AdminResumo({ resumo }) {
   );
 }
 
-function RotogramaDetail({ detail, onClose }) {
+function RotogramaDetail({ detail, onClose, canEdit, onSaved }) {
   if (!detail) return null;
   const { resumo, pontos = [], telefones = [], checklist = [] } = detail;
 
@@ -147,6 +315,8 @@ function RotogramaDetail({ detail, onClose }) {
           ))}
         </div>
       </DetailSection>
+
+      {canEdit ? <RotogramaManualEditor detail={detail} onSaved={onSaved} /> : null}
 
       <DetailSection title={`Pontos de risco (${pontos.length})`}>
         <div className="risk-point-grid">
@@ -185,6 +355,7 @@ export default function RotogramaSeguroPage({ user }) {
   const [importStatus, setImportStatus] = useState('');
   const [adminResumo, setAdminResumo] = useState(null);
   const [opcoes, setOpcoes] = useState({ origens: [], destinos: [] });
+  const [canEdit, setCanEdit] = useState(false);
   const isAdmin = normalizePerfil(user?.perfil) === 'admin';
 
   const activeFilters = useMemo(() => filters, [filters]);
@@ -193,6 +364,12 @@ export default function RotogramaSeguroPage({ user }) {
     getRotogramaOpcoes()
       .then(setOpcoes)
       .catch(() => setOpcoes({ origens: [], destinos: [] }));
+  }, []);
+
+  useEffect(() => {
+    getRotogramaPermissions()
+      .then((result) => setCanEdit(Boolean(result?.pode_editar)))
+      .catch(() => setCanEdit(false));
   }, []);
 
   useEffect(() => {
@@ -240,6 +417,14 @@ export default function RotogramaSeguroPage({ user }) {
     });
   }
 
+  async function refreshDetail() {
+    if (!selected?.resumo?.id) return;
+    const detail = await getRotogramaDetail(selected.resumo.id);
+    setSelected(detail);
+    const rows = await getRotogramas(activeFilters);
+    setRotogramas(rows);
+  }
+
   async function handleImport(event) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -276,7 +461,7 @@ export default function RotogramaSeguroPage({ user }) {
               <span aria-hidden="true">&larr;</span> Retornar
             </button>
           </div>
-          <RotogramaDetail detail={selected} onClose={closeDetail} />
+          <RotogramaDetail detail={selected} onClose={closeDetail} canEdit={canEdit} onSaved={refreshDetail} />
         </section>
       ) : (
         <>

@@ -472,6 +472,37 @@ export async function getRotogramaDetail(id) {
   return request(`/rotogramas/${id}`);
 }
 
+export async function getRotogramaPermissions() {
+  return request('/rotogramas/permissoes');
+}
+
+export async function updateRotogramaManual(id, payload) {
+  return request(`/rotogramas/${id}/manual`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function createRotogramaPointManual(rotogramaId, payload) {
+  return request(`/rotogramas/${rotogramaId}/pontos/manual`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function updateRotogramaPointManual(rotogramaId, pointId, payload) {
+  return request(`/rotogramas/${rotogramaId}/pontos/${pointId}/manual`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function deleteRotogramaPointManual(rotogramaId, pointId) {
+  return request(`/rotogramas/${rotogramaId}/pontos/${pointId}/manual`, {
+    method: 'DELETE'
+  });
+}
+
 export async function getRotogramaMateriais() {
   return request('/rotogramas/materiais');
 }
