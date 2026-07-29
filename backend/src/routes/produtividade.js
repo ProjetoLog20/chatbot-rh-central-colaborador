@@ -251,9 +251,9 @@ router.get('/admin/msim', authenticateToken, authorizeRoles('admin'), async (req
 router.get('/admin/exportar', authenticateToken, authorizeRoles('admin'), async (req, res) => {
   try {
     const rows = await getAdminRows(req.query);
-    res.setHeader('Content-Disposition', 'attachment; filename="relatorio_produtividade_rv.csv"');
+    res.setHeader('Content-Disposition', 'attachment; filename="relatorio_produtividade_rota_van.csv"');
     res.setHeader('Content-Type', 'text/csv;charset=utf-8');
-    return res.send(toCsv(rows));
+    return res.send(`\uFEFF${toCsv(rows)}`);
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao exportar produtividade' });
   }

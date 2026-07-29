@@ -240,12 +240,20 @@ export async function exportAdminProdutividade(filters = {}) {
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
+  const disposition = res.headers.get('content-disposition') || '';
+  const encodedName = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+  const plainName = disposition.match(/filename="?([^";]+)"?/i)?.[1];
+  const filename = encodedName ? decodeURIComponent(encodedName) : plainName;
   link.href = url;
-  link.download = 'relatorio_produtividade_rv.csv';
+  link.download = filename || 'relatorio_produtividade_rota_van.csv';
+  link.style.display = 'none';
   document.body.appendChild(link);
   link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => {
+    link.remove();
+    URL.revokeObjectURL(url);
+  }, 30000);
+  return { filename: link.download };
 }
 
 export async function getMeuProdutividadeArmazem() {

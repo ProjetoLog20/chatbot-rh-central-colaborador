@@ -682,6 +682,7 @@ function AdminRotaPanel() {
   const [loading, setLoading] = useState(true);
   const [pendingImport, setPendingImport] = useState(null);
   const [publishingImport, setPublishingImport] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const options = useMemo(() => {
     const uniq = (key) => [...new Set(rows.map((row) => row[key]).filter(Boolean))].sort();
@@ -772,6 +773,19 @@ function AdminRotaPanel() {
     }
   }
 
+  async function handleExport() {
+    setExporting(true);
+    setMessage('');
+    try {
+      await exportAdminProdutividade(filters);
+      setMessage('Relatório do Prêmio da Rota e VAN exportado com sucesso.');
+    } catch (err) {
+      setMessage(err.error || 'Erro ao exportar o relatório do Prêmio da Rota e VAN.');
+    } finally {
+      setExporting(false);
+    }
+  }
+
   const summaryCards = [
     ['Colaboradores com prêmio', summary.total_colaboradores, 'number'],
     ['Motoristas', summary.total_motoristas, 'number'],
@@ -787,7 +801,9 @@ function AdminRotaPanel() {
   return (
     <>
       <div className="prod-actions">
-        <button onClick={() => exportAdminProdutividade(filters)}>Exportar relatório</button>
+        <button type="button" onClick={handleExport} disabled={exporting}>
+          {exporting ? 'Preparando relatório...' : 'Exportar Rota e VAN'}
+        </button>
         <label className="prod-file-action">Importar Rota<input type="file" accept=".xlsx,.xlsm" onChange={(event) => handleImport(event.target.files, 'rota')} /></label>
         <label className="prod-file-action van">Importar VAN<input type="file" accept=".xlsx,.xlsm" onChange={(event) => handleImport(event.target.files, 'van')} /></label>
       </div>
