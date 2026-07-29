@@ -70,7 +70,12 @@ export default function NotificationBell() {
   useEffect(() => {
     refresh();
     const interval = window.setInterval(refresh, 60000);
-    return () => window.clearInterval(interval);
+    const handleUpdated = () => refresh();
+    window.addEventListener('yuri:notifications-updated', handleUpdated);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('yuri:notifications-updated', handleUpdated);
+    };
   }, []);
 
   useEffect(() => {
@@ -137,6 +142,7 @@ export default function NotificationBell() {
     setUnread((current) => Math.max(0, current - 1));
     try {
       await markNotificationRead(item.id);
+      window.dispatchEvent(new CustomEvent('yuri:notifications-updated'));
     } catch {
       refresh();
     }
@@ -147,6 +153,7 @@ export default function NotificationBell() {
     setUnread(0);
     try {
       await markAllNotificationsRead();
+      window.dispatchEvent(new CustomEvent('yuri:notifications-updated'));
     } catch {
       refresh();
     }
