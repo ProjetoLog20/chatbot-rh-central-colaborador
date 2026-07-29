@@ -17,12 +17,22 @@ function createPreview(payload) {
   return { token, expiresInMinutes: TTL_MS / 60000 };
 }
 
-function consumePreview(token, userId, type) {
+function getPreview(token, userId, type) {
   cleanup();
   const item = previews.get(String(token || ''));
   if (!item || item.userId !== userId || item.type !== type) return null;
-  previews.delete(String(token));
   return item;
 }
 
-module.exports = { createPreview, consumePreview };
+function removePreview(token) {
+  previews.delete(String(token));
+}
+
+function consumePreview(token, userId, type) {
+  const item = getPreview(token, userId, type);
+  if (!item) return null;
+  removePreview(token);
+  return item;
+}
+
+module.exports = { createPreview, getPreview, removePreview, consumePreview };

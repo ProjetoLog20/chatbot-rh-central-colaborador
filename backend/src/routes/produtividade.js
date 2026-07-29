@@ -4,7 +4,7 @@ const db = require('../db');
 const { authenticateToken, authorizeRoles } = require('../authMiddleware');
 const { ensureModuleAvailable, maintenancePayload } = require('../moduleConfig');
 const { importWorkbook, previewWorkbook } = require('../../scripts/importRvXlsx');
-const { createPreview, consumePreview } = require('../importPreviewStore');
+const { createPreview, getPreview, removePreview } = require('../importPreviewStore');
 
 const router = express.Router();
 
@@ -363,7 +363,7 @@ router.post('/importar', authenticateToken, authorizeRoles('admin'), uploadSingl
 });
 
 router.post('/importar/aprovar', authenticateToken, authorizeRoles('admin'), async (req, res) => {
-  const staged = consumePreview(req.body.preview_token, req.user.id, 'rota');
+  const staged = getPreview(req.body.preview_token, req.user.id, 'rota');
   if (!staged) return res.status(410).json({ error: 'A conferencia expirou ou ja foi utilizada. Leia o arquivo novamente.' });
   try {
     const result = await importWorkbook({
@@ -372,6 +372,7 @@ router.post('/importar/aprovar', authenticateToken, authorizeRoles('admin'), asy
       criadoPor: req.user.id,
       competencia: staged.competencia
     });
+    removePreview(req.body.preview_token);
     return res.json({ status: 'publicado', ...result });
   } catch (error) {
     return res.status(400).json({ error: error.message || 'Erro ao publicar a RV conferida' });

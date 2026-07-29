@@ -681,6 +681,7 @@ function AdminRotaPanel() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [pendingImport, setPendingImport] = useState(null);
+  const [readingImport, setReadingImport] = useState(false);
   const [publishingImport, setPublishingImport] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [importCompetencia, setImportCompetencia] = useState('');
@@ -758,6 +759,9 @@ function AdminRotaPanel() {
       input.value = '';
       return;
     }
+    setReadingImport(true);
+    setPendingImport(null);
+    setMessage(`Lendo a planilha de ${tipo === 'van' ? 'VAN' : 'Rota'} e calculando os valores. Aguarde; arquivos grandes podem levar cerca de 1 minuto.`);
     try {
       const result = await importProdutividadeFile(file, tipo, importCompetencia);
       setPendingImport(result);
@@ -765,6 +769,7 @@ function AdminRotaPanel() {
     } catch (err) {
       setMessage(err.error || 'Erro ao importar RV');
     } finally {
+      setReadingImport(false);
       input.value = '';
     }
   }
@@ -818,8 +823,14 @@ function AdminRotaPanel() {
           Competência do arquivo
           <input type="month" value={importCompetencia} onChange={(event) => setImportCompetencia(event.target.value)} required />
         </label>
-        <label className="prod-file-action">Importar Rota<input type="file" accept=".xlsx,.xlsm" onChange={(event) => handleImport(event, 'rota')} /></label>
-        <label className="prod-file-action van">Importar VAN<input type="file" accept=".xlsx,.xlsm" onChange={(event) => handleImport(event, 'van')} /></label>
+        <label className={`prod-file-action${readingImport ? ' disabled' : ''}`}>
+          {readingImport ? 'Lendo arquivo...' : 'Importar Rota'}
+          <input type="file" accept=".xlsx,.xlsm" disabled={readingImport || publishingImport} onChange={(event) => handleImport(event, 'rota')} />
+        </label>
+        <label className={`prod-file-action van${readingImport ? ' disabled' : ''}`}>
+          {readingImport ? 'Lendo arquivo...' : 'Importar VAN'}
+          <input type="file" accept=".xlsx,.xlsm" disabled={readingImport || publishingImport} onChange={(event) => handleImport(event, 'van')} />
+        </label>
       </div>
       {message ? <div className="import-message">{message}</div> : null}
       {pendingImport ? <ImportConference data={pendingImport} variant="rota" publishing={publishingImport} onApprove={approveRouteConference} onCancel={() => setPendingImport(null)} /> : null}

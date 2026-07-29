@@ -8,7 +8,7 @@ const db = require('../db');
 const { authenticateToken, authorizeRoles } = require('../authMiddleware');
 const { ensureModuleAvailable, maintenancePayload } = require('../moduleConfig');
 const { importOnDemand } = require('../../scripts/importOnDemandArmazemCsv');
-const { createPreview, consumePreview } = require('../importPreviewStore');
+const { createPreview, getPreview, removePreview } = require('../importPreviewStore');
 
 const router = express.Router();
 const upload = multer({
@@ -489,7 +489,7 @@ router.post('/importar', authenticateToken, authorizeRoles('admin'), uploadCsv, 
 });
 
 router.post('/importar/aprovar', authenticateToken, authorizeRoles('admin'), async (req, res) => {
-  const staged = consumePreview(req.body.preview_token, req.user.id, 'armazem');
+  const staged = getPreview(req.body.preview_token, req.user.id, 'armazem');
   if (!staged) return res.status(410).json({ error: 'A conferencia expirou ou ja foi utilizada. Leia o arquivo novamente.' });
   const temporaryFile = path.join(os.tmpdir(), `yuri-ondemand-${crypto.randomUUID()}.csv`);
   const temporaryOperatorFile = path.join(os.tmpdir(), `yuri-operadores-${crypto.randomUUID()}.csv`);
@@ -505,6 +505,7 @@ router.post('/importar/aprovar', authenticateToken, authorizeRoles('admin'), asy
       originalFilename: staged.originalName,
       createdBy: req.user.id
     });
+    removePreview(req.body.preview_token);
     return res.json({
       status: 'publicado',
       message: `RV do armazém publicada: ${report.created} criado(s), ${report.updated} atualizado(s) e ${report.ignored} ignorado(s).`,
