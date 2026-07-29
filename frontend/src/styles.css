@@ -3210,6 +3210,27 @@ tr:not(:last-child) td {
   display: none;
 }
 
+.prod-actions .prod-competencia-action {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 190px;
+  padding: 0.45rem 0.7rem;
+  background: #fff;
+  color: #003B68;
+  border: 1px solid #B8CAD8;
+  text-align: left;
+  font-size: 0.78rem;
+}
+
+.prod-actions .prod-competencia-action input {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #1F2933;
+  font: inherit;
+}
+
 .prod-warning {
   border-left: 5px solid #E87522;
   border-radius: 8px;

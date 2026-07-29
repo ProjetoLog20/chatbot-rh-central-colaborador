@@ -771,7 +771,27 @@ async function loadNameMap() {
   return map;
 }
 
-function readImportRows({ filePath, buffer } = {}) {
+function normalizeSelectedCompetencia(value) {
+  const text = trim(value);
+  const iso = text.match(/^(\d{4})-(\d{2})$/);
+  if (iso) return `${iso[2]}/${iso[1]}`;
+  const br = text.match(/^(0[1-9]|1[0-2])\/(\d{4})$/);
+  return br ? text : '';
+}
+
+function applyCompetenciaOverride(rows, selectedCompetencia) {
+  const competencia = normalizeSelectedCompetencia(selectedCompetencia);
+  if (!competencia) return rows;
+  const period = officialPeriodForCompetencia(competencia);
+  return rows.map((row) => ({
+    ...row,
+    competencia,
+    periodo_inicio: period.inicio,
+    periodo_fim: period.fim
+  }));
+}
+
+function readImportRows({ filePath, buffer, competencia } = {}) {
   const resolvedPath = filePath ? path.resolve(filePath) : DEFAULT_FILE;
   const source = buffer || resolvedPath;
   let rows = readOfficialWorkbookRows(source, Boolean(buffer));
@@ -779,12 +799,12 @@ function readImportRows({ filePath, buffer } = {}) {
     const workbook = buffer ? xlsx.read(buffer, { type: 'buffer' }) : xlsx.readFile(resolvedPath);
     rows = readRowsFromWorkbook(workbook);
   }
-  return rows;
+  return applyCompetenciaOverride(rows, competencia);
 }
 
-async function previewWorkbook({ filePath, buffer } = {}) {
+async function previewWorkbook({ filePath, buffer, competencia } = {}) {
   await assertTables();
-  const rows = readImportRows({ filePath, buffer });
+  const rows = readImportRows({ filePath, buffer, competencia });
   const rvCodeMap = await loadRvCodeMap();
   const nameMap = await loadNameMap();
   const preview = [];
@@ -1140,10 +1160,10 @@ async function importRows(rows, { arquivo, criadoPor = null } = {}) {
   return report;
 }
 
-async function importWorkbook({ filePath, buffer, originalName, criadoPor } = {}) {
+async function importWorkbook({ filePath, buffer, originalName, criadoPor, competencia } = {}) {
   await assertTables();
   const resolvedPath = filePath ? path.resolve(filePath) : DEFAULT_FILE;
-  const rows = readImportRows({ filePath, buffer });
+  const rows = readImportRows({ filePath, buffer, competencia });
   const arquivo = originalName || path.basename(resolvedPath);
   return importRows(rows, { arquivo, criadoPor });
 }
@@ -1197,6 +1217,8 @@ module.exports = {
   parseDate,
   parseBoolean,
   normalizeBonusDevolucao,
+  normalizeSelectedCompetencia,
+  applyCompetenciaOverride,
   officialPeriodForCompetencia,
   validateOfficialPeriod
 };

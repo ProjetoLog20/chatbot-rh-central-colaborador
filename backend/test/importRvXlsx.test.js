@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const xlsx = require('xlsx');
 
-const { previewOfficialWorkbook, buildPayload } = require('../scripts/importRvXlsx');
+const { previewOfficialWorkbook, buildPayload, applyCompetenciaOverride } = require('../scripts/importRvXlsx');
 
 function workbookBuffer(onePagerRows, tableRows) {
   const workbook = xlsx.utils.book_new();
@@ -10,6 +10,18 @@ function workbookBuffer(onePagerRows, tableRows) {
   xlsx.utils.book_append_sheet(workbook, xlsx.utils.aoa_to_sheet(tableRows), 'Tabelão_Mot');
   return xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 }
+
+test('competência selecionada substitui a competência da planilha e ajusta a vigência', () => {
+  const rows = applyCompetenciaOverride([
+    { competencia: '07/2026', periodo_inicio: '2026-06-21', periodo_fim: '2026-07-20' }
+  ], '2026-08');
+
+  assert.deepEqual(rows, [{
+    competencia: '08/2026',
+    periodo_inicio: '2026-07-21',
+    periodo_fim: '2026-08-20'
+  }]);
+});
 
 test('leitor VAN usa regras do One Pager e ignora linhas auxiliares fora da equipe', () => {
   const buffer = workbookBuffer(

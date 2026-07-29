@@ -326,7 +326,11 @@ router.post('/importar', authenticateToken, authorizeRoles('admin'), uploadSingl
   if (!req.file) return res.status(400).json({ error: 'Arquivo nao enviado' });
 
   try {
-    const preview = await previewWorkbook({ buffer: req.file.buffer });
+    const selectedCompetencia = String(req.body.competencia || '').trim();
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(selectedCompetencia)) {
+      return res.status(400).json({ error: 'Selecione a competência do arquivo no formato mês/ano.' });
+    }
+    const preview = await previewWorkbook({ buffer: req.file.buffer, competencia: selectedCompetencia });
     const requestedType = String(req.body.tipo || '').trim().toLowerCase();
     if (!['rota', 'van'].includes(requestedType)) {
       return res.status(400).json({ error: 'Informe se o arquivo pertence a Rota ou VAN.' });
@@ -341,7 +345,8 @@ router.post('/importar', authenticateToken, authorizeRoles('admin'), uploadSingl
       userId: req.user.id,
       buffer: Buffer.from(req.file.buffer),
       originalName: req.file.originalname,
-      planType: requestedType
+      planType: requestedType,
+      competencia: selectedCompetencia
     });
     return res.json({
       status: 'aguardando_confirmacao',
@@ -349,6 +354,7 @@ router.post('/importar', authenticateToken, authorizeRoles('admin'), uploadSingl
       expira_em_minutos: staged.expiresInMinutes,
       arquivo: req.file.originalname,
       tipo: requestedType,
+      competencia_selecionada: selectedCompetencia,
       preview
     });
   } catch (error) {
@@ -363,7 +369,8 @@ router.post('/importar/aprovar', authenticateToken, authorizeRoles('admin'), asy
     const result = await importWorkbook({
       buffer: staged.buffer,
       originalName: staged.originalName,
-      criadoPor: req.user.id
+      criadoPor: req.user.id,
+      competencia: staged.competencia
     });
     return res.json({ status: 'publicado', ...result });
   } catch (error) {

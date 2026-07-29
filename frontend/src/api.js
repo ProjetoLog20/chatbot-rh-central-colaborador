@@ -209,10 +209,12 @@ export async function updateAdminProdutividadeRegistro(id, payload) {
   });
 }
 
-export async function importProdutividadeFile(file, tipo = 'rota') {
+export async function importProdutividadeFile(file, tipo = 'rota', competencia = '') {
   const token = localStorage.getItem('token');
   const formData = new FormData();
   formData.append('file', file);
+  formData.append('tipo', tipo);
+  formData.append('competencia', competencia);
   const res = await fetch(`${API_BASE}/produtividade/importar`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
