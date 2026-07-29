@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
 const db = require('../src/db');
+const { resolveKnownMatriculaByName } = require('./rvKnownMappings');
 
 const DEFAULT_FILE = path.join(__dirname, '../data/rv_log20_importacao_pronta.xlsx');
 const SHEET_NAME = 'IMPORTACAO_RV';
@@ -827,6 +828,10 @@ async function previewWorkbook({ filePath, buffer, competencia } = {}) {
       metodo = 'codigo_rv';
     }
     if (!matricula) {
+      matricula = resolveKnownMatriculaByName(nomeRv);
+      if (matricula) metodo = 'vinculo_confirmado_rh';
+    }
+    if (!matricula) {
       const matches = nameMap.get(normalizeName(nomeRv)) || [];
       if (matches.length === 1) {
         colaborador = matches[0];
@@ -1070,6 +1075,9 @@ async function importRows(rows, { arquivo, criadoPor = null } = {}) {
     if (!matricula && codigoRv && rvCodeMap.has(codigoRv)) {
       colaborador = rvCodeMap.get(codigoRv);
       matricula = colaborador.matricula;
+    }
+    if (!matricula) {
+      matricula = resolveKnownMatriculaByName(nomeRv);
     }
 
     const periodCheck = validateOfficialPeriod(row);
