@@ -2,7 +2,12 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const xlsx = require('xlsx');
 
-const { previewOfficialWorkbook, buildPayload, applyCompetenciaOverride } = require('../scripts/importRvXlsx');
+const {
+  previewOfficialWorkbook,
+  buildPayload,
+  applyCompetenciaOverride,
+  nameLookupKeys
+} = require('../scripts/importRvXlsx');
 
 function workbookBuffer(onePagerRows, tableRows) {
   const workbook = xlsx.utils.book_new();
@@ -44,6 +49,11 @@ test('leitor VAN usa regras do One Pager e ignora linhas auxiliares fora da equi
   assert.equal(rows[0].premio_produtividade, 477.0976);
   assert.equal(rows[0].metodo_cruzamento, 'one_pager_van_codigo_rv');
   assert.equal(rows[0].competencia, '07/2026');
+});
+
+test('leitor aceita a variação WILLIAN do nome oficial WILLIAM', () => {
+  assert.ok(nameLookupKeys('WILLIAM FELIPE LIMA DE PAULA').includes('willian felipe lima de paula'));
+  assert.ok(nameLookupKeys('WILLIAN FELIPE LIMA DE PAULA').includes('william felipe lima de paula'));
 });
 
 test('leitor principal preserva o valor oficial de Nova RV', () => {
