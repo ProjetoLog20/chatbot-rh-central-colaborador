@@ -89,6 +89,20 @@ function normalizeName(value) {
   return stripAccents(value).toLowerCase().trim().replace(/\s+/g, ' ');
 }
 
+function nameLookupKeys(value) {
+  const normalized = normalizeName(value);
+  if (!normalized) return [];
+
+  const keys = new Set([normalized]);
+  // A VAN pode trazer WILLIAN enquanto o QLP oficial registra WILLIAM.
+  if (normalized.startsWith('willian ')) {
+    keys.add(`william ${normalized.slice('willian '.length)}`);
+  } else if (normalized.startsWith('william ')) {
+    keys.add(`willian ${normalized.slice('william '.length)}`);
+  }
+  return [...keys];
+}
+
 function normalizeRow(row) {
   return Object.fromEntries(Object.entries(row).map(([key, value]) => [normalizeKey(key), value]));
 }
@@ -764,10 +778,10 @@ async function loadNameMap() {
   );
   const map = new Map();
   colaboradores.forEach((colaborador) => {
-    const name = normalizeName(colaborador.nome_completo);
-    if (!name) return;
-    if (!map.has(name)) map.set(name, []);
-    map.get(name).push(colaborador);
+    nameLookupKeys(colaborador.nome_completo).forEach((name) => {
+      if (!map.has(name)) map.set(name, []);
+      map.get(name).push(colaborador);
+    });
   });
   return map;
 }
@@ -1228,5 +1242,6 @@ module.exports = {
   normalizeSelectedCompetencia,
   applyCompetenciaOverride,
   officialPeriodForCompetencia,
-  validateOfficialPeriod
+  validateOfficialPeriod,
+  nameLookupKeys
 };
