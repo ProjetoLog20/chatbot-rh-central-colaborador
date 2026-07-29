@@ -749,18 +749,23 @@ function AdminRotaPanel() {
     }
   }
 
-  async function handleImport(files, tipo) {
-    if (!files.length) return;
+  async function handleImport(event, tipo) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file) return;
     if (!importCompetencia) {
       setMessage('Selecione a competência antes de enviar o arquivo.');
+      input.value = '';
       return;
     }
     try {
-      const result = await importProdutividadeFile(files[0], tipo, importCompetencia);
+      const result = await importProdutividadeFile(file, tipo, importCompetencia);
       setPendingImport(result);
       setMessage('Arquivo lido. Confira todos os valores antes de publicar.');
     } catch (err) {
       setMessage(err.error || 'Erro ao importar RV');
+    } finally {
+      input.value = '';
     }
   }
 
@@ -813,8 +818,8 @@ function AdminRotaPanel() {
           Competência do arquivo
           <input type="month" value={importCompetencia} onChange={(event) => setImportCompetencia(event.target.value)} required />
         </label>
-        <label className="prod-file-action">Importar Rota<input type="file" accept=".xlsx,.xlsm" onChange={(event) => handleImport(event.target.files, 'rota')} /></label>
-        <label className="prod-file-action van">Importar VAN<input type="file" accept=".xlsx,.xlsm" onChange={(event) => handleImport(event.target.files, 'van')} /></label>
+        <label className="prod-file-action">Importar Rota<input type="file" accept=".xlsx,.xlsm" onChange={(event) => handleImport(event, 'rota')} /></label>
+        <label className="prod-file-action van">Importar VAN<input type="file" accept=".xlsx,.xlsm" onChange={(event) => handleImport(event, 'van')} /></label>
       </div>
       {message ? <div className="import-message">{message}</div> : null}
       {pendingImport ? <ImportConference data={pendingImport} variant="rota" publishing={publishingImport} onApprove={approveRouteConference} onCancel={() => setPendingImport(null)} /> : null}
