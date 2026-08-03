@@ -984,9 +984,9 @@ export default function AdminPage() {
       {activeTab === 'modulos' ? (
         <section className="admin-section">
           <h2>Configuração de Módulos</h2>
-          <p className="section-help">Controle quais cards aparecem para cada perfil, incluindo o Super Team Room, e coloque painéis em manutenção quando necessário.</p>
+          <p className="section-help">Controle quais cards aparecem para cada perfil e coloque painéis em manutenção quando necessário.</p>
           <div className="module-config-list">
-            {modulos.map((modulo) => (
+            {modulos.filter((modulo) => modulo.chave !== 'super_team_room').map((modulo) => (
               <ModuleConfigItem key={modulo.chave} modulo={modulo} onSave={handleSaveModulo} />
             ))}
           </div>
