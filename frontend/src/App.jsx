@@ -253,7 +253,6 @@ function App() {
       {shouldShowChatAssistant ? <ChatAssistant user={user} /> : null}
       {user && token && !isPublicRoute ? <MandatorySatisfaction user={user} /> : null}
       {user && token && !isPublicRoute ? <MandatoryNotifications user={user} /> : null}
-      {user && token && !isPublicRoute ? <MandatoryNotifications user={user} /> : null}
       {user && !isFirstAccessRoute ? (
         <nav className="mobile-bottom-nav" aria-label="Navegação rápida">
           <Link className={location.pathname === '/' ? 'active' : ''} to="/"><span>⌂</span><small>Início</small></Link>
