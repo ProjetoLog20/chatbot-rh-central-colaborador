@@ -266,8 +266,8 @@ function UnitDreamPanel() {
               onClick={() => setActivePillar(pillar)}
               title={pillar[2]}
             >
-              <span aria-hidden="true"><PillarIcon size={20} weight="duotone" /></span>
-              {pillar[1]}
+              <span className="unit-dream-pillar-icon" aria-hidden="true"><PillarIcon size={20} weight="duotone" /></span>
+              <span className="unit-dream-pillar-label">{pillar[1]}</span>
             </button>
           );
         })}
@@ -275,28 +275,6 @@ function UnitDreamPanel() {
 
       <p className="unit-dream-explanation">{activePillar[2]}</p>
       <small>Esse é o nosso direcionador diário para uma operação mais segura, eficiente e sustentável.</small>
-    </section>
-  );
-}
-
-function SuperTeamRoomPanel() {
-  return (
-    <section className="super-team-room-panel" aria-labelledby="super-team-room-title">
-      <div className="super-team-room-trophy" aria-hidden="true"><Trophy size={82} weight="duotone" /></div>
-      <div className="super-team-room-copy">
-        <span className="super-team-room-kicker">Destaques do mês</span>
-        <h2 id="super-team-room-title">Super Team Room</h2>
-        <h3>Reconhecendo quem fez a diferença</h3>
-        <p>Metas alcançadas, talentos reconhecidos e histórias que inspiram toda a unidade.</p>
-        <div className="super-team-room-highlights">
-          <span><Medal size={16} weight="duotone" /> Produtividade</span>
-          <span><ShieldCheck size={16} weight="duotone" /> Segurança</span>
-          <span><Star size={16} weight="duotone" /> Qualidade</span>
-        </div>
-      </div>
-      <button type="button" disabled title="Disponível após o fechamento mensal">
-        Conhecer os destaques <span aria-hidden="true">›</span>
-      </button>
     </section>
   );
 }
@@ -400,8 +378,6 @@ export default function Dashboard({ user }) {
     return isAdmin ? [adminCard, ...shapedCards] : shapedCards;
   }, [isAdmin, isDistribution, modulos, prontuario, skap]);
 
-  const showSuperTeamRoom = isAdmin || !modulos.length || modulos.some((modulo) => modulo.chave === 'super_team_room');
-
   return (
     <motion.div
       className="dashboard-page dashboard-page-refined"
@@ -461,8 +437,6 @@ export default function Dashboard({ user }) {
           <b aria-hidden="true">›</b>
         </Link>
       </section>
-
-      {showSuperTeamRoom ? <SuperTeamRoomPanel /> : null}
 
       <section className="dashboard-card-section compact-services" aria-label="Atalhos da Central do Colaborador">
         <div className="dashboard-section-heading">

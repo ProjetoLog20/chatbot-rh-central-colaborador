@@ -7,11 +7,6 @@ body,
   overflow-x: clip;
 }
 
-.super-team-room-highlights {
-  display: flex;
-  flex-wrap: wrap;
-}
-
 .dashboard-prize-link {
   display: grid;
   min-width: 0;
@@ -545,14 +540,14 @@ body,
   }
 
   .dashboard-hero {
-    display: block !important;
+    display: grid !important;
     width: 100% !important;
     min-width: 0 !important;
-    grid-template-columns: none !important;
+    grid-template-columns: minmax(0, 1fr) !important;
   }
 
   .dashboard-hero-welcome {
-    display: none !important;
+    display: flex !important;
     width: 100% !important;
     min-height: 64px;
     padding: 3px 2px 10px !important;
@@ -561,12 +556,6 @@ body,
   .dashboard-hero-welcome h1 {
     margin: 5px 0 !important;
     font-size: 1.65rem !important;
-  }
-
-  .dashboard-hero-welcome .brand-tagline,
-  .dashboard-hero-welcome .dashboard-hero-lead,
-  .dashboard-hero-welcome .admin-access-note {
-    display: none !important;
   }
 
   .dashboard-hero .unit-dream-panel {
@@ -597,7 +586,7 @@ body,
 
   .dashboard-hero .unit-dream-pillars {
     display: grid !important;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 5px !important;
   }
 
@@ -606,12 +595,6 @@ body,
     min-height: 34px !important;
     padding: 5px 3px !important;
     font-size: 0.58rem !important;
-  }
-
-  .dashboard-hero .unit-dream-pillars button:nth-child(n + 4),
-  .dashboard-hero .unit-dream-explanation,
-  .dashboard-hero .unit-dream-panel > small {
-    display: none !important;
   }
 
   .dashboard-status-grid {
@@ -635,64 +618,6 @@ body,
   .dashboard-status-icon {
     width: 46px !important;
     height: 46px !important;
-  }
-
-  .super-team-room-panel {
-    display: grid !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    min-height: 0 !important;
-    padding: 15px !important;
-    grid-template-columns: minmax(0, 1fr) 78px !important;
-    gap: 8px !important;
-  }
-
-  .super-team-room-copy {
-    grid-column: 1 !important;
-    grid-row: 1 !important;
-    min-width: 0 !important;
-  }
-
-  .super-team-room-trophy {
-    display: block !important;
-    grid-column: 2 !important;
-    grid-row: 1 !important;
-    align-self: center;
-    font-size: 3rem !important;
-  }
-
-  .super-team-room-panel h2 {
-    margin-top: 6px !important;
-    font-size: 0.78rem !important;
-  }
-
-  .super-team-room-panel h3 {
-    margin: 2px 0 4px !important;
-    font-size: 1.08rem !important;
-    line-height: 1.08 !important;
-  }
-
-  .super-team-room-panel p {
-    font-size: 0.68rem !important;
-    line-height: 1.35 !important;
-  }
-
-  .super-team-room-highlights {
-    display: flex !important;
-    margin-top: 8px !important;
-    gap: 4px !important;
-  }
-
-  .super-team-room-highlights span {
-    width: auto !important;
-    padding: 3px 5px !important;
-    font-size: 0.56rem !important;
-  }
-
-  .super-team-room-panel > button {
-    grid-column: 1 / -1 !important;
-    width: 100% !important;
-    padding: 9px !important;
   }
 
   .compact-services {

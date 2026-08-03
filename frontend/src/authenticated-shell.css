@@ -175,7 +175,7 @@ body:has(.authenticated-main) {
   display: grid;
   min-height: 0;
   padding: 0;
-  grid-template-columns: minmax(360px, .95fr) minmax(440px, 1.05fr) !important;
+  grid-template-columns: minmax(320px, .72fr) minmax(560px, 1.28fr) !important;
   align-items: stretch;
   gap: 18px !important;
   overflow: visible;
@@ -188,7 +188,7 @@ body:has(.authenticated-main) {
 .dashboard-hero-refined .dashboard-hero-welcome > div { position: relative; z-index: 2; max-width: 430px; }
 .dashboard-hero-refined .brand-tagline { display: inline-flex; align-items: center; gap: 7px; color: rgba(255, 255, 255, 0.72) !important; }
 .dashboard-hero-refined .brand-tagline i { width: 7px; height: 7px; background: #42dda3; border-radius: 50%; box-shadow: 0 0 0 5px rgba(66, 221, 163, 0.12); }
-.dashboard-hero-refined .dashboard-hero-welcome h1 { margin: 13px 0 8px; color: #fff !important; font-size: clamp(2rem, 3.3vw, 3rem) !important; letter-spacing: -0.045em; }
+.dashboard-hero-refined .dashboard-hero-welcome h1 { margin: 13px 0 8px; color: #fff !important; font-size: clamp(1.9rem, 2.7vw, 2.65rem) !important; letter-spacing: -0.045em; }
 .dashboard-hero-refined .dashboard-hero-lead { max-width: 390px; margin: 0 !important; color: rgba(255, 255, 255, 0.75) !important; font-size: 0.92rem !important; line-height: 1.6; }
 .dashboard-hero-actions { display: flex; margin-top: 23px; flex-wrap: wrap; gap: 9px; }
 .dashboard-hero-actions a { padding: 10px 14px; color: #fff; font-size: 0.72rem; font-weight: 800; text-decoration: none; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 10px; transition: 160ms ease; }
@@ -216,35 +216,12 @@ body:has(.authenticated-main) {
 .unit-dream-icon svg { display: block; }
 .dashboard-card-icon { color: var(--card-accent) !important; }
 .dashboard-hero .unit-dream-icon { color: var(--yuri-orange) !important; background: #fff3e9 !important; }
-.unit-dream-pillars button span { display: grid; place-items: center; color: #e87522; }
-.super-team-room-trophy { display: grid; place-items: center; color: #e87522; }
-.super-team-room-highlights span { display: inline-flex; align-items: center; gap: 5px; }
-.super-team-room-highlights svg { color: #e87522; flex: 0 0 auto; }
+.unit-dream-pillars .unit-dream-pillar-icon { display: grid; place-items: center; color: #e87522; }
+.unit-dream-pillars .unit-dream-pillar-label { min-width: 0; color: #173b5f; font-size: clamp(0.66rem, 0.72vw, 0.75rem); line-height: 1.15; overflow-wrap: anywhere; }
 .dashboard-card-motion .dashboard-card-item::before { position: absolute; inset: 0 auto 0 0; width: 4px; content: ''; background: var(--card-accent); border-radius: 18px 0 0 18px; transition: width 180ms ease; }
 .dashboard-card-motion .dashboard-card-item:hover::before { width: 6px; }
 .compact-services .card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
 
-
-.super-team-room-panel {
-  position: relative !important;
-  top: auto !important;
-  min-height: 205px !important;
-  padding: 24px 28px !important;
-  grid-template-columns: 112px minmax(0, 1fr) auto !important;
-  align-items: center !important;
-  gap: 22px !important;
-  overflow: hidden !important;
-  border-radius: 20px !important;
-}
-
-.super-team-room-trophy { font-size: 5rem !important; text-align: center; }
-.super-team-room-kicker { color: #fff !important; background: var(--yuri-orange) !important; }
-.super-team-room-panel h2 { margin: 6px 0 0 !important; font-size: 0.95rem !important; }
-.super-team-room-panel h3 { margin: 2px 0 5px !important; font-size: clamp(1.35rem, 2.3vw, 1.9rem) !important; line-height: 1.15; }
-.super-team-room-panel p { margin: 0 !important; font-size: 0.84rem !important; }
-.super-team-room-highlights { display: flex !important; margin-top: 12px !important; flex-wrap: wrap; gap: 7px !important; }
-.super-team-room-highlights span { width: auto !important; padding: 5px 9px !important; font-size: 0.7rem !important; }
-.super-team-room-panel > button { width: auto !important; max-width: 220px; padding: 11px 16px !important; white-space: nowrap; }
 
 .chat-assistant:not(.open) { right: 22px !important; bottom: 24px !important; }
 .chat-assistant:not(.open) .chat-toggle {
@@ -409,7 +386,7 @@ body:has(.authenticated-main) {
   font-weight: 800;
 }
 
-@media (max-width: 1100px) and (min-width: 901px) {
+@media (max-width: 1220px) and (min-width: 901px) {
   .dashboard-hero-refined { grid-template-columns: 1fr !important; }
   .compact-services .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   .desktop-user-profile > span:last-child { display: none; }
@@ -434,20 +411,6 @@ body:has(.authenticated-main) {
   .dashboard-card-motion { width: 100%; min-width: 0; }
   .compact-services .dashboard-card-item { height: 100% !important; }
   .compact-services .dashboard-card-action { display: none !important; }
-  .super-team-room-panel {
-    min-height: 0 !important;
-    padding: 16px !important;
-    grid-template-columns: minmax(0, 1fr) 72px !important;
-    align-content: center !important;
-    gap: 10px !important;
-  }
-  .super-team-room-copy { grid-column: 1 !important; grid-row: 1 !important; }
-  .super-team-room-trophy { grid-column: 2 !important; grid-row: 1 !important; font-size: 3rem !important; }
-  .super-team-room-panel h3 { font-size: 1.05rem !important; }
-  .super-team-room-panel p { font-size: 0.68rem !important; line-height: 1.35 !important; }
-  .super-team-room-highlights { margin-top: 8px !important; gap: 4px !important; }
-  .super-team-room-highlights span { padding: 3px 5px !important; font-size: 0.56rem !important; }
-  .super-team-room-panel > button { display: none !important; }
   .chat-assistant:not(.open) { right: 10px !important; bottom: 78px !important; }
 }
 
