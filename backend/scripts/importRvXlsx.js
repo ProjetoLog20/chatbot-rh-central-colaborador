@@ -94,7 +94,9 @@ function nameLookupKeys(value) {
   if (!normalized) return [];
 
   const keys = new Set([normalized]);
-  // A VAN pode trazer WILLIAN enquanto o QLP oficial registra WILLIAM.
+  // O relatório da VAN pode trazer WILLIAN enquanto o QLP oficial registra
+  // WILLIAM. Mantemos o nome cadastral e aceitamos apenas essa variação
+  // conhecida do primeiro nome para evitar vínculos aproximados indevidos.
   if (normalized.startsWith('willian ')) {
     keys.add(`william ${normalized.slice('willian '.length)}`);
   } else if (normalized.startsWith('william ')) {

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { ChatCircleDots, PaperPlaneTilt, X } from '@phosphor-icons/react';
 import { askYuri, getChatbotSuggestions } from '../api.js';
 
 const defaultSuggestions = [
@@ -45,6 +46,8 @@ export default function ChatAssistant({ user }) {
   ]);
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState(defaultSuggestions);
+  const chatBodyRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     if (!open) return;
@@ -58,6 +61,16 @@ export default function ChatAssistant({ user }) {
         setSuggestions(questions.length ? questions : defaultSuggestions);
       })
       .catch(() => setSuggestions(defaultSuggestions));
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const body = chatBodyRef.current;
+    if (body) body.scrollTop = body.scrollHeight;
+  }, [messages, loading, open]);
+
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
   }, [open]);
 
   function playOpenSound() {
@@ -135,8 +148,8 @@ export default function ChatAssistant({ user }) {
     <div className={`chat-assistant ${open ? 'open' : ''} ${loading ? 'thinking' : ''}`}>
       {!open ? (
         <button className="chat-toggle" onClick={toggleChat} aria-label="Falar com Yuri">
-          <span>Y</span>
-          Yuri
+          <span className="chat-toggle-icon" aria-hidden="true"><ChatCircleDots size={27} weight="fill" /></span>
+          <span className="chat-toggle-label">Fale com o Yuri</span>
         </button>
       ) : null}
       {open ? (
@@ -153,11 +166,11 @@ export default function ChatAssistant({ user }) {
               </div>
             </div>
             <button className="chat-close" onClick={() => setOpen(false)} aria-label="Fechar chat">
-              x
+              <X size={19} weight="bold" aria-hidden="true" />
             </button>
           </div>
 
-          <div className="chat-body">
+          <div className="chat-body" ref={chatBodyRef} aria-live="polite">
             {messages.map((message, index) => (
               <div key={index} className={`chat-message ${message.type}`}>
                 <p>{message.text}</p>
@@ -174,7 +187,8 @@ export default function ChatAssistant({ user }) {
             ) : null}
           </div>
 
-          <div className="chat-suggestions">
+          <div className="chat-suggestions" aria-label="Perguntas rápidas">
+            <span className="chat-suggestions-title">Perguntas rápidas</span>
             {suggestions.map((item) => (
               <button key={item} onClick={() => sendQuestion(item)} disabled={loading}>
                 {item}
@@ -182,17 +196,19 @@ export default function ChatAssistant({ user }) {
             ))}
           </div>
 
-          <div className="chat-footer">
+          <form className="chat-footer" onSubmit={(event) => { event.preventDefault(); sendQuestion(question); }}>
             <input
+              ref={inputRef}
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Escreva sua dúvida..."
             />
-            <button onClick={() => sendQuestion(question)} disabled={loading || !question.trim()}>
-              Enviar
+            <button type="submit" disabled={loading || !question.trim()} aria-label="Enviar mensagem">
+              <PaperPlaneTilt size={20} weight="fill" aria-hidden="true" />
+              <span>Enviar</span>
             </button>
-          </div>
+          </form>
         </section>
       ) : null}
     </div>

@@ -9,6 +9,7 @@ const { authenticateToken, authorizeRoles } = require('../authMiddleware');
 const { ensureModuleAvailable, maintenancePayload } = require('../moduleConfig');
 const { importOnDemand } = require('../../scripts/importOnDemandArmazemCsv');
 const { createPreview, getPreview, removePreview } = require('../importPreviewStore');
+const { publishPrizeUpdateNotification } = require('../services/prizeNotificationService');
 
 const router = express.Router();
 const upload = multer({
@@ -505,11 +506,17 @@ router.post('/importar/aprovar', authenticateToken, authorizeRoles('admin'), asy
       originalFilename: staged.originalName,
       createdBy: req.user.id
     });
+    const notificationResult = await publishPrizeUpdateNotification({
+      createdBy: req.user.id,
+      competence: report.competencia,
+      source: 'armazem'
+    });
     removePreview(req.body.preview_token);
     return res.json({
       status: 'publicado',
       message: `RV do armazém publicada: ${report.created} criado(s), ${report.updated} atualizado(s) e ${report.ignored} ignorado(s).`,
-      report
+      report,
+      notificacao_id: notificationResult.notification.id
     });
   } catch (error) {
     console.error('ERRO APROVAR ON DEMAND:', error);

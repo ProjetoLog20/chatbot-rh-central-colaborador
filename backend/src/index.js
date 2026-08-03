@@ -25,6 +25,7 @@ const satisfacaoYuriRoutes = require('./routes/satisfacao-yuri');
 const { incrementAccessCounter, getAccessMetrics } = require('./accessCounter');
 const { authenticateToken, authorizeRoles } = require('./authMiddleware');
 const errorHandler = require('./errorHandler');
+const { geoRestriction } = require('./geoRestriction');
 const { firstAccessLimiter, loginLimiter, preventSensitiveCaching, requestId, securityHeaders } = require('./security');
 
 const app = express();
@@ -47,7 +48,9 @@ const corsOptions = {
 
     const allowedOrigins = [
       'http://localhost:5173',
+      'http://127.0.0.1:5173',
       'http://localhost:4000',
+      'http://127.0.0.1:4000',
       'http://localhost:4001',
       'https://chatbot-rh-central-colaborador-preset.onrender.com',
       process.env.FRONTEND_URL,
@@ -63,6 +66,8 @@ const corsOptions = {
 };
 
 app.use('/api', cors(corsOptions));
+app.use('/api', preventSensitiveCaching);
+app.use('/api', geoRestriction);
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
@@ -98,7 +103,6 @@ app.get('/api/admin/acessos', authenticateToken, authorizeRoles('admin'), async 
 });
 
 // API routes
-app.use('/api/auth', preventSensitiveCaching);
 app.use('/api/auth/login', loginLimiter);
 app.use('/api/auth/primeiro-acesso', firstAccessLimiter);
 app.use('/api/auth', authRoutes);

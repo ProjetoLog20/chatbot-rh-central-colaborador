@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import {
   getNotifications,
@@ -225,9 +226,10 @@ export default function NotificationBell() {
 
   return (
     <div className="notification-center" ref={panelRef}>
-      {showPushOnboarding ? (
+      {showPushOnboarding && typeof document !== 'undefined' ? createPortal(
         <div className="push-onboarding-backdrop" role="presentation">
           <section className="push-onboarding-modal" role="dialog" aria-modal="true" aria-labelledby="push-onboarding-title">
+            <button type="button" className="push-onboarding-close" aria-label="Fechar aviso" onClick={dismissPushOnboarding}>×</button>
             <span className="push-onboarding-icon" aria-hidden="true">&#128276;</span>
             <small>Novidade no Yuri</small>
             <h2 id="push-onboarding-title">Não perca nenhum aviso importante!</h2>
@@ -251,7 +253,8 @@ export default function NotificationBell() {
             </div>
             <p className="push-onboarding-note">Você poderá ativar depois pelo sininho.</p>
           </section>
-        </div>
+        </div>,
+        document.body
       ) : null}
 
       <button

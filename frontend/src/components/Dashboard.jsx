@@ -1,12 +1,41 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getMeuSkap, getModulos, getProntuarioMe, getPublicAcoes } from '../api.js';
+import { motion, useReducedMotion } from 'motion/react';
+import {
+  ArrowRight,
+  ChartBar,
+  CheckCircle,
+  CurrencyDollar,
+  BellRinging,
+  Handshake,
+  Leaf,
+  MapTrifold,
+  Medal,
+  Megaphone,
+  Package,
+  Recycle,
+  ShieldCheck,
+  Star,
+  Target,
+  Trophy,
+  Truck,
+  UserCircle,
+  Wrench
+} from '@phosphor-icons/react';
+import {
+  getMeuProdutividade,
+  getMeuProdutividadeArmazem,
+  getMeuSkap,
+  getModulos,
+  getProntuarioMe,
+  getPublicAcoes
+} from '../api.js';
 import ActionsCarousel from './ActionsCarousel.jsx';
 
 const generalCards = [
   {
     id: 'pesquisa_clima',
-    icon: '📊',
+    icon: ChartBar,
     title: 'Pesquisa de Clima',
     description: 'Acompanhe e participe das pesquisas de satisfação da empresa.',
     action: 'Acessar pesquisa',
@@ -15,7 +44,7 @@ const generalCards = [
   },
   {
     id: 'skap',
-    icon: '🎖️',
+    icon: Medal,
     title: 'SKAP',
     description: 'Consulte sua evolução, nível atual e habilidades avaliadas pela liderança.',
     action: 'Ver meu SKAP',
@@ -24,7 +53,7 @@ const generalCards = [
   },
   {
     id: 'campeao_seguranca',
-    icon: '🏆',
+    icon: Trophy,
     title: 'Campeão de Segurança',
     description: 'Reconheça atitudes seguras e acompanhe destaques da operação.',
     action: 'Acessar',
@@ -33,7 +62,7 @@ const generalCards = [
   },
   {
     id: 'tres_rs',
-    icon: '♻️',
+    icon: Recycle,
     title: '3 Rs',
     description: 'Conheça responsabilidades, recursos e reconhecimentos da metodologia 3Rs.',
     action: 'Acessar 3Rs',
@@ -42,7 +71,7 @@ const generalCards = [
   },
   {
     id: 'premio_produtividade',
-    icon: '⭐',
+    icon: Star,
     title: 'Prêmio de Produtividade',
     description: 'Veja seus indicadores, metas batidas e valor previsto do prêmio.',
     action: 'Acessar',
@@ -51,7 +80,7 @@ const generalCards = [
   },
   {
     id: 'indicadores_rota',
-    icon: '🎯',
+    icon: Target,
     title: 'Indicadores da Rota',
     description: 'Acompanhe as metas e entenda os indicadores que ajudam sua rota a ser mais produtiva, organizada e segura.',
     action: 'Ver indicadores',
@@ -61,7 +90,7 @@ const generalCards = [
   },
   {
     id: 'rotograma_seguro',
-    icon: '🛣️',
+    icon: MapTrifold,
     title: 'Rotograma Seguro',
     description: 'Consulte rotas, pontos de risco e orientações de segurança antes da operação.',
     action: 'Consultar',
@@ -70,7 +99,7 @@ const generalCards = [
   },
   {
     id: 'prontuario_motorista',
-    icon: '🚚',
+    icon: Truck,
     title: 'Prontuário do Colaborador',
     description: 'Consulte sua pontuação, faixa atual e ocorrências registradas.',
     action: 'Ver prontuário',
@@ -79,7 +108,7 @@ const generalCards = [
   },
   {
     id: 'ouvidoria',
-    icon: '📣',
+    icon: Megaphone,
     title: 'Ouvidoria',
     description: 'Acesse o canal oficial para registrar solicitações, dúvidas ou relatos.',
     action: 'Abrir canal',
@@ -90,7 +119,7 @@ const generalCards = [
 
 const adminCard = {
   id: 'admin',
-  icon: '🛠️',
+  icon: Wrench,
   title: 'Central do Administrador',
   description: 'Gerencie colaboradores, importações, indicadores e configurações do sistema.',
   action: 'Acessar painel',
@@ -101,11 +130,11 @@ const adminCard = {
 };
 
 const unitDreamPillars = [
-  ['🌱', 'Sustentabilidade', 'Cuidar dos recursos e reduzir desperdícios.'],
-  ['🛡️', 'Segurança', 'Garantir uma operação segura para todos.'],
-  ['🤝', 'Engajamento', 'Fortalecer participação, união e pertencimento.'],
-  ['📦', 'Nível de Serviço', 'Entregar qualidade e atendimento ao cliente.'],
-  ['💰', 'Orçamento', 'Respeitar custos e usar recursos com responsabilidade.']
+  [Leaf, 'Sustentabilidade', 'Cuidar dos recursos e reduzir desperdícios.'],
+  [ShieldCheck, 'Segurança', 'Garantir uma operação segura para todos.'],
+  [Handshake, 'Engajamento', 'Fortalecer participação, união e pertencimento.'],
+  [Package, 'Nível de Serviço', 'Entregar qualidade e atendimento ao cliente.'],
+  [CurrencyDollar, 'Orçamento', 'Respeitar custos e usar recursos com responsabilidade.']
 ];
 
 function normalizePerfil(perfil) {
@@ -125,6 +154,13 @@ function isDistributionProfile(user) {
 function getFirstName(user) {
   const name = user?.nome_preferido || user?.nome_completo || 'colaborador';
   return String(name).trim().split(/\s+/)[0] || 'colaborador';
+}
+
+function getLatestProductivity(payload) {
+  if (Array.isArray(payload)) return payload[0] || null;
+  const rows = payload?.registros ?? payload?.items ?? payload?.rows;
+  if (Array.isArray(rows)) return rows[0] || null;
+  return payload?.registro || null;
 }
 
 function formatLevel(value) {
@@ -157,45 +193,51 @@ function MaintenanceNotice({ module, onClose }) {
 }
 
 function DashboardCard({ card, index, onMaintenance }) {
+  const CardIcon = card.icon;
   const content = (
     <>
       <div className="dashboard-card-top">
-        <span className="dashboard-card-icon" aria-hidden="true">{card.icon}</span>
+        <span className="dashboard-card-icon" aria-hidden="true"><CardIcon size={25} weight="duotone" /></span>
         {card.maintenance ? <span className="dashboard-card-badge maintenance">Em manutenção</span> : (card.badge ? <span className="dashboard-card-badge">{card.badge}</span> : null)}
       </div>
       <div className="dashboard-card-copy">
         <h3>{card.title}</h3>
         <p>{card.maintenance ? 'Estamos ajustando este painel.' : card.description}</p>
       </div>
-      <span className="dashboard-card-action">{card.maintenance ? 'Ver aviso' : card.action}</span>
+      <span className="dashboard-card-action">
+        <span className="dashboard-card-action-label">{card.maintenance ? 'Ver aviso' : card.action}</span>
+        <ArrowRight size={17} weight="bold" aria-hidden="true" />
+      </span>
     </>
   );
 
-  const style = {
-    borderTopColor: card.color,
-    animationDelay: `${index * 70}ms`
+  const style = { '--card-accent': card.color };
+  const motionProps = {
+    initial: { opacity: 0, y: 18 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.4, delay: index * 0.045 }
   };
 
   if (card.maintenance) {
     return (
-      <button type="button" className="dashboard-card-item dashboard-card-disabled" style={style} onClick={() => onMaintenance(card)}>
-        {content}
-      </button>
+      <motion.div className="dashboard-card-motion" {...motionProps}>
+        <button type="button" className="dashboard-card-item dashboard-card-disabled" style={style} onClick={() => onMaintenance(card)}>{content}</button>
+      </motion.div>
     );
   }
 
   if (card.href) {
     return (
-      <a className={`dashboard-card-item ${card.featured ? 'dashboard-card-featured' : ''}`} style={style} href={card.href} target="_blank" rel="noreferrer">
-        {content}
-      </a>
+      <motion.div className="dashboard-card-motion" {...motionProps}>
+        <a className={`dashboard-card-item ${card.featured ? 'dashboard-card-featured' : ''}`} style={style} href={card.href} target="_blank" rel="noreferrer">{content}</a>
+      </motion.div>
     );
   }
 
   return (
-    <Link className={`dashboard-card-item ${card.featured ? 'dashboard-card-featured' : ''}`} style={style} to={card.route}>
-      {content}
-    </Link>
+    <motion.div className="dashboard-card-motion" {...motionProps}>
+      <Link className={`dashboard-card-item ${card.featured ? 'dashboard-card-featured' : ''}`} style={style} to={card.route}>{content}</Link>
+    </motion.div>
   );
 }
 
@@ -205,7 +247,7 @@ function UnitDreamPanel() {
   return (
     <section className="unit-dream-panel" aria-labelledby="unit-dream-title">
       <div className="unit-dream-heading">
-        <span className="unit-dream-icon" aria-hidden="true">🎯</span>
+        <span className="unit-dream-icon" aria-hidden="true"><Target size={31} weight="duotone" /></span>
         <div>
           <h2 id="unit-dream-title">Sonho da Unidade</h2>
           <p>Ser sustentável, com segurança, engajamento, entregando o nível de serviço, respeitando o orçamento.</p>
@@ -213,19 +255,22 @@ function UnitDreamPanel() {
       </div>
 
       <div className="unit-dream-pillars" aria-label="Pilares do Sonho da Unidade">
-        {unitDreamPillars.map((pillar) => (
-          <button
-            type="button"
-            key={pillar[1]}
-            onMouseEnter={() => setActivePillar(pillar)}
-            onFocus={() => setActivePillar(pillar)}
-            onClick={() => setActivePillar(pillar)}
-            title={pillar[2]}
-          >
-            <span aria-hidden="true">{pillar[0]}</span>
-            {pillar[1]}
-          </button>
-        ))}
+        {unitDreamPillars.map((pillar) => {
+          const PillarIcon = pillar[0];
+          return (
+            <button
+              type="button"
+              key={pillar[1]}
+              onMouseEnter={() => setActivePillar(pillar)}
+              onFocus={() => setActivePillar(pillar)}
+              onClick={() => setActivePillar(pillar)}
+              title={pillar[2]}
+            >
+              <span aria-hidden="true"><PillarIcon size={20} weight="duotone" /></span>
+              {pillar[1]}
+            </button>
+          );
+        })}
       </div>
 
       <p className="unit-dream-explanation">{activePillar[2]}</p>
@@ -234,12 +279,36 @@ function UnitDreamPanel() {
   );
 }
 
+function SuperTeamRoomPanel() {
+  return (
+    <section className="super-team-room-panel" aria-labelledby="super-team-room-title">
+      <div className="super-team-room-trophy" aria-hidden="true"><Trophy size={82} weight="duotone" /></div>
+      <div className="super-team-room-copy">
+        <span className="super-team-room-kicker">Destaques do mês</span>
+        <h2 id="super-team-room-title">Super Team Room</h2>
+        <h3>Reconhecendo quem fez a diferença</h3>
+        <p>Metas alcançadas, talentos reconhecidos e histórias que inspiram toda a unidade.</p>
+        <div className="super-team-room-highlights">
+          <span><Medal size={16} weight="duotone" /> Produtividade</span>
+          <span><ShieldCheck size={16} weight="duotone" /> Segurança</span>
+          <span><Star size={16} weight="duotone" /> Qualidade</span>
+        </div>
+      </div>
+      <button type="button" disabled title="Disponível após o fechamento mensal">
+        Conhecer os destaques <span aria-hidden="true">›</span>
+      </button>
+    </section>
+  );
+}
+
 export default function Dashboard({ user }) {
   const [acoes, setAcoes] = useState([]);
   const [skap, setSkap] = useState(null);
   const [prontuario, setProntuario] = useState(null);
+  const [productivity, setProductivity] = useState(null);
   const [modulos, setModulos] = useState([]);
   const [maintenanceModule, setMaintenanceModule] = useState(null);
+  const reduceMotion = useReducedMotion();
   const perfil = normalizePerfil(user?.perfil);
   const isAdmin = perfil === 'admin';
   const isDistribution = isDistributionProfile(user);
@@ -265,6 +334,16 @@ export default function Dashboard({ user }) {
       .then(setProntuario)
       .catch(() => setProntuario(null));
   }, [user, isAdmin, isDistribution]);
+
+  useEffect(() => {
+    if (!user) return;
+    Promise.allSettled([getMeuProdutividade(), getMeuProdutividadeArmazem()])
+      .then((results) => {
+        const routeValue = results[0].status === 'fulfilled' ? getLatestProductivity(results[0].value) : null;
+        const warehouseValue = results[1].status === 'fulfilled' ? getLatestProductivity(results[1].value) : null;
+        setProductivity(routeValue || warehouseValue || null);
+      });
+  }, [user]);
 
   const cards = useMemo(() => {
     const moduleByKey = new Map(modulos.map((modulo) => [modulo.chave, modulo]));
@@ -321,28 +400,75 @@ export default function Dashboard({ user }) {
     return isAdmin ? [adminCard, ...shapedCards] : shapedCards;
   }, [isAdmin, isDistribution, modulos, prontuario, skap]);
 
+  const showSuperTeamRoom = isAdmin || !modulos.length || modulos.some((modulo) => modulo.chave === 'super_team_room');
+
   return (
-    <div className="dashboard-page">
-      <section className="dashboard-hero">
-        <div className="dashboard-hero-content">
-          <img src="/rh-logo.jpg" alt="RH LOG20 Cascavel" />
+    <motion.div
+      className="dashboard-page dashboard-page-refined"
+      initial={reduceMotion ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+    >
+      <section className="dashboard-hero dashboard-hero-refined">
+        <motion.div
+          className="dashboard-hero-welcome"
+          initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
           <div>
-            <span className="brand-tagline">Logística que faz bem.</span>
+            <span className="brand-tagline"><i /> Central do Colaborador</span>
             <h1>Olá, {getFirstName(user)}!</h1>
-            <p className="dashboard-hero-lead">Bem-vindo à sua Central do Colaborador LOG20.</p>
-            <p className="dashboard-hero-help">Escolha uma opção abaixo para continuar.</p>
-            {isAdmin ? <span className="admin-access-note">Você possui acesso administrativo.</span> : null}
+            <p className="dashboard-hero-lead">Tudo o que você precisa para acompanhar sua jornada, em um só lugar.</p>
+            {isAdmin ? <span className="admin-access-note">Acesso administrativo ativo</span> : null}
+            <div className="dashboard-hero-actions">
+              <Link to="/produtividade">Ver meu desempenho <span aria-hidden="true">→</span></Link>
+              <Link to="/profile">Atualizar meus dados</Link>
+            </div>
           </div>
-        </div>
+        </motion.div>
+        <UnitDreamPanel />
       </section>
 
-      <UnitDreamPanel />
+      <section className="dashboard-status-grid" aria-label="Resumo do colaborador">
+        <article className={`dashboard-status-card prize ${productivity ? 'is-updated' : 'is-pending'}`}>
+          <Link className="dashboard-prize-link" to="/produtividade" aria-label="Abrir meu prêmio">
+            <span className="dashboard-status-icon" aria-hidden="true"><BellRinging size={29} weight="duotone" /></span>
+            <span>
+              <small>Meu prêmio</small>
+              <strong>{productivity ? 'Prêmio atualizado' : 'Aguardando atualização'}</strong>
+              <em>{productivity?.competencia ? `Competência ${productivity.competencia}` : 'Você será avisado quando houver novidade'}</em>
+            </span>
+          </Link>
+          <Link className="dashboard-status-arrow" to="/produtividade" aria-label="Ver detalhes do prêmio">›</Link>
+        </article>
+        <Link className="dashboard-status-card" to="/skap">
+          <span className="dashboard-status-icon blue" aria-hidden="true"><CheckCircle size={28} weight="duotone" /></span>
+          <span>
+            <small>SKAP</small>
+            <strong>{skap?.nivel_skap ? formatLevel(skap.nivel_skap) : 'Acompanhar'}</strong>
+            <em>Evolução e habilidades</em>
+          </span>
+          <b aria-hidden="true">›</b>
+        </Link>
+        <Link className="dashboard-status-card" to="/profile">
+          <span className="dashboard-status-icon blue" aria-hidden="true"><UserCircle size={29} weight="duotone" /></span>
+          <span>
+            <small>Meu perfil</small>
+            <strong>Dados atualizados</strong>
+            <em>Ver meus dados</em>
+          </span>
+          <b aria-hidden="true">›</b>
+        </Link>
+      </section>
 
-      <section className="dashboard-card-section" aria-label="Atalhos da Central do Colaborador">
+      {showSuperTeamRoom ? <SuperTeamRoomPanel /> : null}
+
+      <section className="dashboard-card-section compact-services" aria-label="Atalhos da Central do Colaborador">
         <div className="dashboard-section-heading">
           <div>
-            <span>Acesso rapido</span>
-            <h2>O que você precisa hoje?</h2>
+            <span>Serviços do Yuri</span>
+            <h2>Acesso rápido</h2>
           </div>
         </div>
         <div className="card-grid">
@@ -354,6 +480,6 @@ export default function Dashboard({ user }) {
 
       <ActionsCarousel items={acoes} />
       <MaintenanceNotice module={maintenanceModule} onClose={() => setMaintenanceModule(null)} />
-    </div>
+    </motion.div>
   );
 }

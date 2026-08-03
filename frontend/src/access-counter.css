@@ -56,7 +56,7 @@
 .access-monthly-track span{display:block;height:100%;background:linear-gradient(90deg,#0b5c91,#1694df);border-radius:inherit}
 .access-data-disclosures{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:10px}
 .access-data-note{padding:0;color:#75511d;background:#fff8eb;border:1px solid #f2dfbd;border-left:4px solid #e87522;border-radius:10px}
-.access-data-note-total{color:#0b4776;background:#eff8fe;border-color:#cee4f2;border-left-color:#0b75b8}
+.access-data-disclosures .access-data-note-total{color:#0b4776;background:#eff8fe;border-color:#cee4f2;border-left-color:#0b75b8}
 .access-data-note summary{display:flex;min-height:72px;padding:13px 15px;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;list-style:none}
 .access-data-note summary::-webkit-details-marker{display:none}
 .access-data-note summary>span:first-child{display:grid;gap:2px}
