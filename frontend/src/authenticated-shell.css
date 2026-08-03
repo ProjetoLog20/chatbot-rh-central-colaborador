@@ -10,6 +10,9 @@ body:has(.authenticated-main) {
   background: radial-gradient(circle at 100% 0, rgba(23, 160, 230, 0.08), transparent 26rem), #f4f7fa;
 }
 
+.desktop-app-sidebar,
+.mobile-bottom-nav { display: none; }
+
 .mobile-user-avatar { display: none !important; }
 
 .push-onboarding-backdrop {
@@ -49,8 +52,15 @@ body:has(.authenticated-main) {
 
 @media (min-width: 901px) {
   .desktop-app-sidebar {
+    position: fixed;
+    z-index: 25;
+    inset: 0 auto 0 0;
+    display: flex;
     width: 248px !important;
+    min-height: 100vh;
     padding: 20px 16px 18px !important;
+    flex-direction: column;
+    color: #fff;
     background: radial-gradient(circle at 15% 0, rgba(23, 160, 230, 0.24), transparent 17rem), linear-gradient(180deg, #073b65 0%, #052f53 58%, #042746 100%) !important;
     box-shadow: 14px 0 36px rgba(2, 37, 66, 0.14) !important;
   }
@@ -83,16 +93,20 @@ body:has(.authenticated-main) {
   .sidebar-brand strong { font-size: 1.05rem; letter-spacing: -0.02em; }
   .sidebar-brand small { color: rgba(255, 255, 255, 0.62); font-size: 0.7rem; font-weight: 700; }
   .sidebar-section-label { display: block; margin: 0 12px 9px; color: rgba(255, 255, 255, 0.43); font-size: 0.62rem; font-weight: 900; letter-spacing: 0.13em; text-transform: uppercase; }
-  .desktop-app-sidebar nav { gap: 4px !important; }
+  .desktop-app-sidebar nav { display: grid; gap: 4px !important; }
 
   .desktop-app-sidebar nav a,
   .sidebar-admin a {
     position: relative;
+    display: flex;
     min-height: 44px !important;
     padding: 9px 11px !important;
+    align-items: center;
     gap: 11px !important;
     color: rgba(255, 255, 255, 0.74) !important;
     font-size: 0.84rem !important;
+    font-weight: 700;
+    text-decoration: none;
     border: 1px solid transparent;
     border-radius: 12px !important;
   }
@@ -117,7 +131,9 @@ body:has(.authenticated-main) {
   .sidebar-admin a.active::before { position: absolute; inset: 9px auto 9px -16px; width: 3px; content: ''; background: var(--yuri-orange); border-radius: 0 4px 4px 0; box-shadow: 0 0 13px rgba(239, 123, 32, 0.65); }
   .desktop-app-sidebar nav a.active span,
   .sidebar-admin a.active span { background: rgba(23, 160, 230, 0.18); }
-  .sidebar-admin { margin-top: 16px !important; }
+  .sidebar-admin { display: grid; margin-top: 16px !important; gap: 8px; }
+  .sidebar-admin > small { display: flex; align-items: center; gap: 10px; color: rgba(255, 255, 255, 0.52); font-size: 0.62rem; }
+  .sidebar-admin > small::after { height: 1px; flex: 1; content: ''; background: rgba(255, 255, 255, 0.18); }
 
   .sidebar-security { display: flex; margin-top: auto; padding: 11px 12px; align-items: center; gap: 10px; color: rgba(255, 255, 255, 0.72); background: rgba(255, 255, 255, 0.055); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 13px; }
   .sidebar-security i { width: 8px; height: 8px; background: #38d996; border-radius: 50%; box-shadow: 0 0 0 5px rgba(56, 217, 150, 0.1); }
@@ -154,8 +170,20 @@ body:has(.authenticated-main) {
 
 .notification-drawer { z-index: 120 !important; }
 
-.dashboard-page-refined { max-width: 1240px !important; gap: 18px !important; }
-.dashboard-hero-refined { grid-template-columns: minmax(360px, .95fr) minmax(440px, 1.05fr) !important; gap: 18px !important; }
+.dashboard-page-refined { width: 100%; max-width: 1240px !important; gap: 18px !important; }
+.dashboard-hero-refined {
+  display: grid;
+  min-height: 0;
+  padding: 0;
+  grid-template-columns: minmax(360px, .95fr) minmax(440px, 1.05fr) !important;
+  align-items: stretch;
+  gap: 18px !important;
+  overflow: visible;
+  color: #092c58;
+  background: transparent;
+  box-shadow: none;
+}
+.dashboard-hero-refined::after { display: none; }
 .dashboard-hero-refined .dashboard-hero-welcome { position: relative; display: flex !important; min-height: 250px; padding: clamp(26px, 3.4vw, 42px) !important; align-items: center; overflow: hidden; color: #fff; background: radial-gradient(circle at 92% 16%, rgba(57, 183, 239, 0.35), transparent 11rem), linear-gradient(135deg, #063a65 0%, #075b91 58%, #0879b8 100%); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 24px; box-shadow: 0 18px 42px rgba(5, 62, 101, 0.18); }
 .dashboard-hero-refined .dashboard-hero-welcome > div { position: relative; z-index: 2; max-width: 430px; }
 .dashboard-hero-refined .brand-tagline { display: inline-flex; align-items: center; gap: 7px; color: rgba(255, 255, 255, 0.72) !important; }
