@@ -14,6 +14,7 @@ const MODULE_DEFAULTS = [
   ['rotograma_seguro', 'Rotograma Seguro', 'Consulte rotas, pontos de risco, telefones de emergência e orientações de segurança da operação.', true, false, null, true, true, true, 57],
   ['prontuario_motorista', 'Prontuário do Colaborador', 'Pontuação, faixa atual e ocorrências registradas.', true, false, null, true, true, true, 60],
   ['ouvidoria', 'Ouvidoria', 'Canal oficial para solicitações, dúvidas ou relatos.', true, false, null, true, true, true, 70],
+  ['super_team_room', 'Super Team Room', 'Destaques e reconhecimentos mensais da unidade.', true, false, null, true, true, true, 75],
   ['assistente_rh', 'Yuri, Assistente de RH', 'Atendimento virtual da Central do Colaborador.', true, false, null, true, true, true, 80]
 ];
 

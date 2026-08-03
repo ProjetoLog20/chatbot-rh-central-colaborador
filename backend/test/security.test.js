@@ -8,6 +8,7 @@ process.env.DATABASE_URL = '';
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'segredo-exclusivo-para-testes-automatizados';
 process.env.ACCESS_COUNTER_ENABLED = 'false';
+process.env.YURI_AI_ENABLED = 'false';
 const testVapidKeys = webpush.generateVAPIDKeys();
 process.env.VAPID_PUBLIC_KEY = testVapidKeys.publicKey;
 process.env.VAPID_PRIVATE_KEY = testVapidKeys.privateKey;
@@ -15,6 +16,7 @@ process.env.VAPID_SUBJECT = 'https://www.log20.com.br';
 
 const app = require('../src/index');
 const db = require('../src/db');
+const { clearGeoCache } = require('../src/geoRestriction');
 
 test.after(async () => {
   await db.close();
@@ -36,6 +38,126 @@ test('cabecalhos de seguranca e CSP sao enviados pela API', async () => {
   assert.equal(response.headers['x-content-type-options'], 'nosniff');
   assert.equal(response.headers['x-frame-options'], 'SAMEORIGIN');
   assert.equal(response.headers['referrer-policy'], 'no-referrer');
+  assert.equal(response.headers['cache-control'], 'no-store');
+});
+
+test('Yuri exige autenticacao antes de processar mensagens', async () => {
+  await request(app)
+    .post('/api/yuri/chat')
+    .send({ message: 'Ola, Yuri' })
+    .expect(401);
+});
+
+test('restricao geografica permite Parana e bloqueia outros estados', async () => {
+  const originalFetch = global.fetch;
+  const token = jwt.sign(
+    { id: 987654, matricula: 'geo-teste', perfil: 'colaborador' },
+    process.env.JWT_SECRET,
+    { expiresIn: '5m' }
+  );
+  process.env.GEO_RESTRICTION_ENABLED = 'true';
+  process.env.GEO_ALLOW_PRIVATE_IPS = 'false';
+  process.env.GEO_FAIL_CLOSED = 'true';
+  process.env.IPINFO_TOKEN = 'token-apenas-para-teste';
+
+  try {
+    global.fetch = async () => ({
+      ok: true,
+      json: async () => ({ geo: { country_code: 'BR', region_code: 'PR' } })
+    });
+    clearGeoCache();
+    await request(app)
+      .post('/api/yuri/chat')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ message: 'Teste no Parana' })
+      .expect(200);
+
+    global.fetch = async () => ({
+      ok: true,
+      json: async () => ({ geo: { country_code: 'BR', region_code: 'SC' } })
+    });
+    clearGeoCache();
+    const blocked = await request(app)
+      .post('/api/yuri/chat')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ message: 'Teste fora do Parana' })
+      .expect(403);
+    assert.equal(blocked.body.code, 'GEO_BLOCKED');
+
+    await request(app).get('/api/health').expect(200);
+  } finally {
+    global.fetch = originalFetch;
+    clearGeoCache();
+    delete process.env.GEO_RESTRICTION_ENABLED;
+    delete process.env.GEO_ALLOW_PRIVATE_IPS;
+    delete process.env.GEO_FAIL_CLOSED;
+    delete process.env.IPINFO_TOKEN;
+  }
+});
+
+test('restricao geografica falha fechada quando a localizacao fica indisponivel', async () => {
+  const originalFetch = global.fetch;
+  process.env.GEO_RESTRICTION_ENABLED = 'true';
+  process.env.GEO_ALLOW_PRIVATE_IPS = 'false';
+  process.env.GEO_FAIL_CLOSED = 'true';
+  process.env.IPINFO_TOKEN = 'token-apenas-para-teste';
+
+  try {
+    global.fetch = async () => { throw new Error('Falha simulada'); };
+    clearGeoCache();
+    const response = await request(app)
+      .post('/api/yuri/chat')
+      .send({ message: 'Teste de indisponibilidade' })
+      .expect(503);
+    assert.equal(response.body.code, 'GEO_UNAVAILABLE');
+  } finally {
+    global.fetch = originalFetch;
+    clearGeoCache();
+    delete process.env.GEO_RESTRICTION_ENABLED;
+    delete process.env.GEO_ALLOW_PRIVATE_IPS;
+    delete process.env.GEO_FAIL_CLOSED;
+    delete process.env.IPINFO_TOKEN;
+  }
+});
+
+test('Yuri limita abuso por conta autenticada', async () => {
+  const suffix = Date.now();
+  const matricula = `yuri-rate-${suffix}`;
+  await db.run(
+    `INSERT INTO colaboradores
+     (matricula, nome_completo, senha_hash, perfil, status, primeiro_acesso, senha_temporaria)
+     VALUES (?, 'Usuario Limite Yuri', 'hash', 'colaborador', 'Ativo', 0, 0)`,
+    [matricula]
+  );
+  const usuario = await db.get('SELECT id FROM colaboradores WHERE matricula = ?', [matricula]);
+  const token = jwt.sign(
+    { id: usuario.id, matricula, perfil: 'colaborador' },
+    process.env.JWT_SECRET,
+    { expiresIn: '5m' }
+  );
+
+  try {
+    for (let attempt = 1; attempt <= 20; attempt += 1) {
+      const response = await request(app)
+        .post('/api/yuri/chat')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ message: `Pergunta de seguranca ${attempt}` })
+        .expect(200);
+      assert.equal(response.body.source, 'ia_desativada');
+      assert.equal(response.headers['cache-control'], 'no-store');
+    }
+
+    const blocked = await request(app)
+      .post('/api/yuri/chat')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ message: 'Tentativa excedente' })
+      .expect(429);
+
+    assert.match(blocked.body.error, /Muitas tentativas/);
+    assert.ok(blocked.headers['retry-after']);
+  } finally {
+    await db.run('DELETE FROM colaboradores WHERE id = ?', [usuario.id]);
+  }
 });
 
 test('request id valido e preservado para rastreabilidade', async () => {

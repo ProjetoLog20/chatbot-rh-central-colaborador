@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const helmet = require('helmet');
-const { rateLimit } = require('express-rate-limit');
+const { ipKeyGenerator, rateLimit } = require('express-rate-limit');
 
 function securityHeaders() {
   return helmet({
@@ -67,10 +67,23 @@ const firstAccessLimiter = rateLimit({
   handler: rateLimitHandler
 });
 
+const yuriLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 20,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  keyGenerator(req) {
+    const userId = req.user?.id || req.user?.matricula;
+    return userId ? `usuario:${userId}` : `ip:${ipKeyGenerator(req.ip)}`;
+  },
+  handler: rateLimitHandler
+});
+
 module.exports = {
   firstAccessLimiter,
   loginLimiter,
   preventSensitiveCaching,
   requestId,
-  securityHeaders
+  securityHeaders,
+  yuriLimiter
 };

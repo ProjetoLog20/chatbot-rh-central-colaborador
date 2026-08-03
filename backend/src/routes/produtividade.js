@@ -5,6 +5,7 @@ const { authenticateToken, authorizeRoles } = require('../authMiddleware');
 const { ensureModuleAvailable, maintenancePayload } = require('../moduleConfig');
 const { importWorkbook, previewWorkbook } = require('../../scripts/importRvXlsx');
 const { createPreview, getPreview, removePreview } = require('../importPreviewStore');
+const { publishPrizeUpdateNotification } = require('../services/prizeNotificationService');
 
 const router = express.Router();
 
@@ -372,8 +373,17 @@ router.post('/importar/aprovar', authenticateToken, authorizeRoles('admin'), asy
       criadoPor: req.user.id,
       competencia: staged.competencia
     });
+    const notificationResult = await publishPrizeUpdateNotification({
+      createdBy: req.user.id,
+      competence: staged.competencia,
+      source: staged.planType
+    });
     removePreview(req.body.preview_token);
-    return res.json({ status: 'publicado', ...result });
+    return res.json({
+      status: 'publicado',
+      ...result,
+      notificacao_id: notificationResult.notification.id
+    });
   } catch (error) {
     return res.status(400).json({ error: error.message || 'Erro ao publicar a RV conferida' });
   }

@@ -36,6 +36,19 @@ Variaveis do Yuri com IA:
 - `YURI_AI_ENABLED=true` ativa a chamada da OpenAI. Use `false` para manter o Yuri com resposta padrao sem IA.
 - `OPENAI_MODEL` define o modelo usado pelo Yuri. Padrao recomendado: `gpt-4o-mini`.
 
+### Restricao geografica ao Parana
+
+Para ativar o bloqueio das APIs fora do Parana no Render, configure:
+
+```env
+GEO_RESTRICTION_ENABLED=true
+IPINFO_TOKEN=token_com_acesso_ao_ipinfo_core
+GEO_FAIL_CLOSED=true
+GEO_ALLOW_PRIVATE_IPS=true
+```
+
+O token precisa retornar `country_code=BR` e `region_code=PR`. O resultado fica em cache por seis horas por IP. A rota de health check, requisicoes CORS `OPTIONS` e IPs privados usados no desenvolvimento local nao sao bloqueados. Geolocalizacao por IP e aproximada e pode ser afetada por VPN, proxy e redes moveis.
+
 ## Instalacao
 
 ```bash

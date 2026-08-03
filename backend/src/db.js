@@ -680,6 +680,7 @@ function connectSqlite() {
       ['rotograma_seguro', 'Rotograma Seguro', 'Consulte rotas, pontos de risco, telefones de emergência e orientações de segurança da operação.', 1, 0, null, 1, 1, 1, 57],
       ['prontuario_motorista', 'Prontuario do Colaborador', 'Pontuacao, faixa atual e ocorrencias registradas.', 1, 0, null, 1, 1, 1, 60],
       ['ouvidoria', 'Ouvidoria', 'Canal oficial para solicitacoes, duvidas ou relatos.', 1, 0, null, 1, 1, 1, 70],
+      ['super_team_room', 'Super Team Room', 'Destaques e reconhecimentos mensais da unidade.', 1, 0, null, 1, 1, 1, 75],
       ['assistente_rh', 'Yuri, Assistente de RH', 'Atendimento virtual da Central do Colaborador.', 1, 0, null, 1, 1, 1, 80]
     ];
 
