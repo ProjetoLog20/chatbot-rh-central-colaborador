@@ -689,9 +689,10 @@ export async function askChatbot(question, previousResponseId) {
   });
 }
 
-export async function askYuri(message, history = []) {
+export async function askYuri(message, history = [], signal) {
   return request('/yuri/chat', {
     method: 'POST',
-    body: JSON.stringify({ message, history })
+    body: JSON.stringify({ message, history }),
+    signal
   });
 }

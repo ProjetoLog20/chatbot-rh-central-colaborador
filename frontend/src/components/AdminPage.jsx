@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { CheckCircle, CopySimple, Key, WarningCircle, X } from '@phosphor-icons/react';
 import '../access-counter.css';
 import {
   getCollaborators,
@@ -341,6 +342,124 @@ function ModuleConfigItem({ modulo, onSave }) {
   );
 }
 
+function PasswordResetDialog({ dialog, onConfirm, onClose }) {
+  const [copied, setCopied] = useState(false);
+  const initialButtonRef = useRef(null);
+  const isWorking = dialog?.status === 'loading';
+
+  useEffect(() => {
+    if (!dialog) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    initialButtonRef.current?.focus();
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape' && !isWorking) onClose();
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [dialog, isWorking, onClose]);
+
+  if (!dialog) return null;
+
+  const name = dialog.user.nome_preferido || dialog.user.nome_completo;
+  const isSuccess = dialog.status === 'success';
+  const isError = dialog.status === 'error';
+
+  async function copyTemporaryPassword() {
+    try {
+      await navigator.clipboard.writeText(dialog.temporaryPassword || 'log20');
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <div className="password-reset-backdrop" role="presentation" onMouseDown={(event) => {
+      if (event.target === event.currentTarget && !isWorking) onClose();
+    }}>
+      <section
+        className={`password-reset-dialog ${isSuccess ? 'is-success' : ''} ${isError ? 'is-error' : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="password-reset-title"
+        aria-describedby="password-reset-description"
+      >
+        {!isWorking ? (
+          <button type="button" className="password-reset-close" aria-label="Fechar" onClick={onClose}>
+            <X size={20} weight="bold" />
+          </button>
+        ) : null}
+
+        <div className="password-reset-icon" aria-hidden="true">
+          {isSuccess ? <CheckCircle size={38} weight="fill" /> : isError ? <WarningCircle size={38} weight="fill" /> : <Key size={36} weight="duotone" />}
+        </div>
+
+        {isSuccess ? (
+          <>
+            <span className="password-reset-eyebrow">Reset concluído</span>
+            <h2 id="password-reset-title">Senha redefinida com sucesso</h2>
+            <p id="password-reset-description">
+              O acesso de <strong>{name}</strong> foi preparado para um novo primeiro acesso.
+            </p>
+            <div className="password-reset-credential">
+              <span>Senha temporária</span>
+              <div>
+                <strong>{dialog.temporaryPassword || 'log20'}</strong>
+                <button type="button" onClick={copyTemporaryPassword} aria-label="Copiar senha temporária">
+                  <CopySimple size={19} weight="bold" /> {copied ? 'Copiada' : 'Copiar'}
+                </button>
+              </div>
+            </div>
+            <div className="password-reset-instructions">
+              <strong>Oriente o usuário:</strong>
+              <span>Entrar com a matrícula <b>{dialog.user.matricula}</b> e a senha temporária acima. O Yuri solicitará a criação de uma nova senha.</span>
+            </div>
+            <button ref={initialButtonRef} type="button" className="password-reset-primary" onClick={onClose}>Entendi</button>
+          </>
+        ) : isError ? (
+          <>
+            <span className="password-reset-eyebrow">Não foi possível concluir</span>
+            <h2 id="password-reset-title">A senha não foi alterada</h2>
+            <p id="password-reset-description">{dialog.error || 'Ocorreu um erro ao comunicar com o servidor.'}</p>
+            <div className="password-reset-actions">
+              <button ref={initialButtonRef} type="button" className="password-reset-secondary" onClick={onClose}>Cancelar</button>
+              <button type="button" className="password-reset-primary" onClick={onConfirm}>Tentar novamente</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <span className="password-reset-eyebrow">Ação administrativa</span>
+            <h2 id="password-reset-title">Resetar a senha deste usuário?</h2>
+            <p id="password-reset-description">
+              Você está redefinindo o acesso de <strong>{name}</strong>.
+            </p>
+            <dl className="password-reset-user">
+              <div><dt>Matrícula</dt><dd>{dialog.user.matricula}</dd></div>
+              <div><dt>Nova senha temporária</dt><dd>log20</dd></div>
+            </dl>
+            <p className="password-reset-warning">
+              {isWorking ? 'Aguarde enquanto o reset é confirmado pelo servidor…' : 'A senha atual deixará de funcionar e o usuário deverá criar uma nova senha no próximo acesso.'}
+            </p>
+            <div className="password-reset-actions">
+              <button ref={initialButtonRef} type="button" className="password-reset-secondary" onClick={onClose} disabled={isWorking}>Cancelar</button>
+              <button type="button" className="password-reset-primary" onClick={onConfirm} disabled={isWorking}>
+                {isWorking ? <><i className="password-reset-spinner" /> Resetando…</> : 'Sim, resetar senha'}
+              </button>
+            </div>
+          </>
+        )}
+      </section>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('excel');
   const [colaboradores, setColaboradores] = useState([]);
@@ -356,6 +475,7 @@ export default function AdminPage() {
   const [collaboratorSearch, setCollaboratorSearch] = useState('');
   const [collaboratorStatusFilter, setCollaboratorStatusFilter] = useState('ativos');
   const [savingCollaborator, setSavingCollaborator] = useState(false);
+  const [passwordResetDialog, setPasswordResetDialog] = useState(null);
   const [importErrors, setImportErrors] = useState(null);
   const [respostaText, setRespostaText] = useState({ pergunta: '', resposta: '', categoria: '', ativo: true });
   const [editingRespostaId, setEditingRespostaId] = useState(null);
@@ -575,13 +695,24 @@ export default function AdminPage() {
     }
   }
 
-  async function handleResetPassword(item) {
+  function handleResetPassword(item) {
+    setPasswordResetDialog({ status: 'confirm', user: item });
+  }
+
+  async function confirmPasswordReset() {
+    const user = passwordResetDialog?.user;
+    if (!user || passwordResetDialog.status === 'loading') return;
+    setPasswordResetDialog((current) => ({ ...current, status: 'loading', error: '' }));
     try {
-      await resetCollaboratorPassword(item.id);
-      setMessage(`Senha de ${item.nome_completo} resetada para log20.`);
-      refresh();
+      const result = await resetCollaboratorPassword(user.id);
+      const temporaryPassword = result?.senha_temporaria || 'log20';
+      setPasswordResetDialog((current) => ({ ...current, status: 'success', temporaryPassword }));
+      setMessage(`Senha de ${user.nome_completo} resetada com sucesso.`);
+      await refresh();
     } catch (err) {
-      setMessage(err.error || 'Erro ao resetar senha');
+      const error = err.error || 'Erro ao resetar senha. Tente novamente.';
+      setPasswordResetDialog((current) => ({ ...current, status: 'error', error }));
+      setMessage(error);
     }
   }
 
@@ -1133,6 +1264,12 @@ export default function AdminPage() {
           </div>
         </section>
       ) : null}
+
+      <PasswordResetDialog
+        dialog={passwordResetDialog}
+        onConfirm={confirmPasswordReset}
+        onClose={() => setPasswordResetDialog(null)}
+      />
     </div>
   );
 }

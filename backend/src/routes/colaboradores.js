@@ -119,11 +119,12 @@ router.put('/:id', authenticateToken, async (req, res) => {
       return res.status(409).json({ error: 'Voce nao pode retirar o proprio acesso de administrador.' });
     }
 
+    const shouldResetPassword = isAdmin && req.body.resetarSenha === true;
     let senhaHash = user.senha_hash;
     let primeiroAcesso = user.primeiro_acesso;
     let senhaTemporaria = user.senha_temporaria;
     let dataTroca = user.data_ultima_troca_senha;
-    if (isAdmin && req.body.resetarSenha) {
+    if (shouldResetPassword) {
       senhaHash = await bcrypt.hash('log20', 10);
       primeiroAcesso = true;
       senhaTemporaria = true;
@@ -159,7 +160,10 @@ router.put('/:id', authenticateToken, async (req, res) => {
       ]
     );
     const updated = await db.get(`SELECT ${publicColumns} FROM colaboradores WHERE id = ?`, [id]);
-    return res.json({ colaborador: updated });
+    return res.json({
+      colaborador: updated,
+      ...(shouldResetPassword ? { reset_realizado: true, senha_temporaria: 'log20' } : {})
+    });
   } catch (error) {
     if (error.status) return res.status(error.status).json({ error: error.message });
     if (/unique|duplicate/i.test(error.message || '')) {

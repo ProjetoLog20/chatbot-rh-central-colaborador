@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 const webpush = require('web-push');
 
 process.env.DATABASE_URL = '';
@@ -259,6 +260,59 @@ test('colaborador nao consegue alterar cargo ou outros dados operacionais', asyn
   assert.equal(after.cargo, 'Motorista');
   assert.equal(after.setor, 'Distribuicao');
   await db.run('DELETE FROM colaboradores WHERE id = ?', [usuario.id]);
+});
+
+test('administrador reseta senha e servidor confirma o novo primeiro acesso', async () => {
+  const suffix = Date.now();
+  const adminMatricula = `admin-reset-${suffix}`;
+  const colaboradorMatricula = `colab-reset-${suffix}`;
+  const oldPasswordHash = await bcrypt.hash('senha-antiga-segura', 4);
+
+  await db.run(
+    `INSERT INTO colaboradores
+     (matricula, nome_completo, senha_hash, perfil, status, primeiro_acesso, senha_temporaria, data_ultima_troca_senha)
+     VALUES (?, 'Admin Reset', 'hash', 'admin', 'Ativo', 0, 0, CURRENT_TIMESTAMP)`,
+    [adminMatricula]
+  );
+  await db.run(
+    `INSERT INTO colaboradores
+     (matricula, nome_completo, senha_hash, perfil, status, primeiro_acesso, senha_temporaria, data_ultima_troca_senha)
+     VALUES (?, 'Colaborador Reset', ?, 'colaborador', 'Ativo', 0, 0, CURRENT_TIMESTAMP)`,
+    [colaboradorMatricula, oldPasswordHash]
+  );
+
+  const admin = await db.get('SELECT id FROM colaboradores WHERE matricula = ?', [adminMatricula]);
+  const colaborador = await db.get('SELECT id FROM colaboradores WHERE matricula = ?', [colaboradorMatricula]);
+  const adminToken = jwt.sign(
+    { id: admin.id, matricula: adminMatricula, perfil: 'admin' },
+    process.env.JWT_SECRET,
+    { expiresIn: '5m' }
+  );
+
+  try {
+    const response = await request(app)
+      .put(`/api/colaboradores/${colaborador.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ resetarSenha: true })
+      .expect(200);
+
+    assert.equal(response.body.reset_realizado, true);
+    assert.equal(response.body.senha_temporaria, 'log20');
+    assert.equal(Boolean(response.body.colaborador.primeiro_acesso), true);
+    assert.equal(Boolean(response.body.colaborador.senha_temporaria), true);
+
+    const after = await db.get(
+      'SELECT senha_hash, primeiro_acesso, senha_temporaria, data_ultima_troca_senha FROM colaboradores WHERE id = ?',
+      [colaborador.id]
+    );
+    assert.equal(await bcrypt.compare('log20', after.senha_hash), true);
+    assert.equal(await bcrypt.compare('senha-antiga-segura', after.senha_hash), false);
+    assert.equal(Boolean(after.primeiro_acesso), true);
+    assert.equal(Boolean(after.senha_temporaria), true);
+    assert.equal(after.data_ultima_troca_senha, null);
+  } finally {
+    await db.run('DELETE FROM colaboradores WHERE id IN (?, ?)', [admin.id, colaborador.id]);
+  }
 });
 
 test('falha no Push nao marca notificacao como enviada e permite nova tentativa', async () => {
