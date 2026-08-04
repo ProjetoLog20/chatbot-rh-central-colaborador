@@ -153,9 +153,11 @@ function buildAiMessages(message, history, user) {
   ];
 }
 
-async function callGroq(messages) {
+async function callGroq(messages, externalSignal) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
+  const abortFromCaller = () => controller.abort();
+  externalSignal?.addEventListener('abort', abortFromCaller, { once: true });
   let response;
   try {
     response = await fetch(GROQ_CHAT_COMPLETIONS_URL, {
@@ -174,6 +176,7 @@ async function callGroq(messages) {
     });
   } finally {
     clearTimeout(timeout);
+    externalSignal?.removeEventListener('abort', abortFromCaller);
   }
 
   const body = await response.json().catch(() => null);
@@ -231,9 +234,16 @@ router.post('/chat', authenticateToken, yuriLimiter, async (req, res) => {
     return res.json({ reply: MISSING_KEY_REPLY, source });
   }
 
+  const providerController = new AbortController();
+  const abortProvider = () => {
+    if (!res.writableEnded) providerController.abort();
+  };
+  res.once('close', abortProvider);
+
   try {
+
     if (provider === 'groq') {
-      const reply = await callGroq(messages);
+      const reply = await callGroq(messages, providerController.signal);
       const source = reply ? 'groq' : 'fallback';
       return res.json({ reply: reply || FALLBACK_REPLY, source });
     }
@@ -243,17 +253,21 @@ router.post('/chat', authenticateToken, yuriLimiter, async (req, res) => {
       maxRetries: 1,
       timeout: PROVIDER_TIMEOUT_MS
     });
-    const completion = await client.chat.completions.create({
-      model,
-      messages,
-      temperature: 0.35,
-      max_tokens: 450
-    });
+    const completion = await client.chat.completions.create(
+      {
+        model,
+        messages,
+        temperature: 0.35,
+        max_tokens: 450
+      },
+      { signal: providerController.signal }
+    );
 
     const reply = completion.choices?.[0]?.message?.content?.trim();
     const source = reply ? 'openai' : 'fallback';
     return res.json({ reply: reply || FALLBACK_REPLY, source });
   } catch (error) {
+    if (res.destroyed || providerController.signal.aborted) return;
     console.error(`[${req.requestId}] [YURI] falha no provedor de IA:`, error?.name || 'erro');
     return res.json({ reply: FALLBACK_REPLY, source: 'fallback' });
   }

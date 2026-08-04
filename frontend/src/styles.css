@@ -1721,6 +1721,300 @@ tr:not(:last-child) td {
   background: #E5EEF5 !important;
 }
 
+.password-reset-backdrop {
+  position: fixed;
+  z-index: 320;
+  inset: 0;
+  display: grid;
+  padding: 20px;
+  place-items: center;
+  overflow-y: auto;
+  background: rgba(3, 25, 43, 0.68);
+  backdrop-filter: blur(7px);
+  animation: passwordResetBackdropIn 160ms ease both;
+}
+
+.password-reset-dialog {
+  position: relative;
+  width: min(100%, 520px);
+  max-height: calc(100dvh - 40px);
+  padding: clamp(24px, 4vw, 36px);
+  overflow-y: auto;
+  color: #173b5f;
+  background:
+    radial-gradient(circle at 100% 0, rgba(18, 126, 185, 0.1), transparent 14rem),
+    #fff;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 24px;
+  box-shadow: 0 30px 90px rgba(0, 22, 39, 0.3);
+  animation: passwordResetDialogIn 190ms ease both;
+}
+
+.password-reset-dialog.is-success {
+  background:
+    radial-gradient(circle at 100% 0, rgba(28, 159, 104, 0.12), transparent 15rem),
+    #fff;
+}
+
+.password-reset-dialog.is-error {
+  background:
+    radial-gradient(circle at 100% 0, rgba(192, 57, 43, 0.1), transparent 15rem),
+    #fff;
+}
+
+.password-reset-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  place-items: center;
+  color: #50687b;
+  background: #f2f6f9;
+  border: 1px solid #dbe6ed;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.password-reset-close:hover,
+.password-reset-close:focus-visible {
+  color: #073b65;
+  background: #e6f1f7;
+  outline: 3px solid rgba(11, 111, 164, 0.15);
+}
+
+.password-reset-icon {
+  display: grid;
+  width: 68px;
+  height: 68px;
+  margin-bottom: 20px;
+  place-items: center;
+  color: #075f9b;
+  background: #e8f4fb;
+  border: 1px solid #d2e8f4;
+  border-radius: 20px;
+}
+
+.password-reset-dialog.is-success .password-reset-icon {
+  color: #138457;
+  background: #e9f8f1;
+  border-color: #ccecdc;
+}
+
+.password-reset-dialog.is-error .password-reset-icon {
+  color: #b42318;
+  background: #fff0ee;
+  border-color: #f4d2cd;
+}
+
+.password-reset-eyebrow {
+  color: #e87522;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.password-reset-dialog.is-success .password-reset-eyebrow { color: #138457; }
+.password-reset-dialog.is-error .password-reset-eyebrow { color: #b42318; }
+
+.password-reset-dialog h2 {
+  margin: 7px 50px 10px 0;
+  color: #073b65;
+  font-size: clamp(1.45rem, 4vw, 1.9rem);
+  line-height: 1.14;
+  letter-spacing: -0.035em;
+}
+
+.password-reset-dialog > p {
+  margin: 0;
+  color: #607587;
+  line-height: 1.55;
+}
+
+.password-reset-dialog > p strong { color: #173b5f; }
+
+.password-reset-user {
+  display: grid;
+  margin: 22px 0 0;
+  overflow: hidden;
+  background: #f5f8fa;
+  border: 1px solid #dce6ed;
+  border-radius: 16px;
+}
+
+.password-reset-user > div {
+  display: flex;
+  min-width: 0;
+  padding: 13px 16px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.password-reset-user > div + div { border-top: 1px solid #dce6ed; }
+.password-reset-user dt { color: #667b8d; font-size: 0.78rem; }
+.password-reset-user dd { margin: 0; color: #073b65; font-weight: 850; text-align: right; overflow-wrap: anywhere; }
+
+.password-reset-warning {
+  margin-top: 14px !important;
+  padding: 12px 14px;
+  color: #864615 !important;
+  background: #fff7ed;
+  border: 1px solid #f7dfc7;
+  border-radius: 13px;
+  font-size: 0.78rem;
+}
+
+.password-reset-actions {
+  display: grid;
+  margin-top: 24px;
+  grid-template-columns: 1fr 1.35fr;
+  gap: 10px;
+}
+
+.password-reset-primary,
+.password-reset-secondary {
+  display: inline-flex;
+  min-height: 48px;
+  padding: 11px 16px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 13px;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.password-reset-primary {
+  width: 100%;
+  margin-top: 24px;
+  color: #fff;
+  background: #075f9b;
+  border: 1px solid #075f9b;
+  box-shadow: 0 10px 22px rgba(7, 95, 155, 0.19);
+}
+
+.password-reset-actions .password-reset-primary { margin-top: 0; }
+
+.password-reset-primary:hover:not(:disabled),
+.password-reset-primary:focus-visible {
+  background: #e87522;
+  border-color: #e87522;
+  outline: 3px solid rgba(232, 117, 34, 0.17);
+}
+
+.password-reset-secondary {
+  color: #294b66;
+  background: #f2f6f9;
+  border: 1px solid #d8e4eb;
+}
+
+.password-reset-secondary:hover:not(:disabled),
+.password-reset-secondary:focus-visible {
+  color: #073b65;
+  background: #e7f0f5;
+  outline: 3px solid rgba(11, 111, 164, 0.12);
+}
+
+.password-reset-primary:disabled,
+.password-reset-secondary:disabled { cursor: wait; opacity: 0.66; }
+
+.password-reset-credential {
+  margin-top: 22px;
+  padding: 16px;
+  background: #f0faf5;
+  border: 1px solid #cdebdc;
+  border-radius: 16px;
+}
+
+.password-reset-credential > span {
+  display: block;
+  margin-bottom: 8px;
+  color: #587666;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.password-reset-credential > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.password-reset-credential strong {
+  color: #0e6f48;
+  font-size: 1.55rem;
+  letter-spacing: 0.06em;
+}
+
+.password-reset-credential button {
+  display: inline-flex;
+  min-height: 38px;
+  padding: 8px 11px;
+  align-items: center;
+  gap: 6px;
+  color: #0e6f48;
+  background: #fff;
+  border: 1px solid #c6e4d5;
+  border-radius: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.password-reset-instructions {
+  display: grid;
+  margin-top: 13px;
+  padding: 13px 14px;
+  gap: 4px;
+  color: #50687b;
+  background: #f6f9fb;
+  border: 1px solid #dce6ed;
+  border-radius: 13px;
+  font-size: 0.79rem;
+  line-height: 1.45;
+}
+
+.password-reset-instructions strong,
+.password-reset-instructions b { color: #173b5f; }
+
+.password-reset-spinner {
+  width: 17px;
+  height: 17px;
+  border: 2px solid rgba(255, 255, 255, 0.42);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: passwordResetSpin 700ms linear infinite;
+}
+
+@keyframes passwordResetBackdropIn { from { opacity: 0; } }
+@keyframes passwordResetDialogIn { from { opacity: 0; transform: translateY(12px) scale(0.98); } }
+@keyframes passwordResetSpin { to { transform: rotate(360deg); } }
+
+@media (max-width: 520px) {
+  .password-reset-backdrop { padding: 10px; align-items: end; }
+  .password-reset-dialog { width: 100%; max-height: calc(100dvh - 20px); padding: 24px 20px; border-radius: 22px 22px 14px 14px; }
+  .password-reset-icon { width: 58px; height: 58px; margin-bottom: 16px; border-radius: 17px; }
+  .password-reset-dialog h2 { margin-right: 38px; }
+  .password-reset-actions { grid-template-columns: 1fr; }
+  .password-reset-actions .password-reset-primary { grid-row: 1; }
+  .password-reset-user > div { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .password-reset-user dd { text-align: left; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .password-reset-backdrop,
+  .password-reset-dialog,
+  .password-reset-spinner { animation-duration: 1ms; }
+}
+
 .prod-file-action {
   display: inline-flex;
   align-items: center;
