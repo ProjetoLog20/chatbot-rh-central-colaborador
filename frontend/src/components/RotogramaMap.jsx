@@ -23,6 +23,24 @@ function pointPosition(point) {
   return [Number(point.latitude), Number(point.longitude)];
 }
 
+function googleMapsPlaceUrl(position) {
+  if (!Array.isArray(position) || position.length < 2 || !position.every(isCoordinate)) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${Number(position[0])},${Number(position[1])}`)}`;
+}
+
+function googleMapsDirectionsUrl(start, end) {
+  if (!googleMapsPlaceUrl(start) || !googleMapsPlaceUrl(end)) return null;
+  const origin = encodeURIComponent(`${Number(start[0])},${Number(start[1])}`);
+  const destination = encodeURIComponent(`${Number(end[0])},${Number(end[1])}`);
+  return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
+}
+
+function GoogleMapsLink({ position, start, end, children = 'Abrir no Google Maps' }) {
+  const href = start && end ? googleMapsDirectionsUrl(start, end) : googleMapsPlaceUrl(position);
+  if (!href) return null;
+  return <a className="rotograma-google-maps-link" href={href} target="_blank" rel="noopener noreferrer">{children}<span aria-hidden="true">↗</span></a>;
+}
+
 function MapViewport({ positions, resetToken = 0 }) {
   const map = useMap();
   useEffect(() => {
@@ -85,7 +103,7 @@ export function RotogramaOverviewMap({ routes = [], supportZones = [], onSelectR
           <MapViewport positions={positions} resetToken={resetToken} />
           {supportZones.map((zone) => (
             <Circle key={`overview-support-${zone.id}`} center={[zone.latitude, zone.longitude]} radius={zone.radiusKm * 1000} pathOptions={{ color: '#15803d', fillColor: '#22c55e', fillOpacity: 0.13, weight: 2 }}>
-              <Popup><div className="rotograma-map-popup support-popup"><strong>{zone.nome || 'Região com suporte em rota'}</strong><p>Suporte operacional disponível nesta região para atolamentos e situações semelhantes.</p><small>Cobertura de até {zone.radiusKm} km.</small></div></Popup>
+              <Popup><div className="rotograma-map-popup support-popup"><strong>{zone.nome || 'Região com suporte em rota'}</strong><p>Suporte operacional disponível nesta região para atolamentos e situações semelhantes.</p><small>Cobertura de até {zone.radiusKm} km.</small><GoogleMapsLink position={[zone.latitude, zone.longitude]}>Ver localização</GoogleMapsLink></div></Popup>
             </Circle>
           ))}
           {routes.map((route) => (
@@ -93,7 +111,6 @@ export function RotogramaOverviewMap({ routes = [], supportZones = [], onSelectR
               key={route.id}
               center={route.center}
               radius={route.classificacao_rota === 'OK' ? 7 : 9}
-              eventHandlers={{ click: () => onSelectRoute?.(route.id) }}
               pathOptions={{ color: '#fff', fillColor: route.classificacao_rota === 'OK' ? '#2563eb' : '#f97316', fillOpacity: 0.92, weight: 2 }}
             >
               <Tooltip direction="top">{route.nome}</Tooltip>
@@ -101,7 +118,10 @@ export function RotogramaOverviewMap({ routes = [], supportZones = [], onSelectR
                 <div className="rotograma-map-popup">
                   <strong>{route.nome}</strong>
                   <p>{route.origem || 'Origem não informada'} → {route.destino || route.cidade}</p>
-                  <button type="button" onClick={() => onSelectRoute?.(route.id)}>Abrir rotograma</button>
+                  <div className="rotograma-map-popup-actions">
+                    <button type="button" onClick={() => onSelectRoute?.(route.id)}>Abrir rotograma</button>
+                    <GoogleMapsLink start={route.start} end={route.end}>Traçar rota</GoogleMapsLink>
+                  </div>
                 </div>
               </Popup>
             </CircleMarker>
@@ -209,7 +229,7 @@ export default function RotogramaMap({
           <MapClickHandler enabled={Boolean(editorMode)} onClick={onMapClick} />
           {showSupport && supportZones.map((zone) => (
             <Circle key={zone.id} center={[zone.latitude, zone.longitude]} radius={zone.radiusKm * 1000} pathOptions={{ color: '#15803d', fillColor: '#22c55e', fillOpacity: 0.16, weight: 2 }}>
-              <Popup><div className="rotograma-map-popup support-popup"><strong>{zone.simulated ? 'Demonstração de cobertura' : 'Região com suporte em rota'}</strong><p>{zone.simulated ? 'Exemplo visual. Esta área ainda não representa um suporte oficial cadastrado.' : 'Há suporte operacional nesta região para atolamentos e situações semelhantes.'}</p><small>Cobertura aproximada de {zone.radiusKm} km.</small></div></Popup>
+              <Popup><div className="rotograma-map-popup support-popup"><strong>{zone.simulated ? 'Demonstração de cobertura' : 'Região com suporte em rota'}</strong><p>{zone.simulated ? 'Exemplo visual. Esta área ainda não representa um suporte oficial cadastrado.' : 'Há suporte operacional nesta região para atolamentos e situações semelhantes.'}</p><small>Cobertura aproximada de {zone.radiusKm} km.</small><GoogleMapsLink position={[zone.latitude, zone.longitude]}>Ver localização</GoogleMapsLink></div></Popup>
             </Circle>
           ))}
           {calculatedRoutePath.length ? <><Polyline positions={calculatedRoutePath} pathOptions={{ color: '#fff', opacity: 0.92, weight: 10 }} /><Polyline positions={calculatedRoutePath} pathOptions={{ color: '#2563eb', opacity: 0.96, weight: 5 }} /></> : null}
@@ -220,13 +240,13 @@ export default function RotogramaMap({
           {showPoints && validPoints.map(({ point, position }, index) => (
             <CircleMarker key={point.id} center={position} radius={selectedPointId === point.id ? 11 : 8} eventHandlers={{ click: () => onSelectPoint?.(point.id) }} pathOptions={{ color: '#fff', fillColor: riskColor(point.nivel_risco), fillOpacity: 1, weight: 3 }}>
               <Tooltip permanent direction="center" className="rotograma-point-number">{index + 1}</Tooltip>
-              <Popup><div className="rotograma-map-popup"><strong>{point.descricao || point.tipo_ponto || 'Ponto de atenção'}</strong><p>{point.orientacao || 'Consulte a orientação operacional deste ponto.'}</p>{point.velocidade_segura ? <small>Velocidade segura: {point.velocidade_segura}</small> : null}</div></Popup>
+              <Popup><div className="rotograma-map-popup"><strong>{point.descricao || point.tipo_ponto || 'Ponto de atenção'}</strong><p>{point.orientacao || 'Consulte a orientação operacional deste ponto.'}</p>{point.velocidade_segura ? <small>Velocidade segura: {point.velocidade_segura}</small> : null}<GoogleMapsLink position={position}>Abrir no Google Maps</GoogleMapsLink></div></Popup>
             </CircleMarker>
           ))}
           {draftCoordinates.map((position, index) => <CircleMarker key={`draft-${index}`} center={[position.latitude, position.longitude]} radius={10} pathOptions={{ color: '#fff', fillColor: '#7c3aed', fillOpacity: 1, weight: 3 }}><Tooltip permanent>{index === 0 ? 'Início' : 'Fim'}</Tooltip></CircleMarker>)}
         </MapContainer>
       </div>
-      <div className="rotograma-map-footer"><div className="rotograma-map-legend"><span><i className="route" /> Rota</span><span><i className="attention" /> Atenção</span><span><i className="support" /> Região com suporte</span></div><p>Mapa informativo. Siga a sinalização da via e as orientações oficiais da operação.</p></div>
+      <div className="rotograma-map-footer"><div className="rotograma-map-legend"><span><i className="route" /> Rota</span><span><i className="attention" /> Atenção</span><span><i className="support" /> Região com suporte</span></div><div className="rotograma-map-footer-actions">{calculatedRoutePath.length > 1 ? <GoogleMapsLink start={calculatedRoutePath[0]} end={calculatedRoutePath[calculatedRoutePath.length - 1]}>Navegar no Google Maps</GoogleMapsLink> : null}<p>Mapa informativo. Siga a sinalização da via e as orientações oficiais da operação.</p></div></div>
     </div>
   );
 }

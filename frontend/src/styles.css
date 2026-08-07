@@ -7032,6 +7032,12 @@ tr:not(:last-child) td {
 .rotograma-map-popup strong { color: #0f172a; }
 .rotograma-map-popup p { margin: 7px 0; line-height: 1.4; }
 .rotograma-map-popup small { color: #64748b; }
+.rotograma-map-popup-actions { display: flex; margin-top: 10px; flex-wrap: wrap; align-items: center; gap: 7px; }
+.rotograma-google-maps-link { display: inline-flex; margin-top: 10px; padding: 7px 10px; align-items: center; justify-content: center; gap: 5px; color: #fff !important; background: #0b6e4f; border: 1px solid #0b6e4f; border-radius: 8px; font-size: .72rem; font-weight: 850; line-height: 1.2; text-decoration: none !important; transition: 160ms ease; }
+.rotograma-google-maps-link:hover, .rotograma-google-maps-link:focus-visible { background: #075a41; border-color: #075a41; box-shadow: 0 6px 14px rgba(11, 110, 79, .2); transform: translateY(-1px); }
+.rotograma-map-popup-actions .rotograma-google-maps-link { margin-top: 0; }
+.rotograma-map-footer-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+.rotograma-map-footer-actions .rotograma-google-maps-link { flex: 0 0 auto; margin-top: 0; }
 .rotograma-point-number { border: 0; background: transparent; box-shadow: none; color: #fff; font-size: 0.7rem; font-weight: 900; }
 .rotograma-point-number::before { display: none; }
 .risk-point-card { cursor: pointer; transition: transform 160ms ease, box-shadow 160ms ease, outline-color 160ms ease; }
@@ -7093,6 +7099,7 @@ tr:not(:last-child) td {
   .rotograma-map-footer,
   .rotograma-overview-heading,
   .rotograma-visual-editor-heading { align-items: stretch; flex-direction: column; }
+  .rotograma-map-footer-actions { align-items: stretch; flex-direction: column; }
   .rotograma-map-footer p { text-align: left; }
   .rotograma-overview-map { height: 430px; min-height: 0; }
   .rotograma-map-layout { grid-template-columns: 1fr; }
