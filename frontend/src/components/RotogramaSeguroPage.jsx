@@ -403,7 +403,7 @@ function RotogramaDetail({ detail, onClose, canEdit, onSaved }) {
   const [geometrySaved, setGeometrySaved] = useState(Boolean(detail.mapPath?.length));
   const supportZones = detail.supportZones || [];
   const displaySupportZones = useMemo(() => {
-    if (supportZones.length || !import.meta.env.DEV || pontos.length < 2) return supportZones;
+    if (supportZones.length || pontos.length < 2) return supportZones;
     return [pontos[Math.floor(pontos.length / 3)], pontos[Math.floor((pontos.length * 2) / 3)]]
       .filter((point) => Number.isFinite(Number(point.latitude)) && Number.isFinite(Number(point.longitude)))
       .map((point, index) => ({
