@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@atlaskit/pragmatic-drag-and-drop": "^2.0.1",
     "@phosphor-icons/react": "^2.1.10",
     "leaflet": "^1.9.4",
     "motion": "^12.43.0",

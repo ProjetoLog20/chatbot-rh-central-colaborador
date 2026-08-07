@@ -22,6 +22,7 @@ const campeoesSegurancaRoutes = require('./routes/campeoes-seguranca');
 const rotogramasRoutes = require('./routes/rotogramas');
 const notificacoesRoutes = require('./routes/notificacoes');
 const satisfacaoYuriRoutes = require('./routes/satisfacao-yuri');
+const planosMelhoriaRoutes = require('./routes/planos-melhoria');
 const { incrementAccessCounter, getAccessMetrics } = require('./accessCounter');
 const { authenticateToken, authorizeRoles } = require('./authMiddleware');
 const errorHandler = require('./errorHandler');
@@ -127,6 +128,7 @@ app.use('/api/campeoes-seguranca', campeoesSegurancaRoutes);
 app.use('/api/rotogramas', rotogramasRoutes);
 app.use('/api/notificacoes', notificacoesRoutes);
 app.use('/api/satisfacao-yuri', satisfacaoYuriRoutes);
+app.use('/api/planos-melhoria', planosMelhoriaRoutes);
 
 // Serve static files from frontend dist
 const frontendDist = path.resolve(__dirname, "../../frontend/dist");

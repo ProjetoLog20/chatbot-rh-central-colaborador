@@ -389,6 +389,38 @@ export async function getAdminAcoes() {
   return request('/admin/acoes-encontros');
 }
 
+export async function getPlanosMelhoria() {
+  return request('/planos-melhoria');
+}
+
+export async function getPlanosMelhoriaAccess() {
+  return request('/planos-melhoria/access');
+}
+
+export async function createPlanoBucket(payload) {
+  return request('/planos-melhoria/buckets', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function addPlanoMember(payload) {
+  return request('/planos-melhoria/members', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function createPlanoCard(payload) {
+  return request('/planos-melhoria/cards', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function updatePlanoCard(id, payload) {
+  return request(`/planos-melhoria/cards/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+}
+
+export async function updatePlanoCardStatus(id, column) {
+  return request(`/planos-melhoria/cards/${id}/status`, { method: 'PATCH', body: JSON.stringify({ column }) });
+}
+
+export async function addPlanoComment(id, comment) {
+  return request(`/planos-melhoria/cards/${id}/comments`, { method: 'POST', body: JSON.stringify({ comment }) });
+}
+
 export async function getAdminAccessMetrics() {
   return request('/admin/acessos');
 }

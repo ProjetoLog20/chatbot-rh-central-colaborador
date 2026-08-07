@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
-import { ChartBar, CheckCircle, FileText, GearSix, House, MapTrifold, Medal, Recycle, UserCircle } from '@phosphor-icons/react';
+import { ChartBar, CheckCircle, ClipboardText, FileText, GearSix, House, MapTrifold, Medal, Recycle, UserCircle } from '@phosphor-icons/react';
 import { getUser, clearToken, getToken } from './auth.js';
+import { getPlanosMelhoriaAccess } from './api.js';
 import LoginPage from './components/LoginPage.jsx';
 import Dashboard from './components/Dashboard.jsx';
 import ProfilePage from './components/ProfilePage.jsx';
@@ -23,6 +24,12 @@ import RotogramaSeguroPage from './components/RotogramaSeguroPage.jsx';
 import NotificationBell from './components/NotificationBell.jsx';
 import MandatoryNotifications from './components/MandatoryNotifications.jsx';
 import MandatorySatisfaction from './components/MandatorySatisfaction.jsx';
+
+const PlanosMelhoriaPage = lazy(() => import('./components/PlanosMelhoriaPage.jsx'));
+
+function PlanosMelhoriaRoute({ previewMode = false, user = null }) {
+  return <Suspense fallback={<div className="loading">Abrindo o plano de melhorias...</div>}><PlanosMelhoriaPage previewMode={previewMode} user={user} /></Suspense>;
+}
 
 function normalizePerfil(perfil) {
   return String(perfil || '').trim().toLowerCase();
@@ -53,7 +60,9 @@ const pageMeta = {
   '/rotograma-seguro': ['Segurança', 'Rotograma'],
   '/3rs': ['Cultura', '3Rs'],
   '/profile': ['Minha conta', 'Meus dados'],
-  '/admin': ['Gestão', 'Administração']
+  '/admin': ['Gestão', 'Administração'],
+  '/admin/planos-de-acao': ['Gestão', 'Plano de Melhorias'],
+  '/_preview/planos-de-acao': ['Demonstração local', 'Plano de Melhorias']
 };
 
 function NavIcon({ name }) {
@@ -66,7 +75,8 @@ function NavIcon({ name }) {
     route: MapTrifold,
     recycle: Recycle,
     user: UserCircle,
-    settings: GearSix
+    settings: GearSix,
+    plans: ClipboardText
   };
   const Icon = icons[name] || House;
   return <Icon aria-hidden="true" size={18} weight="bold" />;
@@ -77,6 +87,7 @@ function App() {
   const location = useLocation();
   const [user, setUser] = useState(getUser());
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [plansAccess, setPlansAccess] = useState(null);
   const reduceMotion = useReducedMotion();
   const headerActionsRef = useRef(null);
 
@@ -85,6 +96,19 @@ function App() {
       setUser(null);
     }
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    if (!user || !getToken() || normalizePerfil(user.perfil) !== 'admin') {
+      setPlansAccess({ allowed: false, grade: null });
+      return undefined;
+    }
+    setPlansAccess(null);
+    getPlanosMelhoriaAccess()
+      .then((result) => { if (active) setPlansAccess(result); })
+      .catch(() => { if (active) setPlansAccess({ allowed: false, grade: null }); });
+    return () => { active = false; };
+  }, [user?.id, user?.matricula, user?.perfil]);
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -223,6 +247,7 @@ function App() {
             <div className="sidebar-admin">
               <small>ADMIN</small>
               <Link className={location.pathname === '/admin' ? 'active' : ''} to="/admin"><span><NavIcon name="settings" /></span> Administração</Link>
+              {plansAccess?.allowed ? <Link className={location.pathname === '/admin/planos-de-acao' ? 'active' : ''} to="/admin/planos-de-acao"><span><NavIcon name="plans" /></span> Plano de melhorias</Link> : null}
             </div>
           ) : null}
           <div className="sidebar-security"><i /><span><strong>Ambiente protegido</strong><small>Acesso monitorado</small></span></div>
@@ -245,6 +270,8 @@ function App() {
           <Route path="/skap" element={requireAuth(<SkapPage user={user} />)} />
           <Route path="/produtividade" element={requireAuth(<ProdutividadePage user={user} />)} />
           <Route path="/admin" element={requireAuth(<AdminPage />, ['admin'])} />
+          <Route path="/admin/planos-de-acao" element={plansAccess === null ? <div className="loading">Validando seu acesso...</div> : plansAccess.allowed ? requireAuth(<PlanosMelhoriaRoute user={user} />, ['admin']) : <Navigate to="/admin" replace />} />
+          <Route path="/_preview/planos-de-acao" element={import.meta.env.DEV ? <PlanosMelhoriaRoute previewMode user={user} /> : <Navigate to="/login" replace />} />
           <Route path="/admin/pesquisa-clima" element={requireAuth(<AdminPesquisaClimaPage />, ['admin'])} />
           <Route path="/primeiro-acesso" element={<FirstAccessPage onComplete={() => setUser(null)} />} />
         </Routes>
