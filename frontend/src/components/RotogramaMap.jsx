@@ -28,15 +28,8 @@ function googleMapsPlaceUrl(position) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${Number(position[0])},${Number(position[1])}`)}`;
 }
 
-function googleMapsDirectionsUrl(start, end) {
-  if (!googleMapsPlaceUrl(start) || !googleMapsPlaceUrl(end)) return null;
-  const origin = encodeURIComponent(`${Number(start[0])},${Number(start[1])}`);
-  const destination = encodeURIComponent(`${Number(end[0])},${Number(end[1])}`);
-  return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
-}
-
-function GoogleMapsLink({ position, start, end, children = 'Abrir no Google Maps' }) {
-  const href = start && end ? googleMapsDirectionsUrl(start, end) : googleMapsPlaceUrl(position);
+function GoogleMapsLink({ position, children = 'Ver no Google Maps' }) {
+  const href = googleMapsPlaceUrl(position);
   if (!href) return null;
   return <a className="rotograma-google-maps-link" href={href} target="_blank" rel="noopener noreferrer">{children}<span aria-hidden="true">↗</span></a>;
 }
@@ -120,7 +113,7 @@ export function RotogramaOverviewMap({ routes = [], supportZones = [], onSelectR
                   <p>{route.origem || 'Origem não informada'} → {route.destino || route.cidade}</p>
                   <div className="rotograma-map-popup-actions">
                     <button type="button" onClick={() => onSelectRoute?.(route.id)}>Abrir rotograma</button>
-                    <GoogleMapsLink start={route.start} end={route.end}>Traçar rota</GoogleMapsLink>
+                    <GoogleMapsLink position={route.center}>Ver no Google Maps</GoogleMapsLink>
                   </div>
                 </div>
               </Popup>
@@ -246,7 +239,7 @@ export default function RotogramaMap({
           {draftCoordinates.map((position, index) => <CircleMarker key={`draft-${index}`} center={[position.latitude, position.longitude]} radius={10} pathOptions={{ color: '#fff', fillColor: '#7c3aed', fillOpacity: 1, weight: 3 }}><Tooltip permanent>{index === 0 ? 'Início' : 'Fim'}</Tooltip></CircleMarker>)}
         </MapContainer>
       </div>
-      <div className="rotograma-map-footer"><div className="rotograma-map-legend"><span><i className="route" /> Rota</span><span><i className="attention" /> Atenção</span><span><i className="support" /> Região com suporte</span></div><div className="rotograma-map-footer-actions">{calculatedRoutePath.length > 1 ? <GoogleMapsLink start={calculatedRoutePath[0]} end={calculatedRoutePath[calculatedRoutePath.length - 1]}>Navegar no Google Maps</GoogleMapsLink> : null}<p>Mapa informativo. Siga a sinalização da via e as orientações oficiais da operação.</p></div></div>
+      <div className="rotograma-map-footer"><div className="rotograma-map-legend"><span><i className="route" /> Rota</span><span><i className="attention" /> Atenção</span><span><i className="support" /> Região com suporte</span></div><p>Mapa informativo. Siga a sinalização da via e as orientações oficiais da operação.</p></div>
     </div>
   );
 }
