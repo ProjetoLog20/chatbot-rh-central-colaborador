@@ -323,6 +323,7 @@ router.get('/mapa-geral', authenticateToken, ensureRotogramaAvailable, async (re
     }).filter((route) => route.center);
     return res.json(payload);
   } catch (error) {
+    console.error(`[${req.requestId}] Falha ao carregar mapa geral dos rotogramas:`, error.message || error);
     return res.status(500).json({ error: 'Erro ao carregar o mapa geral dos rotogramas.' });
   }
 });
@@ -698,6 +699,7 @@ router.get('/:id', authenticateToken, ensureRotogramaAvailable, async (req, res)
 
     return res.json(payload);
   } catch (error) {
+    console.error(`[${req.requestId}] Falha ao carregar detalhe do rotograma ${req.params.id}:`, error.message || error);
     return res.status(500).json({ error: 'Erro ao carregar detalhe do rotograma' });
   }
 });

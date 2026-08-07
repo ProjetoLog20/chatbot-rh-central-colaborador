@@ -27,6 +27,7 @@ const { authenticateToken, authorizeRoles } = require('./authMiddleware');
 const errorHandler = require('./errorHandler');
 const { geoRestriction } = require('./geoRestriction');
 const { firstAccessLimiter, loginLimiter, preventSensitiveCaching, requestId, securityHeaders } = require('./security');
+const { ensureRuntimeSchema } = require('./runtimeSchema');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -139,10 +140,18 @@ app.get(/^\/(?!api).*/, (req, res) => {
 app.use(errorHandler);
 
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`Backend rodando em http://localhost:${PORT}`);
-    console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
-  });
+  ensureRuntimeSchema()
+    .then((result) => {
+      if (result.applied) console.log(`Schema atualizado: ${result.migration}`);
+      app.listen(PORT, () => {
+        console.log(`Backend rodando em http://localhost:${PORT}`);
+        console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+      });
+    })
+    .catch((error) => {
+      console.error('Falha ao preparar o schema do banco:', error.message || error);
+      process.exit(1);
+    });
 }
 
 module.exports = app;
