@@ -1,17 +1,25 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   createRotogramaPointManual,
+  createRotogramaSupportZone,
   deleteRotogramaPointManual,
+  deleteRotogramaSupportZone,
   getAdminRotogramaResumo,
   getRotogramaDetail,
   getRotogramaOpcoes,
+  getRotogramaOverview,
+  getRotogramaRegionalSupportZones,
   getRotogramaPermissions,
   getRotogramas,
   importRotogramaFile,
+  saveRotogramaGeometry,
   updateRotogramaManual,
   updateRotogramaPointManual
 } from '../api.js';
+
+const RotogramaMap = lazy(() => import('./RotogramaMap.jsx'));
+const RotogramaOverviewMap = lazy(() => import('./RotogramaMap.jsx').then((module) => ({ default: module.RotogramaOverviewMap })));
 
 const filtersInitialState = {
   origem: '',
@@ -76,9 +84,12 @@ function RotogramaCard({ item, onSelect }) {
   );
 }
 
-function RiskPointCard({ point }) {
+function RiskPointCard({ point, selected, onSelect }) {
   return (
-    <article className={`risk-point-card ${riskClass(point.nivel_risco)}`}>
+    <article
+      className={`risk-point-card ${riskClass(point.nivel_risco)} ${selected ? 'selected' : ''}`}
+      onClick={() => onSelect?.(point.id)}
+    >
       <div>
         <span className={`risk-badge ${riskClass(point.nivel_risco)}`}>{point.nivel_risco || 'Ponto'}</span>
         <h4>{point.descricao || point.tipo_ponto || 'Ponto de risco'}</h4>
@@ -120,6 +131,10 @@ const emptyPoint = {
   orientacao: '',
   latitude: '',
   longitude: '',
+  fim_latitude: '',
+  fim_longitude: '',
+  trecho_nivel: 'Moderado',
+  ordem: '',
   velocidade_permitida: '',
   velocidade_segura: '',
   cidade: ''
@@ -177,6 +192,9 @@ function PointEditor({ point, rotogramaId, onSaved, onCancel }) {
         <Field label="Rodovia/endereço"><input value={form.rodovia_endereco || ''} onChange={(e) => change('rodovia_endereco', e.target.value)} /></Field>
         <Field label="Latitude"><input value={form.latitude || ''} onChange={(e) => change('latitude', e.target.value)} placeholder="-24.000000" /></Field>
         <Field label="Longitude"><input value={form.longitude || ''} onChange={(e) => change('longitude', e.target.value)} placeholder="-53.000000" /></Field>
+        <Field label="Fim do trecho - latitude"><input value={form.fim_latitude || ''} onChange={(e) => change('fim_latitude', e.target.value)} placeholder="Opcional" /></Field>
+        <Field label="Fim do trecho - longitude"><input value={form.fim_longitude || ''} onChange={(e) => change('fim_longitude', e.target.value)} placeholder="Opcional" /></Field>
+        <Field label="Ordem na rota"><input type="number" min="1" value={form.ordem || ''} onChange={(e) => change('ordem', e.target.value)} /></Field>
         <Field label="Velocidade permitida"><input value={form.velocidade_permitida || ''} onChange={(e) => change('velocidade_permitida', e.target.value)} /></Field>
         <Field label="Velocidade segura"><input value={form.velocidade_segura || ''} onChange={(e) => change('velocidade_segura', e.target.value)} /></Field>
       </div>
@@ -220,6 +238,22 @@ function RotogramaManualEditor({ detail, onSaved }) {
     await onSaved();
   }
 
+  async function movePoint(index, direction) {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= detail.pontos.length) return;
+    setStatus('Reordenando pontos...');
+    try {
+      const current = detail.pontos[index];
+      const target = detail.pontos[targetIndex];
+      await updateRotogramaPointManual(detail.resumo.id, current.id, { ...current, ordem: targetIndex + 1 });
+      await updateRotogramaPointManual(detail.resumo.id, target.id, { ...target, ordem: index + 1 });
+      setStatus('Ordem atualizada.');
+      await onSaved();
+    } catch (error) {
+      setStatus(error?.error || 'Não foi possível reordenar os pontos.');
+    }
+  }
+
   return (
     <details className="rotograma-editor-panel">
       <summary>Editar Rotograma</summary>
@@ -257,9 +291,10 @@ function RotogramaManualEditor({ detail, onSaved }) {
       </div>
       {addingPoint ? <PointEditor rotogramaId={detail.resumo.id} onSaved={refreshPoints} onCancel={() => setAddingPoint(false)} /> : null}
       <div className="rotograma-editor-point-list">
-        {detail.pontos.map((point) => (
+        {detail.pontos.map((point, index) => (
           <article key={point.id}>
             <div><strong>{point.descricao || point.tipo_ponto}</strong><span>{point.rodovia_endereco || 'Sem endereço'}</span></div>
+            <div className="rotograma-order-actions"><button type="button" disabled={index === 0} onClick={() => movePoint(index, -1)} aria-label="Mover ponto para cima">↑</button><button type="button" disabled={index === detail.pontos.length - 1} onClick={() => movePoint(index, 1)} aria-label="Mover ponto para baixo">↓</button></div>
             <button type="button" onClick={() => { setEditingPoint(point); setAddingPoint(false); }}>Editar</button>
             {editingPoint?.id === point.id ? <PointEditor point={point} rotogramaId={detail.resumo.id} onSaved={refreshPoints} onCancel={() => setEditingPoint(null)} /> : null}
           </article>
@@ -284,9 +319,119 @@ function AdminResumo({ resumo }) {
   );
 }
 
+function VisualMapEditor({ rotogramaId, editor, setEditor, supportZones, onSaved }) {
+  const [description, setDescription] = useState('');
+  const [risk, setRisk] = useState('Moderado');
+  const [radiusKm, setRadiusKm] = useState(8);
+  const [status, setStatus] = useState('');
+
+  function chooseMode(mode) {
+    setStatus('');
+    setEditor({ mode, draft: [] });
+  }
+
+  async function saveDraft() {
+    setStatus('Salvando...');
+    try {
+      if (editor.mode === 'support') {
+        if (!editor.draft[0]) throw new Error('Clique no mapa para posicionar a área.');
+        await createRotogramaSupportZone(rotogramaId, {
+          nome: 'Região com suporte',
+          ...editor.draft[0],
+          radiusKm
+        });
+      } else {
+        const requiredClicks = editor.mode === 'segment' ? 2 : 1;
+        if (editor.draft.length < requiredClicks) throw new Error(`Marque ${requiredClicks} ${requiredClicks === 1 ? 'posição' : 'posições'} no mapa.`);
+        if (!description.trim()) throw new Error('Informe uma descrição para o ponto de atenção.');
+        await createRotogramaPointManual(rotogramaId, {
+          tipo_ponto: editor.mode === 'segment' ? 'Trecho de atenção' : 'Ponto de atenção',
+          descricao: description,
+          nivel_risco: risk,
+          trecho_nivel: risk,
+          latitude: editor.draft[0].latitude,
+          longitude: editor.draft[0].longitude,
+          fim_latitude: editor.draft[1]?.latitude || '',
+          fim_longitude: editor.draft[1]?.longitude || '',
+          orientacao: 'Redobre a atenção e siga a sinalização da via.'
+        });
+      }
+      setDescription('');
+      setEditor({ mode: null, draft: [] });
+      setStatus('Salvo com sucesso.');
+      await onSaved();
+    } catch (error) {
+      setStatus(error?.error || error?.message || 'Não foi possível salvar.');
+    }
+  }
+
+  async function removeZone(zoneId) {
+    if (!window.confirm('Excluir esta região de suporte?')) return;
+    await deleteRotogramaSupportZone(rotogramaId, zoneId);
+    await onSaved();
+  }
+
+  return (
+    <div className="rotograma-visual-editor">
+      <div className="rotograma-visual-editor-heading">
+        <div><strong>Editor visual</strong><span>Escolha uma ferramenta e marque diretamente no mapa.</span></div>
+        <div className="rotograma-visual-tools">
+          <button type="button" className={editor.mode === 'point' ? 'active' : ''} onClick={() => chooseMode('point')}>Adicionar ponto</button>
+          <button type="button" className={editor.mode === 'segment' ? 'active' : ''} onClick={() => chooseMode('segment')}>Desenhar trecho</button>
+          <button type="button" className={editor.mode === 'support' ? 'active support' : ''} onClick={() => chooseMode('support')}>Área de suporte</button>
+          {editor.mode ? <button type="button" onClick={() => setEditor({ mode: null, draft: [] })}>Cancelar</button> : null}
+        </div>
+      </div>
+      {editor.mode ? (
+        <div className="rotograma-visual-form">
+          {editor.mode !== 'support' ? <><Field label="Descrição"><input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Ex.: trecho sem acostamento" /></Field><Field label="Risco"><select value={risk} onChange={(event) => setRisk(event.target.value)}><option>Baixo</option><option>Moderado</option><option>Alto</option><option>Crítico</option></select></Field></> : <Field label="Raio de cobertura (km)"><input type="number" min="1" max="100" value={radiusKm} onChange={(event) => setRadiusKm(event.target.value)} /></Field>}
+          <span className="rotograma-editor-clicks">{editor.draft.length} marcação(ões) registrada(s)</span>
+          <button type="button" className="save" onClick={saveDraft}>Salvar no rotograma</button>
+        </div>
+      ) : null}
+      {supportZones.length ? <div className="rotograma-support-zone-list">{supportZones.map((zone) => <span key={zone.id}>{zone.nome || 'Região de suporte'} · {zone.radiusKm} km {zone.rotograma_id ? <button type="button" onClick={() => removeZone(zone.id)}>Excluir</button> : <small>regional</small>}</span>)}</div> : null}
+      {status ? <p className="rotograma-editor-status">{status}</p> : null}
+    </div>
+  );
+}
+
 function RotogramaDetail({ detail, onClose, canEdit, onSaved }) {
   if (!detail) return null;
   const { resumo, pontos = [], telefones = [], checklist = [] } = detail;
+  const [selectedPointId, setSelectedPointId] = useState(null);
+  const [editor, setEditor] = useState({ mode: null, draft: [] });
+  const [geometrySaved, setGeometrySaved] = useState(Boolean(detail.mapPath?.length));
+  const supportZones = detail.supportZones || [];
+  const displaySupportZones = useMemo(() => {
+    if (supportZones.length || !import.meta.env.DEV || pontos.length < 2) return supportZones;
+    return [pontos[Math.floor(pontos.length / 3)], pontos[Math.floor((pontos.length * 2) / 3)]]
+      .filter((point) => Number.isFinite(Number(point.latitude)) && Number.isFinite(Number(point.longitude)))
+      .map((point, index) => ({
+        id: `preview-support-${index}`,
+        latitude: Number(point.latitude),
+        longitude: Number(point.longitude),
+        radiusKm: index === 0 ? 7 : 9,
+        simulated: true
+      }));
+  }, [pontos, supportZones]);
+
+  const handleMapClick = useCallback((coordinate) => {
+    setEditor((current) => {
+      if (!current.mode) return current;
+      const limit = current.mode === 'segment' ? 2 : 1;
+      return { ...current, draft: [...current.draft, coordinate].slice(0, limit) };
+    });
+  }, []);
+
+  const handleRouteCalculated = useCallback(async (geometry) => {
+    if (!canEdit || geometrySaved) return;
+    try {
+      await saveRotogramaGeometry(resumo.id, geometry);
+      setGeometrySaved(true);
+    } catch {
+      // O mapa continua funcional mesmo se o cache local não puder ser salvo.
+    }
+  }, [canEdit, geometrySaved, resumo.id]);
 
   return (
     <section className="rotograma-detail-panel" aria-label="Detalhes do rotograma">
@@ -316,11 +461,32 @@ function RotogramaDetail({ detail, onClose, canEdit, onSaved }) {
         </div>
       </DetailSection>
 
-      {canEdit ? <RotogramaManualEditor detail={detail} onSaved={onSaved} /> : null}
+      <DetailSection title="Mapa da rota">
+        {canEdit ? <VisualMapEditor rotogramaId={resumo.id} editor={editor} setEditor={setEditor} supportZones={supportZones} onSaved={onSaved} /> : null}
+        <div className="rotograma-map-layout">
+          <Suspense fallback={<div className="rotograma-map-loading">Carregando mapa da rota...</div>}>
+            <RotogramaMap routePath={detail.mapPath || []} points={pontos} supportZones={displaySupportZones} mapMetrics={detail.mapMetrics || {}} selectedPointId={selectedPointId} onSelectPoint={setSelectedPointId} onRouteCalculated={handleRouteCalculated} editorMode={editor.mode} draftCoordinates={editor.draft} onMapClick={handleMapClick} />
+          </Suspense>
+          <aside className="rotograma-map-point-panel" aria-label="Pontos em ordem da rota">
+            <div><strong>Pontos da rota</strong><span>Clique para destacar no mapa</span></div>
+            {pontos.map((point, index) => <button type="button" className={selectedPointId === point.id ? 'active' : ''} key={point.id} onClick={() => setSelectedPointId(point.id)}><b>{index + 1}</b><span>{point.descricao || point.tipo_ponto}<small>{point.rodovia_endereco || 'Localização cadastrada'}</small></span></button>)}
+          </aside>
+        </div>
+        {!supportZones.length ? <p className="rotograma-support-empty">Os círculos verdes exibidos são uma demonstração visual. Nenhuma região oficial de suporte foi cadastrada para esta rota; o editor permite registrá-las sem expor contatos ou prestadores.</p> : null}
+      </DetailSection>
+
+      {canEdit && !detail.isDemo ? <RotogramaManualEditor detail={detail} onSaved={onSaved} /> : null}
 
       <DetailSection title={`Pontos de risco (${pontos.length})`}>
         <div className="risk-point-grid">
-          {pontos.length ? pontos.map((point) => <RiskPointCard point={point} key={point.id} />) : <p>Nenhum ponto de risco importado para esta rota.</p>}
+          {pontos.length ? pontos.map((point) => (
+            <RiskPointCard
+              point={point}
+              key={point.id}
+              selected={selectedPointId === point.id}
+              onSelect={setSelectedPointId}
+            />
+          )) : <p>Nenhum ponto de risco importado para esta rota.</p>}
         </div>
       </DetailSection>
 
@@ -348,6 +514,9 @@ function RotogramaDetail({ detail, onClose, canEdit, onSaved }) {
 export default function RotogramaSeguroPage({ user }) {
   const [filters, setFilters] = useState(filtersInitialState);
   const [rotogramas, setRotogramas] = useState([]);
+  const [overviewRoutes, setOverviewRoutes] = useState([]);
+  const [regionalSupportZones, setRegionalSupportZones] = useState([]);
+  const [viewMode, setViewMode] = useState('map');
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -359,11 +528,20 @@ export default function RotogramaSeguroPage({ user }) {
   const isAdmin = normalizePerfil(user?.perfil) === 'admin';
 
   const activeFilters = useMemo(() => filters, [filters]);
+  const visibleOverviewRoutes = useMemo(() => {
+    const ids = new Set(rotogramas.map((route) => route.id));
+    return overviewRoutes.filter((route) => ids.has(route.id));
+  }, [overviewRoutes, rotogramas]);
 
   useEffect(() => {
     getRotogramaOpcoes()
       .then(setOpcoes)
       .catch(() => setOpcoes({ origens: [], destinos: [] }));
+  }, []);
+
+  useEffect(() => {
+    getRotogramaOverview().then(setOverviewRoutes).catch(() => setOverviewRoutes([]));
+    getRotogramaRegionalSupportZones().then(setRegionalSupportZones).catch(() => setRegionalSupportZones([]));
   }, []);
 
   useEffect(() => {
@@ -523,22 +701,35 @@ export default function RotogramaSeguroPage({ user }) {
         </div>
 
         {isAdmin ? (
-          <div className="rotograma-admin-box">
-            <strong>Gerenciar Rotogramas</strong>
+          <details className="rotograma-admin-box">
+            <summary>Gerenciar Rotogramas</summary>
             <AdminResumo resumo={adminResumo} />
             <label>
               Importar nova planilha
               <input type="file" accept=".xlsx,.xls" onChange={handleImport} />
             </label>
             {importStatus ? <p>{importStatus}</p> : <p>Use a importação para atualizar rotas OK e rotas em atenção.</p>}
-          </div>
+          </details>
         ) : null}
       </section>
 
       {message ? <section className="rotograma-message">{message}</section> : null}
       {loading ? <section className="rotograma-message">Carregando rotogramas...</section> : null}
 
-      <section className="rotograma-grid" aria-label="Cards de rotogramas">
+      {!loading && rotogramas.length ? (
+        <div className="rotograma-view-switch" aria-label="Modo de visualização">
+          <button type="button" className={viewMode === 'map' ? 'active' : ''} onClick={() => setViewMode('map')}>Mapa</button>
+          <button type="button" className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>Lista</button>
+        </div>
+      ) : null}
+
+      {!loading && rotogramas.length && viewMode === 'map' ? (
+        <Suspense fallback={<section className="rotograma-message">Carregando mapa geral...</section>}>
+          <RotogramaOverviewMap routes={visibleOverviewRoutes} supportZones={regionalSupportZones} onSelectRoute={openDetail} />
+        </Suspense>
+      ) : null}
+
+      <section className={`rotograma-grid ${viewMode === 'map' ? 'compact-list' : ''}`} aria-label="Cards de rotogramas">
         {!loading && rotogramas.map((item) => <RotogramaCard item={item} key={item.id} onSelect={openDetail} />)}
       </section>
 

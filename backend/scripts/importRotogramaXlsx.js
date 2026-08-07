@@ -445,6 +445,44 @@ async function insertRows(table, columns, rows, chunkSize = 120) {
 }
 
 async function insertRotograma(meta, points) {
+  const existing = await db.get(
+    `SELECT id FROM rotogramas
+     WHERE LOWER(COALESCE(observacao, '')) = LOWER(?)
+        OR (
+          LOWER(COALESCE(nome, '')) = LOWER(?)
+          AND LOWER(COALESCE(destino, '')) = LOWER(?)
+        )
+     ORDER BY CASE WHEN LOWER(COALESCE(observacao, '')) = LOWER(?) THEN 0 ELSE 1 END, id DESC
+     LIMIT 1`,
+    [meta.observacao, meta.nome, meta.destino, meta.observacao]
+  );
+
+  if (existing) {
+    await db.run(
+      `UPDATE rotogramas SET
+        rotograma_id = ?, nome = ?, origem = ?, destino = ?, cidade = ?, transportadora = ?,
+        classificacao_rota = ?, nivel_risco = ?, status = ?, ativo = ?, observacao = ?,
+        data_atualizacao = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [
+        meta.rotograma_id,
+        meta.nome,
+        meta.origem,
+        meta.destino,
+        meta.cidade,
+        meta.transportadora,
+        meta.classificacao,
+        meta.classificacao,
+        'ativo',
+        true,
+        meta.observacao,
+        meta.data_atualizacao,
+        existing.id
+      ]
+    );
+    return existing.id;
+  }
+
   const result = await db.run(
     `INSERT INTO rotogramas (
       rotograma_id, nome, origem, destino, cidade, transportadora,

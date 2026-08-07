@@ -486,6 +486,14 @@ export async function getRotogramaOpcoes() {
   return request('/rotogramas/opcoes');
 }
 
+export async function getRotogramaOverview() {
+  return request('/rotogramas/mapa-geral');
+}
+
+export async function getRotogramaRegionalSupportZones() {
+  return request('/rotogramas/areas-suporte');
+}
+
 export async function getRotogramaDetail(id) {
   return request(`/rotogramas/${id}`);
 }
@@ -499,6 +507,31 @@ export async function updateRotogramaManual(id, payload) {
     method: 'PUT',
     body: JSON.stringify(payload)
   });
+}
+
+export async function saveRotogramaGeometry(id, payload) {
+  return request(`/rotogramas/${id}/geometria`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function createRotogramaSupportZone(rotogramaId, payload) {
+  return request(`/rotogramas/${rotogramaId}/areas-suporte`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function updateRotogramaSupportZone(rotogramaId, zoneId, payload) {
+  return request(`/rotogramas/${rotogramaId}/areas-suporte/${zoneId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function deleteRotogramaSupportZone(rotogramaId, zoneId) {
+  return request(`/rotogramas/${rotogramaId}/areas-suporte/${zoneId}`, { method: 'DELETE' });
 }
 
 export async function createRotogramaPointManual(rotogramaId, payload) {

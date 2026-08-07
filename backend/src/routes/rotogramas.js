@@ -9,7 +9,7 @@ const { normalizeCoordinatePair } = require('../utils/rotogramaCoordinates');
 const router = express.Router();
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 25 * 1024 * 1024 },
+  limits: { fileSize: 300 * 1024 * 1024 },
   fileFilter(req, file, callback) {
     const ext = file.originalname.split('.').pop().toLowerCase();
     if (ext !== 'xlsx') {
@@ -22,7 +22,7 @@ const upload = multer({
 function uploadError(err, req, res, next) {
   if (!err) return next();
   if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(400).json({ error: 'Arquivo excede o limite de 25 MB' });
+    return res.status(400).json({ error: 'Arquivo excede o limite de 300 MB' });
   }
   return res.status(400).json({ error: err.message || 'Erro no upload do arquivo' });
 }
@@ -193,11 +193,45 @@ function buildListWhere(query, isAdmin = false) {
 }
 
 function shapePoint(row) {
+  let segment = null;
+  const start = normalizeCoordinatePair(row.latitude, row.longitude);
+  const end = normalizeCoordinatePair(row.fim_latitude, row.fim_longitude);
+  if (start.valid && end.valid) {
+    segment = [
+      [Number(start.latitude), Number(start.longitude)],
+      [Number(end.latitude), Number(end.longitude)]
+    ];
+  }
   return {
     ...row,
+    ordem: row.ordem === null || row.ordem === undefined ? null : Number(row.ordem),
+    segment,
     maps_url: row.latitude && row.longitude
       ? `https://www.google.com/maps?q=${encodeURIComponent(row.latitude)},${encodeURIComponent(row.longitude)}`
       : null
+  };
+}
+
+function parseMapPath(value) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((item) => Array.isArray(item) && item.length >= 2 && Number.isFinite(Number(item[0])) && Number.isFinite(Number(item[1])))
+      .map((item) => [Number(item[0]), Number(item[1])]);
+  } catch {
+    return [];
+  }
+}
+
+function shapeSupportZone(row) {
+  return {
+    ...row,
+    latitude: Number(row.latitude),
+    longitude: Number(row.longitude),
+    radiusKm: Number(row.raio_km || 8),
+    active: boolValue(row.ativo)
   };
 }
 
@@ -243,6 +277,66 @@ router.get('/opcoes', authenticateToken, ensureRotogramaAvailable, async (req, r
     res.json({ origens, destinos });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao listar opcoes de rotogramas' });
+  }
+});
+
+router.get('/mapa-geral', authenticateToken, ensureRotogramaAvailable, async (req, res) => {
+  try {
+    const routes = await db.all(
+      `SELECT id, nome, origem, destino, cidade, classificacao_rota, nivel_risco,
+              distancia_km, duracao_minutos, map_path_json
+       FROM rotogramas
+       WHERE COALESCE(ativo, true) = true
+         AND classificacao_rota IN ('ATENÃ‡ÃƒO', 'OK')
+       ORDER BY nome`
+    );
+    const points = await db.all(
+      `SELECT id, rotograma_id, latitude, longitude, fim_latitude, fim_longitude, ordem
+       FROM rotograma_pontos_risco
+       WHERE COALESCE(latitude, '') <> '' AND COALESCE(longitude, '') <> ''
+       ORDER BY rotograma_id, COALESCE(ordem, id), id`
+    );
+    const grouped = new Map();
+    points.forEach((point) => {
+      const normalized = normalizeCoordinatePair(point.latitude, point.longitude);
+      if (!normalized.valid) return;
+      if (!grouped.has(point.rotograma_id)) grouped.set(point.rotograma_id, []);
+      grouped.get(point.rotograma_id).push([Number(normalized.latitude), Number(normalized.longitude)]);
+    });
+    const payload = routes.map((route) => {
+      const cachedPath = parseMapPath(route.map_path_json);
+      const positions = cachedPath.length ? cachedPath : (grouped.get(route.id) || []);
+      const center = positions.length
+        ? [
+          positions.reduce((sum, item) => sum + item[0], 0) / positions.length,
+          positions.reduce((sum, item) => sum + item[1], 0) / positions.length
+        ]
+        : null;
+      return {
+        ...route,
+        map_path_json: undefined,
+        center,
+        start: positions[0] || null,
+        end: positions[positions.length - 1] || null,
+        hasOfficialGeometry: cachedPath.length > 1
+      };
+    }).filter((route) => route.center);
+    return res.json(payload);
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao carregar o mapa geral dos rotogramas.' });
+  }
+});
+
+router.get('/areas-suporte', authenticateToken, ensureRotogramaAvailable, async (req, res) => {
+  try {
+    const rows = await db.all(
+      `SELECT * FROM rotograma_areas_suporte
+       WHERE rotograma_id IS NULL AND COALESCE(ativo, true) = true
+       ORDER BY nome`
+    );
+    return res.json(rows.map(shapeSupportZone));
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao carregar as regiÃµes de suporte.' });
   }
 });
 
@@ -324,6 +418,85 @@ router.put('/:id/manual', authenticateToken, requireRotogramaEditor, async (req,
   }
 });
 
+router.put('/:id/geometria', authenticateToken, requireRotogramaEditor, async (req, res) => {
+  try {
+    const route = await db.get('SELECT * FROM rotogramas WHERE id = ?', [req.params.id]);
+    if (!route) return res.status(404).json({ error: 'Rotograma nÃ£o encontrado.' });
+    const path = Array.isArray(req.body.path) ? req.body.path : [];
+    const normalizedPath = path
+      .filter((item) => Array.isArray(item) && item.length >= 2 && Number.isFinite(Number(item[0])) && Number.isFinite(Number(item[1])))
+      .map((item) => [Number(item[0]), Number(item[1])]);
+    if (normalizedPath.length < 2 || normalizedPath.length > 20000) {
+      return res.status(400).json({ error: 'A geometria deve conter entre 2 e 20.000 coordenadas.' });
+    }
+    await db.run(
+      `UPDATE rotogramas SET map_path_json = ?, distancia_km = ?, duracao_minutos = ?,
+       geometry_updated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      [JSON.stringify(normalizedPath), Number(req.body.distanceKm) || null, Number(req.body.durationMinutes) || null, req.params.id]
+    );
+    const after = await db.get('SELECT * FROM rotogramas WHERE id = ?', [req.params.id]);
+    await auditChange(req, 'geometria_rota', Number(req.params.id), 'atualizar', { map_path_json: route.map_path_json }, { map_path_json: after.map_path_json });
+    return res.json({ ok: true, mapPath: normalizedPath });
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao salvar a geometria da rota.' });
+  }
+});
+
+router.post('/:id/areas-suporte', authenticateToken, requireRotogramaEditor, async (req, res) => {
+  try {
+    const route = await db.get('SELECT id FROM rotogramas WHERE id = ?', [req.params.id]);
+    if (!route) return res.status(404).json({ error: 'Rotograma nÃ£o encontrado.' });
+    const coordinates = normalizeCoordinatePair(req.body.latitude, req.body.longitude);
+    const radiusKm = Number(req.body.radiusKm || req.body.raio_km);
+    if (!coordinates.valid) return res.status(400).json({ error: 'Coordenadas invÃ¡lidas para a regiÃ£o atendida.' });
+    if (!Number.isFinite(radiusKm) || radiusKm < 1 || radiusKm > 100) return res.status(400).json({ error: 'O raio deve ficar entre 1 e 100 km.' });
+    const result = await db.run(
+      `INSERT INTO rotograma_areas_suporte (rotograma_id, nome, latitude, longitude, raio_km, observacao, ativo)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [req.params.id, text(req.body.nome || 'RegiÃ£o com suporte', 120), coordinates.latitude, coordinates.longitude, radiusKm, text(req.body.observacao, 500), true]
+    );
+    const created = await db.get('SELECT * FROM rotograma_areas_suporte WHERE id = ?', [result.lastID]);
+    await auditChange(req, 'area_suporte', created.id, 'criar', null, created);
+    return res.status(201).json(shapeSupportZone(created));
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao criar a Ã¡rea de suporte.' });
+  }
+});
+
+router.put('/:id/areas-suporte/:zoneId', authenticateToken, requireRotogramaEditor, async (req, res) => {
+  try {
+    const before = await db.get('SELECT * FROM rotograma_areas_suporte WHERE id = ? AND rotograma_id = ?', [req.params.zoneId, req.params.id]);
+    if (!before) return res.status(404).json({ error: 'Ãrea de suporte nÃ£o encontrada.' });
+    const coordinates = normalizeCoordinatePair(req.body.latitude, req.body.longitude);
+    const radiusKm = Number(req.body.radiusKm || req.body.raio_km);
+    if (!coordinates.valid || !Number.isFinite(radiusKm) || radiusKm < 1 || radiusKm > 100) {
+      return res.status(400).json({ error: 'Informe coordenadas vÃ¡lidas e raio entre 1 e 100 km.' });
+    }
+    await db.run(
+      `UPDATE rotograma_areas_suporte SET nome = ?, latitude = ?, longitude = ?, raio_km = ?,
+       observacao = ?, ativo = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND rotograma_id = ?`,
+      [text(req.body.nome || 'RegiÃ£o com suporte', 120), coordinates.latitude, coordinates.longitude, radiusKm, text(req.body.observacao, 500), req.body.active === false ? false : true, req.params.zoneId, req.params.id]
+    );
+    const after = await db.get('SELECT * FROM rotograma_areas_suporte WHERE id = ?', [req.params.zoneId]);
+    await auditChange(req, 'area_suporte', after.id, 'atualizar', before, after);
+    return res.json(shapeSupportZone(after));
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao atualizar a Ã¡rea de suporte.' });
+  }
+});
+
+router.delete('/:id/areas-suporte/:zoneId', authenticateToken, requireRotogramaEditor, async (req, res) => {
+  try {
+    const before = await db.get('SELECT * FROM rotograma_areas_suporte WHERE id = ? AND rotograma_id = ?', [req.params.zoneId, req.params.id]);
+    if (!before) return res.status(404).json({ error: 'Ãrea de suporte nÃ£o encontrada.' });
+    await auditChange(req, 'area_suporte', before.id, 'excluir', before, null);
+    await db.run('DELETE FROM rotograma_areas_suporte WHERE id = ? AND rotograma_id = ?', [req.params.zoneId, req.params.id]);
+    return res.json({ ok: true });
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao excluir a Ã¡rea de suporte.' });
+  }
+});
+
 router.post('/:id/pontos/manual', authenticateToken, requireRotogramaEditor, async (req, res) => {
   try {
     const route = await db.get(
@@ -339,8 +512,9 @@ router.post('/:id/pontos/manual', authenticateToken, requireRotogramaEditor, asy
     const result = await db.run(
       `INSERT INTO rotograma_pontos_risco
         (rotograma_id, tipo_ponto, descricao, nivel_risco, rodovia_endereco, orientacao,
-         latitude, longitude, velocidade_permitida, velocidade_segura, cidade, origem_aba)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         latitude, longitude, fim_latitude, fim_longitude, trecho_nivel, ordem,
+         velocidade_permitida, velocidade_segura, cidade, origem_aba)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         req.params.id,
         text(req.body.tipo_ponto, 80),
@@ -350,6 +524,10 @@ router.post('/:id/pontos/manual', authenticateToken, requireRotogramaEditor, asy
         text(req.body.orientacao, 1000),
         coordinates.valid ? coordinates.latitude : '',
         coordinates.valid ? coordinates.longitude : '',
+        normalizeCoordinatePair(req.body.fim_latitude, req.body.fim_longitude).valid ? normalizeCoordinatePair(req.body.fim_latitude, req.body.fim_longitude).latitude : '',
+        normalizeCoordinatePair(req.body.fim_latitude, req.body.fim_longitude).valid ? normalizeCoordinatePair(req.body.fim_latitude, req.body.fim_longitude).longitude : '',
+        text(req.body.trecho_nivel || req.body.nivel_risco, 50),
+        Number(req.body.ordem) || null,
         text(req.body.velocidade_permitida, 50),
         text(req.body.velocidade_segura, 50),
         text(req.body.cidade || route.cidade, 160),
@@ -382,8 +560,8 @@ router.put('/:id/pontos/:pointId/manual', authenticateToken, requireRotogramaEdi
     await db.run(
       `UPDATE rotograma_pontos_risco SET
         tipo_ponto = ?, descricao = ?, nivel_risco = ?, rodovia_endereco = ?, orientacao = ?,
-        latitude = ?, longitude = ?, velocidade_permitida = ?, velocidade_segura = ?,
-        cidade = ?, updated_at = CURRENT_TIMESTAMP
+        latitude = ?, longitude = ?, fim_latitude = ?, fim_longitude = ?, trecho_nivel = ?, ordem = ?,
+        velocidade_permitida = ?, velocidade_segura = ?, cidade = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ? AND rotograma_id = ?`,
       [
         text(req.body.tipo_ponto, 80),
@@ -393,6 +571,10 @@ router.put('/:id/pontos/:pointId/manual', authenticateToken, requireRotogramaEdi
         text(req.body.orientacao, 1000),
         coordinates.valid ? coordinates.latitude : '',
         coordinates.valid ? coordinates.longitude : '',
+        normalizeCoordinatePair(req.body.fim_latitude, req.body.fim_longitude).valid ? normalizeCoordinatePair(req.body.fim_latitude, req.body.fim_longitude).latitude : '',
+        normalizeCoordinatePair(req.body.fim_latitude, req.body.fim_longitude).valid ? normalizeCoordinatePair(req.body.fim_latitude, req.body.fim_longitude).longitude : '',
+        text(req.body.trecho_nivel || req.body.nivel_risco, 50),
+        Number(req.body.ordem) || null,
         text(req.body.velocidade_permitida, 50),
         text(req.body.velocidade_segura, 50),
         text(req.body.cidade, 160),
@@ -462,7 +644,7 @@ router.get('/:id/pontos', authenticateToken, ensureRotogramaAvailable, async (re
     );
     if (!resumo) return res.status(404).json({ error: 'Rotograma nao encontrado' });
     const points = await db.all(
-      'SELECT * FROM rotograma_pontos_risco WHERE rotograma_id = ? ORDER BY id',
+      'SELECT * FROM rotograma_pontos_risco WHERE rotograma_id = ? ORDER BY COALESCE(ordem, id), id',
       [req.params.id]
     );
     res.json(points.map(shapePoint));
@@ -480,17 +662,25 @@ router.get('/:id', authenticateToken, ensureRotogramaAvailable, async (req, res)
     );
     if (!resumo) return res.status(404).json({ error: 'Rotograma nao encontrado' });
 
-    const [pontos, telefones, checklist] = await Promise.all([
-      db.all('SELECT * FROM rotograma_pontos_risco WHERE rotograma_id = ? ORDER BY id', [req.params.id]),
+    const [pontos, telefones, checklist, supportZones] = await Promise.all([
+      db.all('SELECT * FROM rotograma_pontos_risco WHERE rotograma_id = ? ORDER BY COALESCE(ordem, id), id', [req.params.id]),
       db.all('SELECT * FROM rotograma_telefones WHERE rotograma_id = ? ORDER BY orgao', [req.params.id]),
-      db.all('SELECT * FROM rotograma_checklist WHERE rotograma_id = ? ORDER BY id', [req.params.id])
+      db.all('SELECT * FROM rotograma_checklist WHERE rotograma_id = ? ORDER BY id', [req.params.id]),
+      db.all('SELECT * FROM rotograma_areas_suporte WHERE (rotograma_id = ? OR rotograma_id IS NULL) AND COALESCE(ativo, true) = true ORDER BY rotograma_id, nome, id', [req.params.id])
     ]);
 
     const payload = {
       resumo,
       pontos: pontos.map(shapePoint),
       telefones,
-      checklist
+      checklist,
+      mapPath: parseMapPath(resumo.map_path_json),
+      mapMetrics: {
+        distanceKm: resumo.distancia_km === null ? null : Number(resumo.distancia_km),
+        durationMinutes: resumo.duracao_minutos === null ? null : Number(resumo.duracao_minutos),
+        updatedAt: resumo.geometry_updated_at || null
+      },
+      supportZones: supportZones.map(shapeSupportZone)
     };
 
     if (isAdmin) {

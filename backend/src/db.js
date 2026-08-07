@@ -631,6 +631,43 @@ function connectSqlite() {
       FOREIGN KEY (rotograma_id) REFERENCES rotogramas(id) ON DELETE CASCADE
     )`);
 
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS rotograma_areas_suporte (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      rotograma_id INTEGER,
+      nome TEXT DEFAULT 'RegiÃ£o com suporte',
+      latitude TEXT NOT NULL,
+      longitude TEXT NOT NULL,
+      raio_km REAL NOT NULL DEFAULT 8,
+      observacao TEXT,
+      ativo INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (rotograma_id) REFERENCES rotogramas(id) ON DELETE CASCADE
+    )`);
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS permissoes_colaboradores (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      colaborador_id INTEGER NOT NULL,
+      permissao TEXT NOT NULL,
+      ativo INTEGER NOT NULL DEFAULT 1,
+      concedido_em TEXT DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (colaborador_id, permissao),
+      FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE CASCADE
+    )`);
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS rotograma_auditoria (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      colaborador_id INTEGER,
+      matricula TEXT,
+      entidade TEXT NOT NULL,
+      entidade_id INTEGER,
+      acao TEXT NOT NULL,
+      antes_json TEXT,
+      depois_json TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE SET NULL
+    )`);
+
     sqliteDb.run(`CREATE TABLE IF NOT EXISTS rotograma_telefones (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       rotograma_id INTEGER,
@@ -743,7 +780,25 @@ function connectSqlite() {
     };
 
     ensureRotogramaColumn('ativo', 'INTEGER DEFAULT 1');
+    ensureRotogramaColumn('map_path_json', 'TEXT');
+    ensureRotogramaColumn('distancia_km', 'REAL');
+    ensureRotogramaColumn('duracao_minutos', 'REAL');
+    ensureRotogramaColumn('geometry_updated_at', 'TEXT');
     ensureRotogramaImportColumn('ativo', 'INTEGER DEFAULT 1');
+
+    const ensureRotogramaPointColumn = (name, definition) => {
+      sqliteDb.all('PRAGMA table_info(rotograma_pontos_risco)', [], (err, columns) => {
+        if (err) return;
+        if (!columns.some((column) => column.name === name)) {
+          sqliteDb.run(`ALTER TABLE rotograma_pontos_risco ADD COLUMN ${name} ${definition}`);
+        }
+      });
+    };
+
+    ensureRotogramaPointColumn('ordem', 'INTEGER');
+    ensureRotogramaPointColumn('fim_latitude', 'TEXT');
+    ensureRotogramaPointColumn('fim_longitude', 'TEXT');
+    ensureRotogramaPointColumn('trecho_nivel', 'TEXT');
 
     const ensureProdutividadeImportColumn = (name, definition) => {
       sqliteDb.all('PRAGMA table_info(produtividade_importacoes)', [], (err, columns) => {

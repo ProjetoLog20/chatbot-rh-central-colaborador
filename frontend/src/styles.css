@@ -5006,6 +5006,10 @@ tr:not(:last-child) td {
   color: #6b7280;
 }
 
+.rotograma-editor-point-list article > .rotograma-order-actions { display: flex; flex-direction: row; gap: 5px; margin-left: auto; }
+.rotograma-order-actions button { width: 30px; min-height: 30px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; color: #334155; cursor: pointer; font-weight: 900; }
+.rotograma-order-actions button:disabled { cursor: not-allowed; opacity: .35; }
+
 .rotograma-editor-point-list .rotograma-manual-form {
   flex-basis: 100%;
   margin: 8px 0 0;
@@ -6955,4 +6959,143 @@ tr:not(:last-child) td {
   .satisfaction-distribution-row small {
     display: none;
   }
+}
+.rotograma-map-eyebrow {
+  color: #2563eb;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rotograma-admin-box > summary {
+  cursor: pointer;
+  color: #003B68;
+  font-weight: 900;
+  list-style-position: inside;
+}
+
+.rotograma-admin-box[open] > summary { margin-bottom: .75rem; }
+
+.rotograma-map-loading { display: grid; min-height: 320px; place-items: center; color: #475569; font-weight: 800; }
+.rotograma-map-shell {
+  overflow: hidden;
+  border: 1px solid #dbe4f0;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.09);
+}
+
+.rotograma-map-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 18px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.rotograma-map-toolbar > div:first-child { display: grid; gap: 3px; }
+.rotograma-map-toolbar strong { color: #0f172a; font-size: 0.98rem; }
+.rotograma-map-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.rotograma-map-actions button,
+.rotograma-view-switch button,
+.rotograma-overview-heading button {
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 800;
+  padding: 8px 12px;
+}
+.rotograma-map-actions button.active,
+.rotograma-view-switch button.active { border-color: #2563eb; background: #eff6ff; color: #1d4ed8; }
+.rotograma-map-actions button.support.active { border-color: #16a34a; background: #f0fdf4; color: #15803d; }
+.rotograma-map-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: #e2e8f0; border-bottom: 1px solid #e2e8f0; }
+.rotograma-map-metrics span { display: grid; gap: 2px; padding: 10px 14px; background: #f8fafc; color: #64748b; font-size: .72rem; }
+.rotograma-map-metrics b { color: #0f172a; font-size: .9rem; }
+.rotograma-map-legend { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px 14px; }
+.rotograma-map-legend span { display: inline-flex; align-items: center; gap: 6px; color: #475569; font-size: 0.78rem; font-weight: 700; }
+.rotograma-map-legend i { display: inline-block; width: 16px; height: 5px; border-radius: 999px; }
+.rotograma-map-legend i.route { background: #2563eb; }
+.rotograma-map-legend i.attention { background: #f59e0b; }
+.rotograma-map-legend i.support { width: 12px; height: 12px; border: 2px solid #15803d; background: rgba(34, 197, 94, 0.25); }
+.rotograma-map-canvas { height: 520px; background: #e2e8f0; }
+.rotograma-leaflet-map { width: 100%; height: 100%; font-family: inherit; }
+.rotograma-map-footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 10px 16px; background: #f8fafc; }
+.rotograma-map-footer p { margin: 0; color: #64748b; font-size: .74rem; text-align: right; }
+.rotograma-map-editor-hint { padding: 9px 16px; background: #f5f3ff; color: #6d28d9; font-size: .8rem; font-weight: 800; }
+.rotograma-map-popup { max-width: 240px; color: #334155; }
+.rotograma-map-popup strong { color: #0f172a; }
+.rotograma-map-popup p { margin: 7px 0; line-height: 1.4; }
+.rotograma-map-popup small { color: #64748b; }
+.rotograma-point-number { border: 0; background: transparent; box-shadow: none; color: #fff; font-size: 0.7rem; font-weight: 900; }
+.rotograma-point-number::before { display: none; }
+.risk-point-card { cursor: pointer; transition: transform 160ms ease, box-shadow 160ms ease, outline-color 160ms ease; }
+.risk-point-card:hover { transform: translateY(-2px); }
+.risk-point-card.selected { outline: 3px solid rgba(37, 99, 235, 0.24); box-shadow: 0 14px 30px rgba(37, 99, 235, 0.14); }
+
+.rotograma-view-switch { display: flex; justify-content: flex-end; gap: 8px; margin: 18px 0 10px; }
+.rotograma-grid.compact-list { display: none; }
+.rotograma-overview-shell { overflow: hidden; border: 1px solid #dbe4f0; border-radius: 24px; background: #fff; box-shadow: 0 18px 46px rgba(15, 23, 42, .1); }
+.rotograma-overview-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 20px 22px; }
+.rotograma-overview-heading span { color: #2563eb; font-size: .72rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+.rotograma-overview-heading h2 { margin: 2px 0; color: #0f172a; font-size: 1.45rem; }
+.rotograma-overview-heading p { margin: 0; color: #64748b; }
+.rotograma-overview-map { height: min(58vh, 600px); min-height: 430px; border-block: 1px solid #e2e8f0; }
+.rotograma-overview-footer { display: flex; align-items: center; gap: 18px; padding: 12px 20px; color: #475569; font-size: .78rem; }
+.rotograma-overview-footer span { display: inline-flex; align-items: center; gap: 6px; }
+.rotograma-overview-footer i { width: 10px; height: 10px; border-radius: 50%; background: #2563eb; }
+.rotograma-overview-footer i.attention { background: #f97316; }
+.rotograma-overview-footer i.support { box-sizing: border-box; background: rgba(34, 197, 94, .2); border: 2px solid #15803d; }
+.rotograma-overview-footer b { margin-left: auto; }
+.rotograma-map-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 14px; align-items: stretch; }
+.rotograma-map-point-panel { overflow: auto; max-height: 690px; padding: 12px; border: 1px solid #dbe4f0; border-radius: 18px; background: #f8fafc; }
+.rotograma-map-point-panel > div { display: grid; gap: 2px; padding: 4px 5px 12px; color: #0f172a; }
+.rotograma-map-point-panel > div span { color: #64748b; font-size: .72rem; }
+.rotograma-map-point-panel > button { display: grid; grid-template-columns: 30px 1fr; gap: 8px; width: 100%; margin-bottom: 7px; padding: 9px; border: 1px solid transparent; border-radius: 12px; background: #fff; color: #334155; cursor: pointer; text-align: left; }
+.rotograma-map-point-panel > button:hover,
+.rotograma-map-point-panel > button.active { border-color: #93c5fd; background: #eff6ff; }
+.rotograma-map-point-panel button b { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: #2563eb; color: #fff; }
+.rotograma-map-point-panel button span { display: grid; gap: 3px; font-size: .77rem; font-weight: 800; }
+.rotograma-map-point-panel button small { color: #64748b; font-size: .68rem; font-weight: 600; }
+.rotograma-support-empty { margin: 10px 2px 0; padding: 10px 12px; border-radius: 10px; background: #f0fdf4; color: #166534; font-size: .78rem; }
+.rotograma-map-shell.fullscreen { position: fixed; inset: 12px; z-index: 9999; display: flex; flex-direction: column; border-radius: 18px; }
+.rotograma-map-shell.fullscreen .rotograma-map-canvas { height: auto; flex: 1; }
+.rotograma-visual-editor { margin-bottom: 12px; padding: 14px; border: 1px solid #ddd6fe; border-radius: 16px; background: #faf8ff; }
+.rotograma-visual-editor-heading { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+.rotograma-visual-editor-heading > div:first-child { display: grid; gap: 2px; color: #4c1d95; }
+.rotograma-visual-editor-heading span { color: #7c3aed; font-size: .74rem; }
+.rotograma-visual-tools { display: flex; flex-wrap: wrap; gap: 7px; }
+.rotograma-visual-tools button,
+.rotograma-visual-form button { border: 1px solid #c4b5fd; border-radius: 9px; background: #fff; color: #5b21b6; cursor: pointer; font: inherit; font-size: .74rem; font-weight: 800; padding: 8px 10px; }
+.rotograma-visual-tools button.active { background: #7c3aed; color: #fff; }
+.rotograma-visual-tools button.support.active { border-color: #15803d; background: #15803d; }
+.rotograma-visual-form { display: grid; grid-template-columns: minmax(180px, 1fr) 150px auto auto; gap: 10px; align-items: end; margin-top: 12px; }
+.rotograma-visual-form label { display: grid; gap: 4px; color: #475569; font-size: .7rem; font-weight: 800; }
+.rotograma-visual-form input,
+.rotograma-visual-form select { min-height: 38px; border: 1px solid #cbd5e1; border-radius: 9px; padding: 7px 9px; }
+.rotograma-visual-form .save { border-color: #2563eb; background: #2563eb; color: #fff; }
+.rotograma-editor-clicks { align-self: center; color: #6d28d9; font-size: .72rem; font-weight: 800; }
+.rotograma-support-zone-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+.rotograma-support-zone-list span { display: inline-flex; align-items: center; gap: 7px; padding: 6px 9px; border-radius: 999px; background: #dcfce7; color: #166534; font-size: .72rem; font-weight: 800; }
+.rotograma-support-zone-list button { border: 0; background: transparent; color: #b91c1c; cursor: pointer; font-weight: 900; }
+
+@media (max-width: 760px) {
+  .rotograma-map-toolbar { align-items: stretch; flex-direction: column; }
+  .rotograma-map-actions { justify-content: flex-start; }
+  .rotograma-map-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rotograma-map-legend { justify-content: flex-start; }
+  .rotograma-map-canvas { height: 380px; }
+  .rotograma-map-footer,
+  .rotograma-overview-heading,
+  .rotograma-visual-editor-heading { align-items: stretch; flex-direction: column; }
+  .rotograma-map-footer p { text-align: left; }
+  .rotograma-overview-map { height: 430px; min-height: 0; }
+  .rotograma-map-layout { grid-template-columns: 1fr; }
+  .rotograma-map-point-panel { max-height: 300px; }
+  .rotograma-visual-form { grid-template-columns: 1fr; }
 }
