@@ -56,7 +56,7 @@ async function getUserProfile(user) {
   if (!user?.id) return user || null;
 
   const profile = await get(
-    `SELECT id, matricula, nome_completo, nome_preferido, telefone_whatsapp, cargo, setor, unidade, status, perfil
+    `SELECT id, perfil, tipo_colaborador
      FROM colaboradores
      WHERE id = ?`,
     [user.id]
@@ -183,23 +183,9 @@ function buildKnowledgeText(rows) {
 function buildUserContext(user) {
   if (!user) return 'Usuário autenticado, sem dados adicionais disponíveis.';
   const lines = [
-    `Nome: ${user.nome_completo || 'não informado'}`,
-    `Nome preferido: ${user.nome_preferido || 'não informado'}`,
     `Perfil: ${user.perfil || 'não informado'}`,
-    `Matrícula: ${user.matricula || 'não informada'}`,
-    `Cargo: ${user.cargo || 'não informado'}`,
-    `Setor: ${user.setor || 'não informado'}`,
-    `Unidade: ${user.unidade || 'não informada'}`,
-      `Status: ${user.status || 'não informado'}`
+    `Tipo de acesso: ${user.tipo_colaborador || 'não informado'}`
   ];
-
-  if (user.prontuario) {
-    lines.push(
-      `Prontuário do colaborador - pontuação ponderada: ${user.prontuario.pontuacao_ponderada ?? 'não informada'}`,
-      `Prontuário do colaborador - faixa: ${user.prontuario.faixa || 'não informada'}`,
-      `Prontuário do colaborador - cor da faixa: ${user.prontuario.cor_faixa || 'sem_faixa'}`
-    );
-  }
 
   return lines.join('\n');
 }
@@ -214,7 +200,8 @@ function extractOutputText(responseBody) {
 
 async function askOpenAI({ question, knowledgeBase, user, previousResponseId }) {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return null;
+  const legacyAiEnabled = String(process.env.YURI_LEGACY_AI_ENABLED || '').toLowerCase() === 'true';
+  if (!apiKey || !legacyAiEnabled) return null;
 
   const payload = {
     model: process.env.OPENAI_MODEL || DEFAULT_MODEL,
@@ -251,21 +238,29 @@ async function askOpenAI({ question, knowledgeBase, user, previousResponseId }) 
       }
     ],
     max_output_tokens: 450,
-    store: true
+    store: false
   };
 
   if (previousResponseId) {
     payload.previous_response_id = previousResponseId;
   }
 
-  const response = await fetch(OPENAI_API_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
+  let response;
+  try {
+    response = await fetch(OPENAI_API_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   const body = await response.json().catch(() => null);
   if (!response.ok) {
@@ -285,10 +280,10 @@ async function logAttendance({ user, question, answer, category, status }) {
   try {
     await run(
       `INSERT INTO atendimentos (colaborador_id, telefone, mensagem, resposta, categoria, status, data_hora)
-       VALUES (?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
+       VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
       [
         user.id,
-        user.telefone_whatsapp || '',
+        '',
         question,
         answer,
         category || 'Chat IA',

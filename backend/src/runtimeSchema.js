@@ -3,6 +3,8 @@ const path = require('path');
 const db = require('./db');
 
 const ROTOGRAMA_MAP_MIGRATION = path.join(__dirname, '../migrations/024_rotograma_mapa.sql');
+const PLANOS_MELHORIA_MIGRATION = path.join(__dirname, '../migrations/025_planos_melhoria_yuri.sql');
+const PESQUISA_CLIMA_INTEGRIDADE_MIGRATION = path.join(__dirname, '../migrations/026_pesquisa_clima_integridade.sql');
 
 async function ensureRuntimeSchema({
   database = db,
@@ -10,12 +12,17 @@ async function ensureRuntimeSchema({
 } = {}) {
   if (!usePostgres) return { applied: false, reason: 'sqlite' };
 
-  const sql = fs.readFileSync(ROTOGRAMA_MAP_MIGRATION, 'utf8');
-  await database.query(sql);
-  return { applied: true, migration: path.basename(ROTOGRAMA_MAP_MIGRATION) };
+  const migrations = [ROTOGRAMA_MAP_MIGRATION, PLANOS_MELHORIA_MIGRATION, PESQUISA_CLIMA_INTEGRIDADE_MIGRATION];
+  for (const migration of migrations) {
+    const sql = fs.readFileSync(migration, 'utf8');
+    await database.query(sql);
+  }
+  return { applied: true, migration: migrations.map((item) => path.basename(item)).join(', ') };
 }
 
 module.exports = {
   ROTOGRAMA_MAP_MIGRATION,
+  PLANOS_MELHORIA_MIGRATION,
+  PESQUISA_CLIMA_INTEGRIDADE_MIGRATION,
   ensureRuntimeSchema
 };

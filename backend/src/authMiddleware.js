@@ -10,32 +10,47 @@ function getJwtSecret() {
   return process.env.JWT_SECRET;
 }
 
-function authenticateToken(req, res, next) {
+function getJwtVerificationSecrets() {
+  return [getJwtSecret(), process.env.JWT_SECRET_PREVIOUS]
+    .map((value) => String(value || '').trim())
+    .filter((value, index, items) => value && items.indexOf(value) === index);
+}
+
+async function authenticateToken(req, res, next) {
   const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.split(' ')[1];
+  const [scheme, token] = String(authHeader || '').trim().split(/\s+/, 2);
+  if (scheme?.toLowerCase() !== 'bearer') return res.status(401).json({ error: 'Token não fornecido' });
   if (!token) return res.status(401).json({ error: 'Token não fornecido' });
 
-  jwt.verify(token, getJwtSecret(), async (err, user) => {
-    if (err) return res.status(401).json({ error: 'Token inválido' });
+  let user = null;
+  for (const secret of getJwtVerificationSecrets()) {
     try {
-      const currentUser = await db.get(
-        'SELECT id, matricula, perfil, nome_completo, nome_preferido, status FROM colaboradores WHERE id = ?',
-        [user.id]
-      );
-      if (!currentUser && process.env.NODE_ENV === 'test') {
-        req.user = user;
-        return next();
-      }
-      if (!currentUser || ['desligado', 'removido', 'inativo'].includes(String(currentUser.status || '').trim().toLowerCase())) {
-        return res.status(401).json({ error: 'Cadastro inativo. Procure o RH.' });
-      }
-      req.user = { ...user, ...currentUser };
-      next();
-    } catch (dbError) {
-      console.error('ERRO VALIDACAO TOKEN:', dbError);
-      return res.status(500).json({ error: 'Erro ao validar acesso' });
+      user = jwt.verify(token, secret, { algorithms: ['HS256'] });
+      break;
+    } catch {
+      // Durante uma rotacao controlada, o token pode ter sido assinado pelo segredo anterior.
     }
-  });
+  }
+  if (!user) return res.status(401).json({ error: 'Token inválido' });
+
+  try {
+    const currentUser = await db.get(
+      'SELECT id, matricula, perfil, nome_completo, nome_preferido, status FROM colaboradores WHERE id = ?',
+      [user.id]
+    );
+    if (!currentUser && process.env.NODE_ENV === 'test') {
+      req.user = user;
+      return next();
+    }
+    if (!currentUser || ['desligado', 'removido', 'inativo'].includes(String(currentUser.status || '').trim().toLowerCase())) {
+      return res.status(401).json({ error: 'Cadastro inativo. Procure o RH.' });
+    }
+    req.user = { ...user, ...currentUser };
+    return next();
+  } catch (dbError) {
+    console.error('ERRO VALIDACAO TOKEN:', dbError);
+    return res.status(500).json({ error: 'Erro ao validar acesso' });
+  }
 }
 
 function normalizePerfil(perfil) {

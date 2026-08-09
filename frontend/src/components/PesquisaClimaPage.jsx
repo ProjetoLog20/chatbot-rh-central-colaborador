@@ -31,7 +31,7 @@ export default function PesquisaClimaPage() {
   const fetchPesquisasAdmin = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:4000/api/pesquisa-clima/admin', {
+      const res = await fetch('/api/pesquisa-clima/admin', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -47,7 +47,7 @@ export default function PesquisaClimaPage() {
   const fetchPesquisaAtiva = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:4000/api/pesquisa-clima/ativa', {
+      const res = await fetch('/api/pesquisa-clima/ativa', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -64,7 +64,7 @@ export default function PesquisaClimaPage() {
   const handleActivatePesquisa = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`http://localhost:4000/api/pesquisa-clima/${id}/ativar`, {
+      await fetch(`/api/pesquisa-clima/${id}/ativar`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -78,7 +78,7 @@ export default function PesquisaClimaPage() {
   const handleViewDashboard = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:4000/api/pesquisa-clima/${id}/dashboard`, {
+      const res = await fetch(`/api/pesquisa-clima/${id}/dashboard`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -114,7 +114,7 @@ export default function PesquisaClimaPage() {
     setEnviando(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:4000/api/pesquisa-clima/responder', {
+      const res = await fetch('/api/pesquisa-clima/responder', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

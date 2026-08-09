@@ -1,3 +1,5 @@
+import { clearToken } from './auth.js';
+
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 function getHeaders(token) {
@@ -15,9 +17,7 @@ async function request(path, options = {}) {
   const body = await res.json().catch(() => null);
 
   if (res.status === 401 && token) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    sessionStorage.removeItem('firstAccess');
+    clearToken();
     if (window.location.pathname !== '/login') {
       window.location.assign('/login');
     }
@@ -318,8 +318,7 @@ export async function importOnDemandArmazemFile(file, operatorFile, competencia 
   });
   const body = await res.json().catch(() => null);
   if (res.status === 401 && token) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    clearToken();
     window.location.assign('/login');
   }
   if (!res.ok) throw body || { error: 'Erro ao importar o arquivo On Demand' };
@@ -387,6 +386,38 @@ export async function updateAdminModulo(chave, payload) {
 
 export async function getAdminAcoes() {
   return request('/admin/acoes-encontros');
+}
+
+export async function getPlanosMelhoria() {
+  return request('/planos-melhoria');
+}
+
+export async function getPlanosMelhoriaAccess() {
+  return request('/planos-melhoria/access');
+}
+
+export async function createPlanoBucket(payload) {
+  return request('/planos-melhoria/buckets', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function addPlanoMember(payload) {
+  return request('/planos-melhoria/members', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function createPlanoCard(payload) {
+  return request('/planos-melhoria/cards', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function updatePlanoCard(id, payload) {
+  return request(`/planos-melhoria/cards/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+}
+
+export async function updatePlanoCardStatus(id, column) {
+  return request(`/planos-melhoria/cards/${id}/status`, { method: 'PATCH', body: JSON.stringify({ column }) });
+}
+
+export async function addPlanoComment(id, comment) {
+  return request(`/planos-melhoria/cards/${id}/comments`, { method: 'POST', body: JSON.stringify({ comment }) });
 }
 
 export async function getAdminAccessMetrics() {

@@ -10,7 +10,7 @@ export default function PesquisaClimaCard() {
     const fetchPesquisa = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:4000/api/pesquisa-clima/ativa', {
+        const res = await fetch('/api/pesquisa-clima/ativa', {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();

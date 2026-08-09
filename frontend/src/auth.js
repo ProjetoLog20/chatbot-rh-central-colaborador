@@ -9,6 +9,10 @@ export function setUserData(user) {
 export function clearToken() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
+  for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+    const key = localStorage.key(index);
+    if (key?.startsWith('yuri-chat:')) localStorage.removeItem(key);
+  }
   sessionStorage.removeItem('firstAccess');
 }
 

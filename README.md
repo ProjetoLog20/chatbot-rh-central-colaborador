@@ -101,17 +101,15 @@ Em producão, o backend serve o frontend gerado em `frontend/dist` e mantém as
 
 ## Fluxo de Primeiro Acesso
 
-Quando um novo colaborador é cadastrado (manualmente ou por import Excel/CSV) sem informar senha, o sistema utiliza a **senha padrão temporária: log20**.
-
-No primeiro login:
+No cadastro manual, no reset administrativo e para novos usuários importados sem senha informada, o servidor gera uma senha temporária individual. No primeiro login:
 1. O colaborador faz login com sua matrícula e a senha temporária.
 2. O sistema o redireciona para a página de mudança obrigatória de senha.
-3. A nova senha não pode ser igual a "log20" por razões de segurança.
+3. A nova senha deve ter pelo menos 10 caracteres e não pode repetir a senha temporária.
 4. Após a mudança bem-sucedida, ele é redirecionado para a página inicial.
 
 ### Administrador: Resetar Senha de Colaborador
 
-Se um administrador resetar a senha de um colaborador sem informar uma nova senha, o sistema retorna a senha para a temporária "log20" e marca como primeiro acesso novamente.
+Se um administrador resetar a senha, o sistema gera uma credencial temporária individual, exibe-a uma única vez ao administrador e marca o cadastro como primeiro acesso novamente.
 
 ## Usuarios de teste
 
@@ -125,7 +123,7 @@ Se um administrador resetar a senha de um colaborador sem informar uma nova senh
   - Matricula: `3000`
   - Senha: `log20` (primeira vez)
 
-No primeiro login, cada usuário será obrigado a mudar a senha temporária "log20" para uma nova senha pessoal.
+Os usuários de demonstração do seed ainda utilizam `log20` exclusivamente no ambiente local. Cadastros reais recebem credenciais temporárias individuais.
 
 ## Comandos uteis
 
@@ -188,6 +186,7 @@ Regras:
 - Arquivos aceitos: `.xlsx` e `.csv`
 - Tamanho maximo: 5 MB
 - Importacao de colaboradores usa UPSERT por `matricula`, preservando o `id` e os vinculos existentes.
+- Novos colaboradores sem senha informada recebem credenciais temporárias individuais; o painel baixa um CSV para entrega segura. Senhas de usuários já existentes são preservadas.
 - Importacao de prontuario registra historico quando pontuacao ou faixa mudam.
 
 ## Segurança e privacidade

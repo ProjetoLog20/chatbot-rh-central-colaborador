@@ -1,9 +1,41 @@
 const express = require('express');
-const dayjs = require('dayjs');
 const db = require('../db');
 const { authenticateToken, authorizeRoles } = require('../authMiddleware');
 
 const router = express.Router();
+
+function parseOptions(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed.map((item) => String(item).trim()).filter(Boolean);
+  } catch {
+    // Bases antigas podem guardar opcoes separadas por virgula ou quebra de linha.
+  }
+  return String(value).split(/[\n,;]/).map((item) => item.trim()).filter(Boolean);
+}
+
+function validateAnswer(question, answer) {
+  const note = answer.nota === undefined || answer.nota === null || answer.nota === '' ? null : Number(answer.nota);
+  const textAnswer = String(answer.resposta_texto || '').trim().slice(0, 4000);
+  const optionAnswer = String(answer.resposta_opcao || '').trim().slice(0, 500);
+  const hasAnswer = note !== null || Boolean(textAnswer) || Boolean(optionAnswer);
+
+  if (question.obrigatoria && !hasAnswer) return { error: `Responda a pergunta obrigatoria: ${question.pergunta}` };
+  if (!hasAnswer) return { value: null };
+  if (question.tipo === 'nota' && (!Number.isInteger(note) || note < 1 || note > 5)) {
+    return { error: `A nota de "${question.pergunta}" deve estar entre 1 e 5.` };
+  }
+  if (question.tipo === 'sim_nao' && !['sim', 'nao', 'não'].includes(optionAnswer.toLowerCase())) {
+    return { error: `Selecione Sim ou Nao em "${question.pergunta}".` };
+  }
+  if (['opcao', 'multipla_escolha'].includes(question.tipo)) {
+    const options = parseOptions(question.opcoes);
+    if (!options.includes(optionAnswer)) return { error: `Selecione uma opcao valida em "${question.pergunta}".` };
+  }
+  return { value: { note, textAnswer, optionAnswer } };
+}
 
 router.get('/ativa', authenticateToken, async (req, res) => {
   try {
@@ -32,7 +64,7 @@ router.get('/ativa', authenticateToken, async (req, res) => {
     );
 
     const jaRespondeu = await db.query(
-      `SELECT COUNT(*) as total FROM respostas_clima 
+      `SELECT COUNT(*) as total FROM pesquisa_clima_participacoes
        WHERE pesquisa_id = $1 AND colaborador_id = $2`,
       [pesquisa.id, req.user.id]
     );
@@ -55,26 +87,65 @@ router.post('/responder', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Dados inválidos' });
     }
 
-    const jaRespondeu = await db.query(
-      `SELECT id FROM respostas_clima 
-       WHERE pesquisa_id = $1 AND colaborador_id = $2 
-       LIMIT 1`,
-      [pesquisa_id, req.user.id]
-    );
-
-    if (jaRespondeu.rows?.[0]) {
-      return res.status(400).json({ error: 'Você já respondeu esta pesquisa' });
-    }
-
-    for (const resp of respostas) {
-      const { pergunta_id, nota, resposta_texto, resposta_opcao } = resp;
-      await db.query(
-        `INSERT INTO respostas_clima 
-         (pesquisa_id, pergunta_id, colaborador_id, nota, resposta_texto, resposta_opcao, comentario) 
-         VALUES ($1, $2, $3, $4, $5, $6, '')`,
-        [pesquisa_id, pergunta_id, req.user.id, nota || null, resposta_texto || null, resposta_opcao || null]
+    const result = await db.withTransaction(async (transaction) => {
+      const surveyResult = await transaction.query(
+        `SELECT id, anonima FROM pesquisas_clima
+         WHERE id = $1 AND status = 'ativa'
+           AND (data_inicio IS NULL OR data_inicio <= CURRENT_TIMESTAMP)
+           AND (data_fim IS NULL OR data_fim >= CURRENT_TIMESTAMP)
+         FOR UPDATE`,
+        [pesquisa_id]
       );
-    }
+      const survey = surveyResult.rows?.[0];
+      if (!survey) return { status: 409, error: 'Esta pesquisa nao esta disponivel para respostas.' };
+
+      const questionsResult = await transaction.query(
+        `SELECT id, pergunta, tipo, obrigatoria, opcoes
+         FROM perguntas_clima WHERE pesquisa_id = $1 AND ativa = true ORDER BY ordem, id`,
+        [pesquisa_id]
+      );
+      const questions = questionsResult.rows || [];
+      const answersByQuestion = new Map();
+      for (const answer of respostas) {
+        const questionId = Number(answer?.pergunta_id);
+        if (!Number.isInteger(questionId) || answersByQuestion.has(questionId)) {
+          return { status: 400, error: 'A lista de respostas contem perguntas invalidas ou duplicadas.' };
+        }
+        answersByQuestion.set(questionId, answer);
+      }
+
+      const validated = [];
+      for (const question of questions) {
+        const answer = answersByQuestion.get(Number(question.id)) || {};
+        const validation = validateAnswer(question, answer);
+        if (validation.error) return { status: 400, error: validation.error };
+        if (validation.value) validated.push({ question, ...validation.value });
+        answersByQuestion.delete(Number(question.id));
+      }
+      if (answersByQuestion.size) return { status: 400, error: 'Uma resposta nao pertence a esta pesquisa.' };
+
+      const participationResult = await transaction.query(
+        `INSERT INTO pesquisa_clima_participacoes (pesquisa_id, colaborador_id)
+         VALUES ($1, $2)
+         ON CONFLICT (pesquisa_id, colaborador_id) DO NOTHING
+         RETURNING pesquisa_id`,
+        [pesquisa_id, req.user.id]
+      );
+      if (!participationResult.rows?.[0]) return { status: 409, error: 'Voce ja respondeu esta pesquisa.' };
+
+      for (const answer of validated) {
+        await transaction.query(
+          `INSERT INTO respostas_clima
+           (pesquisa_id, pergunta_id, colaborador_id, nota, resposta_texto, resposta_opcao, comentario)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [pesquisa_id, answer.question.id, survey.anonima ? null : req.user.id,
+            answer.note, answer.textAnswer || null, answer.optionAnswer || null, answer.textAnswer || null]
+        );
+      }
+      return { status: 200 };
+    });
+
+    if (result.error) return res.status(result.status).json({ error: result.error });
 
     res.json({ mensagem: 'Pesquisa respondida com sucesso!' });
   } catch (error) {
@@ -133,10 +204,18 @@ router.get('/admin/lista', authenticateToken, authorizeRoles('admin'), async (re
 router.patch('/:id/ativar', authenticateToken, authorizeRoles('admin'), async (req, res) => {
   try {
     const { id } = req.params;
-    await db.query(
-      `UPDATE pesquisas_clima SET status = 'ativa' WHERE id = $1`,
-      [id]
-    );
+    const found = await db.withTransaction(async (transaction) => {
+      await transaction.query(
+        `UPDATE pesquisas_clima SET status = 'encerrada' WHERE status = 'ativa' AND id <> $1`,
+        [id]
+      );
+      const result = await transaction.query(
+        `UPDATE pesquisas_clima SET status = 'ativa' WHERE id = $1 RETURNING id`,
+        [id]
+      );
+      return Boolean(result.rows?.[0]);
+    });
+    if (!found) return res.status(404).json({ error: 'Pesquisa nao encontrada' });
     res.json({ mensagem: 'Pesquisa ativada com sucesso' });
   } catch (error) {
     console.error('ERRO AO ATIVAR PESQUISA:', error);
@@ -253,7 +332,7 @@ router.get('/:id/dashboard', authenticateToken, authorizeRoles('admin'), async (
     const { id } = req.params;
 
     const totalRespostasResult = await db.query(
-      `SELECT COUNT(DISTINCT colaborador_id) as total FROM respostas_clima WHERE pesquisa_id = $1`,
+      `SELECT COUNT(*) as total FROM pesquisa_clima_participacoes WHERE pesquisa_id = $1`,
       [id]
     );
 
@@ -269,8 +348,8 @@ router.get('/:id/dashboard', authenticateToken, authorizeRoles('admin'), async (
     );
 
     const comentariosResult = await db.query(
-      `SELECT comentario FROM respostas_clima 
-       WHERE pesquisa_id = $1 AND comentario IS NOT NULL AND comentario != ''
+      `SELECT COALESCE(NULLIF(resposta_texto, ''), comentario) AS comentario FROM respostas_clima
+       WHERE pesquisa_id = $1 AND COALESCE(NULLIF(resposta_texto, ''), comentario) IS NOT NULL
        ORDER BY created_at DESC
        LIMIT 10`,
       [id]

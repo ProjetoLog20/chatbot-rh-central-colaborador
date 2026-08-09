@@ -107,8 +107,13 @@ function sanitizeText(value, maxLength = MAX_MESSAGE_LENGTH) {
   return String(value || '')
     .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, '[token oculto]')
     .replace(/OPENAI_API_KEY\s*=\s*\S+/gi, 'OPENAI_API_KEY=[oculta]')
+    .replace(/GROQ_API_KEY\s*=\s*\S+/gi, 'GROQ_API_KEY=[oculta]')
+    .replace(/JWT_SECRET(?:_PREVIOUS)?\s*=\s*\S+/gi, 'JWT_SECRET=[oculto]')
     .replace(/DATABASE_URL\s*=\s*\S+/gi, 'DATABASE_URL=[oculta]')
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, '[email oculto]')
     .replace(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g, '[cpf oculto]')
+    .replace(/\b\d{2}\.?\d{3}\.?\d{3}\/\d{4}-?\d{2}\b/g, '[cnpj oculto]')
+    .replace(/(?:\+?55\s*)?(?:\(?\d{2}\)?\s*)?(?:9\s*)?\d{4}[-\s]?\d{4}\b/g, '[telefone oculto]')
     .replace(/\b\d{6,}\b/g, '[numero oculto]')
     .slice(0, maxLength)
     .trim();
@@ -127,10 +132,9 @@ function sanitizeHistory(history) {
 }
 
 function getUserContext(user) {
-  const name = user?.nome_preferido || user?.nome_completo || 'colaborador';
   return [
-    `Usuario logado: ${name}`,
-    `Perfil: ${user?.perfil || 'nao informado'}`
+    'Usuario autenticado na Central do Colaborador.',
+    `Perfil de acesso: ${user?.perfil || 'nao informado'}`
   ].join('\n');
 }
 
