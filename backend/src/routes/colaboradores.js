@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const db = require('../db');
 const { authenticateToken, authorizeRoles } = require('../authMiddleware');
+const { generateTemporaryPassword } = require('../temporaryPassword');
 
 const router = express.Router();
 const ALLOWED_PROFILES = new Set(['admin', 'motorista', 'colaborador']);
@@ -67,7 +68,11 @@ router.post('/', authenticateToken, authorizeRoles('admin'), async (req, res) =>
   }
 
   try {
-    const senhaHash = await bcrypt.hash(text(req.body.senha) || 'log20', 10);
+    const temporaryPassword = text(req.body.senha) || generateTemporaryPassword();
+    if (temporaryPassword.length < 10) {
+      return res.status(400).json({ error: 'A senha temporaria deve ter pelo menos 10 caracteres.' });
+    }
+    const senhaHash = await bcrypt.hash(temporaryPassword, 10);
     const result = await db.run(
       `INSERT INTO colaboradores (
         matricula, nome_completo, nome_preferido, cpf, telefone_whatsapp, email, cargo, setor, unidade,
@@ -84,7 +89,7 @@ router.post('/', authenticateToken, authorizeRoles('admin'), async (req, res) =>
       ]
     );
     const created = await db.get(`SELECT ${publicColumns} FROM colaboradores WHERE id = ?`, [result.lastID]);
-    return res.status(201).json({ colaborador: created, senha_temporaria: text(req.body.senha) || 'log20' });
+    return res.status(201).json({ colaborador: created, senha_temporaria: temporaryPassword });
   } catch (error) {
     if (/unique|duplicate/i.test(error.message || '')) {
       return res.status(409).json({ error: 'Matricula, usuario On Demand ou codigo operacional ja cadastrado.' });
@@ -124,12 +129,17 @@ router.put('/:id', authenticateToken, async (req, res) => {
     let primeiroAcesso = user.primeiro_acesso;
     let senhaTemporaria = user.senha_temporaria;
     let dataTroca = user.data_ultima_troca_senha;
+    let generatedTemporaryPassword = null;
     if (shouldResetPassword) {
-      senhaHash = await bcrypt.hash('log20', 10);
+      generatedTemporaryPassword = generateTemporaryPassword();
+      senhaHash = await bcrypt.hash(generatedTemporaryPassword, 10);
       primeiroAcesso = true;
       senhaTemporaria = true;
       dataTroca = null;
     } else if (isAdmin && text(req.body.senha)) {
+      if (text(req.body.senha).length < 10) {
+        return res.status(400).json({ error: 'A senha temporaria deve ter pelo menos 10 caracteres.' });
+      }
       senhaHash = await bcrypt.hash(text(req.body.senha), 10);
       primeiroAcesso = true;
       senhaTemporaria = true;
@@ -162,7 +172,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const updated = await db.get(`SELECT ${publicColumns} FROM colaboradores WHERE id = ?`, [id]);
     return res.json({
       colaborador: updated,
-      ...(shouldResetPassword ? { reset_realizado: true, senha_temporaria: 'log20' } : {})
+      ...(shouldResetPassword ? { reset_realizado: true, senha_temporaria: generatedTemporaryPassword } : {})
     });
   } catch (error) {
     if (error.status) return res.status(error.status).json({ error: error.message });

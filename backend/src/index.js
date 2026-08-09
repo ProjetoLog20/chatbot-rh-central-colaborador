@@ -58,11 +58,16 @@ const corsOptions = {
       process.env.FRONTEND_URL,
     ].filter(Boolean);
 
-    if (allowedOrigins.includes(origin)) {
+    const isLocalDevelopmentOrigin = process.env.NODE_ENV !== 'production'
+      && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
+
+    if (allowedOrigins.includes(origin) || isLocalDevelopmentOrigin) {
       return callback(null, true);
     }
 
-    return callback(new Error('Origem não permitida pelo CORS'));
+    const error = new Error('Origem nao permitida pelo CORS');
+    error.code = 'CORS_DENIED';
+    return callback(error);
   },
   credentials: true,
 };
@@ -142,10 +147,39 @@ app.get(/^\/(?!api).*/, (req, res) => {
 app.use(errorHandler);
 
 if (require.main === module) {
+  let server;
+  let shuttingDown = false;
+
+  const shutdown = (signal) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`Recebido ${signal}; encerrando o Yuri com seguranca.`);
+
+    const forceExit = setTimeout(() => {
+      console.error('Tempo limite de encerramento excedido; finalizando processo.');
+      process.exit(1);
+    }, 25_000);
+    forceExit.unref();
+
+    server?.close(async (error) => {
+      if (error) console.error('Falha ao encerrar servidor HTTP:', error.message || error);
+      try {
+        await db.close();
+      } catch (dbError) {
+        console.error('Falha ao encerrar conexao com banco:', dbError.message || dbError);
+      }
+      clearTimeout(forceExit);
+      process.exit(error ? 1 : 0);
+    });
+  };
+
+  process.once('SIGTERM', () => shutdown('SIGTERM'));
+  process.once('SIGINT', () => shutdown('SIGINT'));
+
   ensureRuntimeSchema()
     .then((result) => {
       if (result.applied) console.log(`Schema atualizado: ${result.migration}`);
-      app.listen(PORT, () => {
+      server = app.listen(PORT, () => {
         console.log(`Backend rodando em http://localhost:${PORT}`);
         console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
       });

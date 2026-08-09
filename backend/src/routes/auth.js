@@ -98,8 +98,8 @@ router.post('/primeiro-acesso', async (req, res) => {
     return res.status(400).json({ error: 'Informe como voce deseja ser chamado.' });
   }
 
-  if (!novaSenha || novaSenha.length < 6) {
-    return res.status(400).json({ error: 'A nova senha deve ter pelo menos 6 caracteres.' });
+  if (!novaSenha || novaSenha.length < 10) {
+    return res.status(400).json({ error: 'A nova senha deve ter pelo menos 10 caracteres.' });
   }
 
   if (novaSenha === 'log20') {
@@ -126,6 +126,9 @@ router.post('/primeiro-acesso', async (req, res) => {
     const senhaOk = await bcrypt.compare(senhaAtual || '', usuario.senha_hash);
     if (!senhaOk) {
       return res.status(401).json({ error: 'Senha atual invalida.' });
+    }
+    if (await bcrypt.compare(novaSenha, usuario.senha_hash)) {
+      return res.status(400).json({ error: 'A nova senha deve ser diferente da senha temporaria.' });
     }
 
     const senhaHash = await bcrypt.hash(novaSenha, 10);

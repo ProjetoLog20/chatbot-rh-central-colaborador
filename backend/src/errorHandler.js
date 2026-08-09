@@ -8,6 +8,13 @@ function errorHandler(err, req, res, next) {
     });
   }
 
+  if (err?.code === 'CORS_DENIED') {
+    return res.status(403).json({
+      error: 'Origem nao autorizada',
+      request_id: requestId
+    });
+  }
+
   console.error(`[${requestId}]`, err);
 
   res.status(500).json({

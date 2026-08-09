@@ -4,3 +4,17 @@ backend/node_modules/
 backend/data/db.sqlite
 dist/
 .env
+*.log
+.codex-tmp/
+.tmp/
+tmp/
+output/
+outputs/
+backend/logs/
+backend/data/*.db
+backend/data/*.sqlite
+backend/uploads/
+backend/**/*.sqlite
+backend/**/*backup*.json
+backend/**/*backup*.xlsx
+backend/**/*backup*.xls

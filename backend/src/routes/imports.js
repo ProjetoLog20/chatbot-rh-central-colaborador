@@ -5,6 +5,7 @@ const xlsx = require('xlsx');
 const bcrypt = require('bcrypt');
 const db = require('../db');
 const { authenticateToken, authorizeRoles } = require('../authMiddleware');
+const { generateTemporaryPassword } = require('../temporaryPassword');
 
 const allowedExtensions = new Set(['csv', 'xlsx']);
 const upload = multer({
@@ -119,7 +120,7 @@ router.get('/modelos/:tipo', authenticateToken, authorizeRoles('admin'), (req, r
           { campo: 'matricula', orientacao: 'Obrigatorio. Usado para criar ou atualizar o colaborador.' },
           { campo: 'nome_completo', orientacao: 'Obrigatorio.' },
           { campo: 'perfil', orientacao: 'Use colaborador, motorista ou admin.' },
-          { campo: 'senha', orientacao: 'Opcional. Se ficar vazio, o sistema usa a senha temporária log20 para novos registros.' }
+          { campo: 'senha', orientacao: 'Opcional. Se ficar vazio, o sistema gera uma senha temporaria individual para novos registros.' }
         ]
       }
     ]);
@@ -183,21 +184,27 @@ router.post('/colaboradores', authenticateToken, authorizeRoles('admin'), upload
   }
 
   const errors = [];
+  const temporaryCredentials = [];
   let imported = 0;
 
   for (const [index, row] of rows.entries()) {
     const matricula = normalizeValue(row, ['matricula', 'MATRICULA', 'Matricula']);
     const nomeCompleto = normalizeValue(row, ['nome_completo', 'NOME', 'Nome']);
     const senhaFormatted = normalizeValue(row, ['senha', 'Senha']);
-    const senha = senhaFormatted ? senhaFormatted : 'log20';
+    const senha = senhaFormatted || generateTemporaryPassword();
     const perfil = normalizeValue(row, ['perfil', 'Perfil']) || 'colaborador';
 
     if (!matricula || !nomeCompleto) {
       errors.push({ row: index + 1, error: 'Matricula e nome_completo sao obrigatorios' });
       continue;
     }
+    if (senha.length < 10) {
+      errors.push({ row: index + 1, error: 'A senha temporaria deve ter pelo menos 10 caracteres' });
+      continue;
+    }
 
     try {
+      const existing = await getDb('SELECT id FROM colaboradores WHERE matricula = ?', [matricula]);
       await runDb(
         `INSERT INTO colaboradores (matricula, nome_completo, cpf, telefone_whatsapp, email, cargo, setor, unidade, tipo_colaborador, status, data_admissao, senha_hash, perfil, primeiro_acesso, senha_temporaria, data_ultima_troca_senha)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, true, true, null)
@@ -226,17 +233,18 @@ router.post('/colaboradores', authenticateToken, authorizeRoles('admin'), upload
           normalizeValue(row, ['tipo_colaborador', 'Tipo']),
           normalizeValue(row, ['status', 'Status']) || 'Ativo',
           normalizeValue(row, ['data_admissao', 'DataAdmissao']),
-          bcrypt.hashSync(senha, 10),
+          await bcrypt.hash(senha, 10),
           perfil
         ]
       );
+      if (!existing) temporaryCredentials.push({ matricula, nome_completo: nomeCompleto, senha_temporaria: senha });
       imported += 1;
     } catch (err) {
       errors.push({ row: index + 1, error: err.message });
     }
   }
 
-  res.json({ imported, errors });
+  res.json({ imported, errors, credenciais_temporarias: temporaryCredentials });
 });
 
 router.post('/prontuario_motoristas', authenticateToken, authorizeRoles('admin'), uploadSingleFile, async (req, res) => {

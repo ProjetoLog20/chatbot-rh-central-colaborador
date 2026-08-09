@@ -1,3 +1,5 @@
+import { clearToken } from './auth.js';
+
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 function getHeaders(token) {
@@ -15,9 +17,7 @@ async function request(path, options = {}) {
   const body = await res.json().catch(() => null);
 
   if (res.status === 401 && token) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    sessionStorage.removeItem('firstAccess');
+    clearToken();
     if (window.location.pathname !== '/login') {
       window.location.assign('/login');
     }
@@ -318,8 +318,7 @@ export async function importOnDemandArmazemFile(file, operatorFile, competencia 
   });
   const body = await res.json().catch(() => null);
   if (res.status === 401 && token) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    clearToken();
     window.location.assign('/login');
   }
   if (!res.ok) throw body || { error: 'Erro ao importar o arquivo On Demand' };

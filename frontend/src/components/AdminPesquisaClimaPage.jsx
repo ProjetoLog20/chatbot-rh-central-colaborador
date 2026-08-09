@@ -19,7 +19,7 @@ export default function AdminPesquisaClimaPage() {
   const fetchPesquisas = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:4000/api/pesquisa-clima', {
+      const res = await fetch('/api/pesquisa-clima', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -39,7 +39,7 @@ export default function AdminPesquisaClimaPage() {
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:4000/api/pesquisa-clima', {
+      const res = await fetch('/api/pesquisa-clima', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -61,7 +61,7 @@ export default function AdminPesquisaClimaPage() {
   const handleActivatePesquisa = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`http://localhost:4000/api/pesquisa-clima/${id}`, {
+      await fetch(`/api/pesquisa-clima/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -79,7 +79,7 @@ export default function AdminPesquisaClimaPage() {
   const handleViewDashboard = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:4000/api/pesquisa-clima/${id}/dashboard`, {
+      const res = await fetch(`/api/pesquisa-clima/${id}/dashboard`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();

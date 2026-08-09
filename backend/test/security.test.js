@@ -42,11 +42,55 @@ test('cabecalhos de seguranca e CSP sao enviados pela API', async () => {
   assert.equal(response.headers['cache-control'], 'no-store');
 });
 
+test('CORS permite portas locais apenas fora de producao e rejeita origens externas', async () => {
+  const local = await request(app)
+    .get('/api/health')
+    .set('Origin', 'http://127.0.0.1:4100')
+    .expect(200);
+  assert.equal(local.headers['access-control-allow-origin'], 'http://127.0.0.1:4100');
+
+  const blocked = await request(app)
+    .get('/api/health')
+    .set('Origin', 'https://origem-nao-autorizada.example')
+    .expect(403);
+  assert.equal(blocked.body.error, 'Origem nao autorizada');
+  assert.ok(blocked.body.request_id);
+});
+
 test('Yuri exige autenticacao antes de processar mensagens', async () => {
   await request(app)
     .post('/api/yuri/chat')
     .send({ message: 'Ola, Yuri' })
     .expect(401);
+});
+
+test('rotacao de JWT aceita temporariamente o segredo anterior sem aceitar outro algoritmo', async () => {
+  process.env.JWT_SECRET_PREVIOUS = 'segredo-anterior-para-rotacao-controlada';
+  try {
+    const previousToken = jwt.sign(
+      { id: 7654321, matricula: 'rotacao-jwt', perfil: 'colaborador' },
+      process.env.JWT_SECRET_PREVIOUS,
+      { expiresIn: '5m', algorithm: 'HS256' }
+    );
+    await request(app)
+      .post('/api/yuri/chat')
+      .set('Authorization', `Bearer ${previousToken}`)
+      .send({ message: 'Teste de rotacao' })
+      .expect(200);
+
+    const unexpectedAlgorithm = jwt.sign(
+      { id: 7654321, matricula: 'rotacao-jwt', perfil: 'colaborador' },
+      process.env.JWT_SECRET_PREVIOUS,
+      { expiresIn: '5m', algorithm: 'HS384' }
+    );
+    await request(app)
+      .post('/api/yuri/chat')
+      .set('Authorization', `Bearer ${unexpectedAlgorithm}`)
+      .send({ message: 'Algoritmo inesperado' })
+      .expect(401);
+  } finally {
+    delete process.env.JWT_SECRET_PREVIOUS;
+  }
 });
 
 test('restricao geografica permite Parana e bloqueia outros estados', async () => {
@@ -297,7 +341,7 @@ test('administrador reseta senha e servidor confirma o novo primeiro acesso', as
       .expect(200);
 
     assert.equal(response.body.reset_realizado, true);
-    assert.equal(response.body.senha_temporaria, 'log20');
+    assert.match(response.body.senha_temporaria, /^[A-HJ-NP-Za-km-z2-9]{10,32}$/);
     assert.equal(Boolean(response.body.colaborador.primeiro_acesso), true);
     assert.equal(Boolean(response.body.colaborador.senha_temporaria), true);
 
@@ -305,7 +349,7 @@ test('administrador reseta senha e servidor confirma o novo primeiro acesso', as
       'SELECT senha_hash, primeiro_acesso, senha_temporaria, data_ultima_troca_senha FROM colaboradores WHERE id = ?',
       [colaborador.id]
     );
-    assert.equal(await bcrypt.compare('log20', after.senha_hash), true);
+    assert.equal(await bcrypt.compare(response.body.senha_temporaria, after.senha_hash), true);
     assert.equal(await bcrypt.compare('senha-antiga-segura', after.senha_hash), false);
     assert.equal(Boolean(after.primeiro_acesso), true);
     assert.equal(Boolean(after.senha_temporaria), true);

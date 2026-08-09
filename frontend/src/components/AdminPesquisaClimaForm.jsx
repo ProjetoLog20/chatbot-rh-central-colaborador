@@ -61,7 +61,7 @@ export default function AdminPesquisaClimaForm({ pesquisa, onSave, onCancel }) {
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(
-        `http://localhost:4000/api/pesquisa-clima/${pesquisa.id}/perguntas`,
+        `/api/pesquisa-clima/${pesquisa.id}/perguntas`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const data = await res.json();
@@ -119,7 +119,7 @@ export default function AdminPesquisaClimaForm({ pesquisa, onSave, onCancel }) {
 
       if (!pesquisaId) {
         const resCreatePesquisa = await fetch(
-          'http://localhost:4000/api/pesquisa-clima',
+          '/api/pesquisa-clima',
           {
             method: 'POST',
             headers: {
@@ -145,7 +145,7 @@ export default function AdminPesquisaClimaForm({ pesquisa, onSave, onCancel }) {
         const dataPesquisa = await resCreatePesquisa.json();
         pesquisaId = dataPesquisa.id;
       } else {
-        await fetch(`http://localhost:4000/api/pesquisa-clima/${pesquisaId}`, {
+        await fetch(`/api/pesquisa-clima/${pesquisaId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -158,7 +158,7 @@ export default function AdminPesquisaClimaForm({ pesquisa, onSave, onCancel }) {
       // Adicionar perguntas novas (que têm ID temporário)
       for (const pergunta of perguntas) {
         if (pergunta.id?.startsWith('temp_')) {
-          await fetch(`http://localhost:4000/api/pesquisa-clima/${pesquisaId}/perguntas`, {
+          await fetch(`/api/pesquisa-clima/${pesquisaId}/perguntas`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

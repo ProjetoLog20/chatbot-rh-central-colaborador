@@ -56,7 +56,7 @@ async function sendPushForNotification(notification) {
     `SELECT p.id, p.endpoint, p.p256dh, p.auth, c.perfil
      FROM push_inscricoes p
      JOIN colaboradores c ON c.id = p.colaborador_id
-     WHERE p.ativo = 1 AND COALESCE(c.status, 'Ativo') = 'Ativo'`
+     WHERE p.ativo = 1 AND LOWER(TRIM(COALESCE(c.status, 'ativo'))) = 'ativo'`
   );
   const targets = subscriptions.filter((item) => matchesAudience(notification, item.perfil));
   const payload = JSON.stringify({
@@ -70,27 +70,31 @@ async function sendPushForNotification(notification) {
   });
 
   const result = { configured: true, targeted: targets.length, sent: 0, failed: 0, expired: 0 };
-  await Promise.all(targets.map(async (target) => {
-    try {
-      await webpush.sendNotification(
-        { endpoint: target.endpoint, keys: { p256dh: target.p256dh, auth: target.auth } },
-        payload,
-        { TTL: 60 * 60 * 24, urgency: notification.prioridade === 'urgente' ? 'high' : 'normal' }
-      );
-      result.sent += 1;
-    } catch (error) {
-      result.failed += 1;
-      if (error.statusCode === 404 || error.statusCode === 410) {
-        result.expired += 1;
-        await deactivateSubscription(target.id, `Push expirado (${error.statusCode})`);
-      } else {
-        await db.run(
-          `UPDATE push_inscricoes SET ultimo_erro = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-          [String(error.message || 'Falha no envio').slice(0, 500), target.id]
+  const batchSize = 25;
+  for (let offset = 0; offset < targets.length; offset += batchSize) {
+    const batch = targets.slice(offset, offset + batchSize);
+    await Promise.all(batch.map(async (target) => {
+      try {
+        await webpush.sendNotification(
+          { endpoint: target.endpoint, keys: { p256dh: target.p256dh, auth: target.auth } },
+          payload,
+          { TTL: 60 * 60 * 24, urgency: notification.prioridade === 'urgente' ? 'high' : 'normal' }
         );
+        result.sent += 1;
+      } catch (error) {
+        result.failed += 1;
+        if (error.statusCode === 404 || error.statusCode === 410) {
+          result.expired += 1;
+          await deactivateSubscription(target.id, `Push expirado (${error.statusCode})`);
+        } else {
+          await db.run(
+            `UPDATE push_inscricoes SET ultimo_erro = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+            [String(error.message || 'Falha no envio').slice(0, 500), target.id]
+          );
+        }
       }
-    }
-  }));
+    }));
+  }
 
   return result;
 }

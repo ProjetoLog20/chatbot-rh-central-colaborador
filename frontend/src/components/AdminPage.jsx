@@ -32,6 +32,31 @@ const actionCategories = [
   ['comite_de_gente', 'Comitê de Gente']
 ];
 
+function downloadTemporaryCredentials(credentials) {
+  if (!Array.isArray(credentials) || !credentials.length) return false;
+  const escapeCell = (value) => {
+    let text = String(value ?? '');
+    if (/^[=+\-@]/.test(text)) text = `'${text}`;
+    return `"${text.replace(/"/g, '""')}"`;
+  };
+  const rows = [
+    ['matricula', 'nome_completo', 'senha_temporaria'],
+    ...credentials.map((item) => [item.matricula, item.nome_completo, item.senha_temporaria])
+  ];
+  const blob = new Blob([`\uFEFF${rows.map((row) => row.map(escapeCell).join(';')).join('\r\n')}`], {
+    type: 'text/csv;charset=utf-8'
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `credenciais_temporarias_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  return true;
+}
+
 const emptyCollaboratorForm = {
   matricula: '',
   nome_completo: '',
@@ -372,7 +397,7 @@ function PasswordResetDialog({ dialog, onConfirm, onClose }) {
 
   async function copyTemporaryPassword() {
     try {
-      await navigator.clipboard.writeText(dialog.temporaryPassword || 'log20');
+      await navigator.clipboard.writeText(dialog.temporaryPassword || '');
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
@@ -411,7 +436,7 @@ function PasswordResetDialog({ dialog, onConfirm, onClose }) {
             <div className="password-reset-credential">
               <span>Senha temporária</span>
               <div>
-                <strong>{dialog.temporaryPassword || 'log20'}</strong>
+                <strong>{dialog.temporaryPassword}</strong>
                 <button type="button" onClick={copyTemporaryPassword} aria-label="Copiar senha temporária">
                   <CopySimple size={19} weight="bold" /> {copied ? 'Copiada' : 'Copiar'}
                 </button>
@@ -442,7 +467,7 @@ function PasswordResetDialog({ dialog, onConfirm, onClose }) {
             </p>
             <dl className="password-reset-user">
               <div><dt>Matrícula</dt><dd>{dialog.user.matricula}</dd></div>
-              <div><dt>Nova senha temporária</dt><dd>log20</dd></div>
+              <div><dt>Nova senha temporária</dt><dd>Gerada com segurança após confirmar</dd></div>
             </dl>
             <p className="password-reset-warning">
               {isWorking ? 'Aguarde enquanto o reset é confirmado pelo servidor…' : 'A senha atual deixará de funcionar e o usuário deverá criar uma nova senha no próximo acesso.'}
@@ -549,7 +574,8 @@ export default function AdminPage() {
     try {
       const result = await importFile(path, files[0]);
       const total = result.imported ?? ((result.created || 0) + (result.updated || 0));
-      setMessage(`Importacao concluida: ${total} registro(s).`);
+      const downloadedCredentials = downloadTemporaryCredentials(result.credenciais_temporarias);
+      setMessage(`Importacao concluida: ${total} registro(s).${downloadedCredentials ? ' As credenciais dos novos usuarios foram baixadas; guarde o arquivo em local seguro.' : ''}`);
       setImportErrors(result.errors || []);
       refresh();
     } catch (err) {
@@ -705,7 +731,7 @@ export default function AdminPage() {
     setPasswordResetDialog((current) => ({ ...current, status: 'loading', error: '' }));
     try {
       const result = await resetCollaboratorPassword(user.id);
-      const temporaryPassword = result?.senha_temporaria || 'log20';
+      const temporaryPassword = result?.senha_temporaria || '';
       setPasswordResetDialog((current) => ({ ...current, status: 'success', temporaryPassword }));
       setMessage(`Senha de ${user.nome_completo} resetada com sucesso.`);
       await refresh();
@@ -740,7 +766,7 @@ export default function AdminPage() {
         setMessage('Cadastro atualizado. Os acessos já refletem o perfil e o status escolhidos.');
       } else {
         const result = await createCollaborator(collaboratorForm);
-        setMessage(`Usuário criado. Senha temporária: ${result.senha_temporaria || 'log20'}.`);
+        setMessage(`Usuário criado. Senha temporária: ${result.senha_temporaria}. Copie e entregue por um canal seguro.`);
       }
       startCreateCollaborator();
       await refresh();
@@ -928,7 +954,7 @@ export default function AdminPage() {
               <div className="user-form-title">
                 <div>
                   <h3>{editingCollaboratorId ? 'Editar cadastro' : 'Cadastrar novo usuário'}</h3>
-                  <small>Campos com * são obrigatórios. A senha inicial padrão é <strong>log20</strong>.</small>
+                  <small>Campos com * são obrigatórios. Se a senha ficar vazia, o servidor gera uma credencial temporária individual.</small>
                 </div>
                 <span className={`user-access-badge ${collaboratorForm.perfil}`}>{collaboratorForm.perfil}</span>
               </div>
@@ -947,7 +973,7 @@ export default function AdminPage() {
                 <label>Status<select value={collaboratorForm.status} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, status: e.target.value })}><option value="Ativo">Ativo</option><option value="Afastado">Afastado</option><option value="Desligado">Desligado</option></select></label>
                 <label>Usuário On Demand<input value={collaboratorForm.usuario_wms} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, usuario_wms: e.target.value })} /></label>
                 <label>Código operacional<input value={collaboratorForm.codigo_operacional} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, codigo_operacional: e.target.value })} /></label>
-                <label>Senha temporária<input type="password" placeholder={editingCollaboratorId ? 'Vazio mantém a senha atual' : 'Padrão: log20'} value={collaboratorForm.senha} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, senha: e.target.value })} /></label>
+                <label>Senha temporária<input type="password" placeholder={editingCollaboratorId ? 'Vazio mantém a senha atual' : 'Vazio gera uma senha segura'} value={collaboratorForm.senha} onChange={(e) => setCollaboratorForm({ ...collaboratorForm, senha: e.target.value })} /></label>
               </div>
               <fieldset className="user-access-selector">
                 <legend>Perfil e acessos *</legend>

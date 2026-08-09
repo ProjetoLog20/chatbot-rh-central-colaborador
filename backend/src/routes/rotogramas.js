@@ -7,9 +7,11 @@ const { importWorkbook } = require('../../scripts/importRotogramaXlsx');
 const { normalizeCoordinatePair } = require('../utils/rotogramaCoordinates');
 
 const router = express.Router();
+const configuredUploadLimitMb = Number(process.env.ROTOGRAMA_UPLOAD_MAX_MB || 50);
+const uploadLimitMb = Math.min(100, Math.max(5, Number.isFinite(configuredUploadLimitMb) ? configuredUploadLimitMb : 50));
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 300 * 1024 * 1024 },
+  limits: { fileSize: uploadLimitMb * 1024 * 1024 },
   fileFilter(req, file, callback) {
     const ext = file.originalname.split('.').pop().toLowerCase();
     if (ext !== 'xlsx') {
@@ -22,7 +24,7 @@ const upload = multer({
 function uploadError(err, req, res, next) {
   if (!err) return next();
   if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(400).json({ error: 'Arquivo excede o limite de 300 MB' });
+    return res.status(400).json({ error: `Arquivo excede o limite de ${uploadLimitMb} MB` });
   }
   return res.status(400).json({ error: err.message || 'Erro no upload do arquivo' });
 }
@@ -629,6 +631,9 @@ router.get('/admin/importacoes', authenticateToken, authorizeRoles('admin'), asy
 
 router.post('/importar', authenticateToken, authorizeRoles('admin'), upload.single('file'), uploadError, async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Arquivo nao enviado' });
+  if (req.file.buffer?.[0] !== 0x50 || req.file.buffer?.[1] !== 0x4b) {
+    return res.status(400).json({ error: 'O conteudo enviado nao e um arquivo XLSX valido.' });
+  }
   try {
     const result = await importWorkbook({ buffer: req.file.buffer });
     return res.json(result);

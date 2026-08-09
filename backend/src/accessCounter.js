@@ -1,6 +1,7 @@
 const db = require('./db');
+let accessCounterReady = null;
 
-async function ensureAccessCounterTable() {
+async function initializeAccessCounterTable() {
   await db.run(`
     CREATE TABLE IF NOT EXISTS acessos_app (
       id INTEGER PRIMARY KEY DEFAULT 1,
@@ -51,6 +52,16 @@ async function ensureAccessCounterTable() {
   await backfillRetroactiveHistory();
 }
 
+function ensureAccessCounterTable() {
+  if (!accessCounterReady) {
+    accessCounterReady = initializeAccessCounterTable().catch((error) => {
+      accessCounterReady = null;
+      throw error;
+    });
+  }
+  return accessCounterReady;
+}
+
 function getSaoPauloDateTime() {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Sao_Paulo',
@@ -91,46 +102,43 @@ async function incrementAccessCounter(req) {
   try {
     await ensureAccessCounterTable();
 
-    const row = await db.get('SELECT * FROM acessos_app WHERE id = 1');
-    if (!row) {
-      await db.run(
-        `INSERT INTO acessos_app (id, total_acessos, total_acessos_hoje, ultima_data, ultimo_acesso_em)
-         VALUES (1, 1, 1, ?, CURRENT_TIMESTAMP)`,
+    await db.withTransaction(async (transaction) => {
+      const row = await transaction.get('SELECT * FROM acessos_app WHERE id = 1');
+      if (!row) {
+        await transaction.run(
+          `INSERT INTO acessos_app (id, total_acessos, total_acessos_hoje, ultima_data, ultimo_acesso_em)
+           VALUES (1, 1, 1, ?, CURRENT_TIMESTAMP)`,
+          [today]
+        );
+      } else if (row.ultima_data === today) {
+        await transaction.run(
+          `UPDATE acessos_app
+           SET total_acessos = total_acessos + 1,
+               total_acessos_hoje = total_acessos_hoje + 1,
+               ultimo_acesso_em = CURRENT_TIMESTAMP
+           WHERE id = 1`
+        );
+      } else {
+        await transaction.run(
+          `UPDATE acessos_app
+           SET total_acessos = total_acessos + 1,
+               total_acessos_hoje = 1,
+               ultima_data = ?,
+               ultimo_acesso_em = CURRENT_TIMESTAMP
+           WHERE id = 1`,
+          [today]
+        );
+      }
+
+      await transaction.run(
+        'INSERT INTO acessos_diarios (data, total) VALUES (?, 1) ON CONFLICT(data) DO UPDATE SET total = acessos_diarios.total + 1',
         [today]
       );
-      await db.run('INSERT INTO acessos_diarios (data, total) VALUES (?, ?) ON CONFLICT(data) DO UPDATE SET total = acessos_diarios.total + 1', [today, 1]);
-      await db.run(
+      await transaction.run(
         'INSERT INTO acessos_horarios (data, hora, total) VALUES (?, ?, 1) ON CONFLICT(data, hora) DO UPDATE SET total = acessos_horarios.total + 1',
         [today, hour]
       );
-      return;
-    }
-
-    if (row.ultima_data === today) {
-      await db.run(
-        `UPDATE acessos_app
-         SET total_acessos = total_acessos + 1,
-             total_acessos_hoje = total_acessos_hoje + 1,
-             ultimo_acesso_em = CURRENT_TIMESTAMP
-         WHERE id = 1`
-      );
-    } else {
-      await db.run(
-        `UPDATE acessos_app
-         SET total_acessos = total_acessos + 1,
-             total_acessos_hoje = 1,
-             ultima_data = ?,
-             ultimo_acesso_em = CURRENT_TIMESTAMP
-         WHERE id = 1`,
-        [today]
-      );
-    }
-
-    await db.run('INSERT INTO acessos_diarios (data, total) VALUES (?, 1) ON CONFLICT(data) DO UPDATE SET total = acessos_diarios.total + 1', [today]);
-    await db.run(
-      'INSERT INTO acessos_horarios (data, hora, total) VALUES (?, ?, 1) ON CONFLICT(data, hora) DO UPDATE SET total = acessos_horarios.total + 1',
-      [today, hour]
-    );
+    });
 
     if (process.env.NODE_ENV !== 'production') {
       console.log(`[acessos] ${req.method} ${path}`);

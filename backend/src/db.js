@@ -7,6 +7,7 @@ const { Pool } = require('pg');
 const usePostgres = Boolean(process.env.DATABASE_URL);
 let sqliteDb = null;
 let pool = null;
+let sqliteTransactionQueue = Promise.resolve();
 
 function normalizeSql(sql) {
   let index = 0;
@@ -853,11 +854,24 @@ function connectSqlite() {
 }
 
 function connectPostgres() {
+  const sslEnabled = process.env.NODE_ENV === 'production' || /sslmode=require/i.test(process.env.DATABASE_URL || '');
+  const rejectUnauthorized = String(process.env.DATABASE_SSL_REJECT_UNAUTHORIZED || 'true').toLowerCase() !== 'false';
+  const configuredPoolMax = Number(process.env.DATABASE_POOL_MAX);
+  const configuredStatementTimeout = Number(process.env.DATABASE_STATEMENT_TIMEOUT_MS);
+  const poolMax = Number.isFinite(configuredPoolMax) ? Math.min(50, Math.max(2, configuredPoolMax)) : 15;
+  const statementTimeout = Number.isFinite(configuredStatementTimeout)
+    ? Math.max(5_000, configuredStatementTimeout)
+    : 120_000;
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' || /sslmode=require/i.test(process.env.DATABASE_URL || '')
-      ? { rejectUnauthorized: false }
-      : false,
+    ssl: sslEnabled ? { rejectUnauthorized } : false,
+    max: poolMax,
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 10_000,
+    statement_timeout: statementTimeout,
+  });
+  pool.on('error', (error) => {
+    console.error('Falha inesperada em conexao ociosa do PostgreSQL:', error?.code || error?.name || 'erro');
   });
   return pool;
 }
@@ -987,6 +1001,59 @@ function query(sql, params = []) {
   });
 }
 
+async function withTransaction(work) {
+  if (typeof work !== 'function') throw new TypeError('withTransaction exige uma funcao');
+
+  if (usePostgres) {
+    const connection = await pool.connect();
+    const transaction = {
+      query(sql, params = []) {
+        return connection.query(normalizeSql(sql), params);
+      },
+      all(sql, params = []) {
+        return connection.query(normalizeSql(sql), params).then((result) => result.rows);
+      },
+      get(sql, params = []) {
+        return connection.query(normalizeSql(sql), params).then((result) => result.rows[0]);
+      },
+      async run(sql, params = []) {
+        const result = await connection.query(normalizeSql(sql), params);
+        return {
+          lastID: result.rows?.[0]?.id ?? null,
+          changes: result.rowCount
+        };
+      }
+    };
+
+    try {
+      await connection.query('BEGIN');
+      const result = await work(transaction);
+      await connection.query('COMMIT');
+      return result;
+    } catch (error) {
+      await connection.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  const execute = async () => {
+    await run('BEGIN IMMEDIATE');
+    try {
+      const result = await work({ query, all, get, run });
+      await run('COMMIT');
+      return result;
+    } catch (error) {
+      await run('ROLLBACK').catch(() => {});
+      throw error;
+    }
+  };
+  const pending = sqliteTransactionQueue.then(execute, execute);
+  sqliteTransactionQueue = pending.catch(() => {});
+  return pending;
+}
+
 function serialize(fn) {
   if (!usePostgres && typeof sqliteDb.serialize === 'function') {
     return sqliteDb.serialize(fn);
@@ -1014,6 +1081,7 @@ module.exports = {
   get,
   run,
   query,
+  withTransaction,
   serialize,
   close,
 };
