@@ -20,7 +20,7 @@ import {
   resetCollaboratorPassword,
   getAdminModulos,
   updateAdminModulo,
-  getAdminAccessMetrics,
+  getAdminLoginMetrics,
   getAdminSatisfacaoYuri
 } from '../api.js';
 import AdminCampeoesSeguranca from './AdminCampeoesSeguranca.jsx';
@@ -136,8 +136,8 @@ function AccessChart({
   monthlyHistory = [],
   hourlyHistory = [],
   summary = {},
-  retroactiveSource = null,
-  totalAccesses = 0
+  totalLogins = 0,
+  uniqueUsersTotal = 0
 }) {
   const values = history.map((item) => Number(item.total || 0));
   const maxValue = Math.max(...values, 1);
@@ -147,23 +147,23 @@ function AccessChart({
   const monthlyMax = Math.max(...monthlyHistory.map((item) => Number(item.total || 0)), 1);
 
   if (!history.length) {
-    return <p>Nenhum dado de acesso registrado ainda.</p>;
+    return <p>Nenhum login autenticado registrado ainda.</p>;
   }
 
   return (
     <div className="access-analytics">
       <div className="access-summary-grid">
-        <article><small>Melhor dia</small><strong>{formatAccessDate(summary.melhor_dia?.data)}</strong><span>{formatAccessNumber(summary.melhor_dia?.total)} acessos</span></article>
-        <article><small>Média diária</small><strong>{formatAccessNumber(summary.media_acessos_dia, 1)}</strong><span>acessos por dia</span></article>
-        <article><small>Horário de pico</small><strong>{summary.horario_pico ? `${String(summary.horario_pico.hora).padStart(2, '0')}h` : 'Em formação'}</strong><span>{formatAccessNumber(summary.horario_pico?.total)} acessos detalhados</span></article>
-        <article><small>Dias registrados</small><strong>{formatAccessNumber(summary.dias_registrados || history.length)}</strong><span>{formatAccessNumber(summary.dias_com_detalhamento_horario)} com horários</span></article>
+        <article><small>Melhor dia</small><strong>{formatAccessDate(summary.melhor_dia?.data)}</strong><span>{formatAccessNumber(summary.melhor_dia?.total)} logins</span></article>
+        <article><small>Média diária</small><strong>{formatAccessNumber(summary.media_logins_dia, 1)}</strong><span>logins por dia</span></article>
+        <article><small>Horário de pico</small><strong>{summary.horario_pico ? `${String(summary.horario_pico.hora).padStart(2, '0')}h` : 'Em formação'}</strong><span>{formatAccessNumber(summary.horario_pico?.total)} logins</span></article>
+        <article><small>Dias registrados</small><strong>{formatAccessNumber(summary.dias_registrados || history.length)}</strong><span>com login autenticado</span></article>
       </div>
 
       {monthlyHistory.length > 1 ? (
         <section className="access-chart-card access-monthly-card">
           <div className="access-chart-heading">
-            <div><small>Visão executiva</small><h3>Evolução mensal dos acessos</h3></div>
-            <span>{formatAccessDate(retroactiveSource?.periodo_inicio)} a {formatAccessDate(retroactiveSource?.periodo_fim)}</span>
+            <div><small>Visão executiva</small><h3>Evolução mensal dos logins</h3></div>
+            <span>Medição de autenticações concluídas</span>
           </div>
           <div className="access-monthly-chart">
             {monthlyHistory.map((item) => {
@@ -186,7 +186,7 @@ function AccessChart({
 
       <section className="access-chart-card">
         <div className="access-chart-heading">
-          <div><small>Evolução</small><h3>Acessos por dia</h3></div>
+          <div><small>Evolução</small><h3>Logins por dia</h3></div>
           <span>Últimos {recentHistory.length} dias registrados</span>
         </div>
         {hasDailySeries ? (
@@ -194,7 +194,7 @@ function AccessChart({
             {recentHistory.map((item) => {
               const height = Math.max(5, (Number(item.total || 0) / maxValue) * 100);
               return (
-                <div className="access-bar-column" key={item.data} title={`${formatAccessDate(item.data)}: ${item.total} acessos`}>
+                <div className="access-bar-column" key={item.data} title={`${formatAccessDate(item.data)}: ${item.total} logins de ${item.usuarios_unicos} usuário(s)`}>
                   <strong>{item.total}</strong>
                   <div className="access-bar-track"><span style={{ height: `${height}%` }} /></div>
                   <small>{String(item.data).slice(5).replace('-', '/')}</small>
@@ -207,7 +207,7 @@ function AccessChart({
             <span className="access-series-empty-icon" aria-hidden="true">▥</span>
             <div>
               <strong>Histórico diário em formação</strong>
-              <p>O total geral foi preservado. A comparação entre dias aparecerá automaticamente após novos dias de uso.</p>
+              <p>A comparação entre dias aparecerá automaticamente após novos logins autenticados.</p>
             </div>
             {recentHistory[0] && (
               <div className="access-series-first-day">
@@ -222,13 +222,13 @@ function AccessChart({
 
       <section className="access-chart-card">
         <div className="access-chart-heading">
-          <div><small>Comportamento</small><h3>Acessos por horário</h3></div>
+          <div><small>Comportamento</small><h3>Logins por horário</h3></div>
           <span>Horário de Brasília</span>
         </div>
-        {summary.dias_com_detalhamento_horario ? (
+        {history.length ? (
           <div className="access-hourly-chart">
             {hourlyHistory.map((item) => (
-              <div className="access-hour-column" key={item.hora} title={`${String(item.hora).padStart(2, '0')}h: ${item.total} acessos`}>
+              <div className="access-hour-column" key={item.hora} title={`${String(item.hora).padStart(2, '0')}h: ${item.total} logins`}>
                 <div className="access-hour-track">
                   <span style={{ height: `${Math.max(item.total ? 4 : 0, (Number(item.total || 0) / hourlyMax) * 100)}%` }} />
                 </div>
@@ -239,7 +239,7 @@ function AccessChart({
         ) : (
           <div className="access-hourly-empty">
             <strong>Detalhamento por horário em formação</strong>
-            <p>Os acessos antigos não possuem horário individual. Este gráfico será preenchido a partir da ativação da nova medição.</p>
+            <p>Este gráfico será preenchido após o primeiro login autenticado.</p>
           </div>
         )}
       </section>
@@ -248,29 +248,26 @@ function AccessChart({
         <details className="access-data-note access-data-note-total">
           <summary>
             <span>
-              <small>Acumulado total</small>
-              <strong>{formatAccessNumber(totalAccesses)} acessos</strong>
+              <small>Logins autenticados</small>
+              <strong>{formatAccessNumber(totalLogins)} logins</strong>
             </span>
             <span className="access-disclosure-arrow" aria-hidden="true">⌄</span>
           </summary>
           <p>
-            Soma consolidada do histórico do chamado com os acessos reais registrados após
-            o encerramento do período retroativo, sem duplicidade.
+            Cada registro corresponde a uma senha validada com sucesso e à emissão de um token de sessão.
           </p>
         </details>
 
         <details className="access-data-note">
           <summary>
             <span>
-              <small>Acessos do chamado</small>
-              <strong>{formatAccessNumber(retroactiveSource?.total_acessos)} acessos</strong>
+              <small>Usuários únicos</small>
+              <strong>{formatAccessNumber(uniqueUsersTotal)} usuários</strong>
             </span>
             <span className="access-disclosure-arrow" aria-hidden="true">⌄</span>
           </summary>
           <p>
-            {retroactiveSource
-              ? `${retroactiveSource.referencia}: ${formatAccessNumber(retroactiveSource.registros_horarios)} registros horários entre ${formatAccessDate(retroactiveSource.periodo_inicio)} e ${formatAccessDate(retroactiveSource.periodo_fim)}. Origem registrada: ${retroactiveSource.origem}.`
-              : 'Nenhum histórico retroativo foi importado.'}
+            Quantidade de usuários diferentes que concluíram ao menos um login desde o início desta medição.
           </p>
         </details>
       </div>
@@ -492,7 +489,7 @@ export default function AdminPage() {
   const [respostas, setRespostas] = useState([]);
   const [acoes, setAcoes] = useState([]);
   const [modulos, setModulos] = useState([]);
-  const [accessMetrics, setAccessMetrics] = useState(null);
+  const [loginMetrics, setLoginMetrics] = useState(null);
   const [satisfactionMetrics, setSatisfactionMetrics] = useState(null);
   const [message, setMessage] = useState('');
   const [collaboratorForm, setCollaboratorForm] = useState(emptyCollaboratorForm);
@@ -535,13 +532,13 @@ export default function AdminPage() {
   }, []);
 
   async function refresh() {
-    const [col, pr, resp, acoesData, modulosData, accessData, satisfactionData] = await Promise.allSettled([
+    const [col, pr, resp, acoesData, modulosData, loginData, satisfactionData] = await Promise.allSettled([
       getCollaborators(),
       getProntuarios(),
       getRespostas(),
       getAdminAcoes(),
       getAdminModulos(),
-      getAdminAccessMetrics(),
+      getAdminLoginMetrics(),
       getAdminSatisfacaoYuri()
     ]);
 
@@ -550,7 +547,7 @@ export default function AdminPage() {
     if (resp.status === 'fulfilled') setRespostas(resp.value);
     if (acoesData.status === 'fulfilled') setAcoes(acoesData.value);
     if (modulosData.status === 'fulfilled') setModulos(modulosData.value);
-    if (accessData.status === 'fulfilled') setAccessMetrics(accessData.value);
+    if (loginData.status === 'fulfilled') setLoginMetrics(loginData.value);
     if (satisfactionData.status === 'fulfilled') setSatisfactionMetrics(satisfactionData.value);
 
     const failed = [
@@ -559,7 +556,7 @@ export default function AdminPage() {
       resp.status === 'rejected' ? 'chatbot' : null,
       acoesData.status === 'rejected' ? 'acoes' : null,
       modulosData.status === 'rejected' ? 'modulos' : null,
-      accessData.status === 'rejected' ? 'contador de acessos' : null,
+      loginData.status === 'rejected' ? 'contador de logins' : null,
       satisfactionData.status === 'rejected' ? 'satisfação do Yuri' : null
     ].filter(Boolean);
 
@@ -836,8 +833,8 @@ export default function AdminPage() {
         <div className="access-counter-heading">
           <div>
             <span className="access-counter-eyebrow">Visão administrativa</span>
-            <h2>Uso da plataforma</h2>
-            <p>Acompanhe o volume e os horários de acesso ao Yuri.</p>
+            <h2>Logins na plataforma</h2>
+            <p>Acompanhe somente autenticações concluídas com sucesso.</p>
           </div>
           <span className="access-counter-private">Somente administradores</span>
         </div>
@@ -846,34 +843,34 @@ export default function AdminPage() {
             <span className="access-primary-icon" aria-hidden="true">↗</span>
             <div>
               <small>Total acumulado</small>
-              <strong>{Number(accessMetrics?.total_acessos || 0).toLocaleString('pt-BR')}</strong>
-              <span>acessos desde abril de 2026</span>
+              <strong>{Number(loginMetrics?.total_logins || 0).toLocaleString('pt-BR')}</strong>
+              <span>logins desde a ativação da medição</span>
             </div>
           </article>
           <article className="access-primary-card">
             <span className="access-primary-icon access-primary-icon-today" aria-hidden="true">●</span>
             <div>
               <small>Movimento de hoje</small>
-              <strong>{Number(accessMetrics?.total_acessos_hoje || 0).toLocaleString('pt-BR')}</strong>
-              <span>acessos registrados hoje</span>
+              <strong>{Number(loginMetrics?.total_logins_hoje || 0).toLocaleString('pt-BR')}</strong>
+              <span>logins autenticados hoje</span>
             </div>
           </article>
           <article className="access-primary-card">
             <span className="access-primary-icon access-primary-icon-date" aria-hidden="true">▣</span>
             <div>
-              <small>Dados atualizados em</small>
-              <strong className="access-primary-date">{formatAccessDate(accessMetrics?.ultima_data)}</strong>
-              <span>fuso horário de Brasília</span>
+              <small>Usuários únicos hoje</small>
+              <strong className="access-primary-date">{Number(loginMetrics?.usuarios_unicos_hoje || 0).toLocaleString('pt-BR')}</strong>
+              <span>pessoas que concluíram login</span>
             </div>
           </article>
         </div>
         <AccessChart
-          history={accessMetrics?.history || []}
-          monthlyHistory={accessMetrics?.monthly_history || []}
-          hourlyHistory={accessMetrics?.hourly_history || []}
-          summary={accessMetrics?.resumo || {}}
-          retroactiveSource={accessMetrics?.fonte_retroativa || null}
-          totalAccesses={accessMetrics?.total_acessos || 0}
+          history={loginMetrics?.history || []}
+          monthlyHistory={loginMetrics?.monthly_history || []}
+          hourlyHistory={loginMetrics?.hourly_history || []}
+          summary={loginMetrics?.resumo || {}}
+          totalLogins={loginMetrics?.total_logins || 0}
+          uniqueUsersTotal={loginMetrics?.usuarios_unicos_total || 0}
         />
       </section>
 
