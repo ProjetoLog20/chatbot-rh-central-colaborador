@@ -214,6 +214,74 @@ test('request id valido e preservado para rastreabilidade', async () => {
   assert.equal(response.headers['x-request-id'], 'teste-seguranca-123');
 });
 
+test('contador registra somente login que emite token autenticado', async () => {
+  const suffix = Date.now();
+  const matricula = `login-metrica-${suffix}`;
+  const matriculaPrimeiroAcesso = `login-primeiro-acesso-${suffix}`;
+  const senha = 'Senha-segura-para-metrica-2026';
+  const senhaHash = await bcrypt.hash(senha, 4);
+
+  await db.run(
+    `INSERT INTO colaboradores
+     (matricula, nome_completo, senha_hash, perfil, status, primeiro_acesso, senha_temporaria)
+     VALUES (?, 'Usuario Metrica Login', ?, 'admin', 'Ativo', 0, 0)`,
+    [matricula, senhaHash]
+  );
+  await db.run(
+    `INSERT INTO colaboradores
+     (matricula, nome_completo, senha_hash, perfil, status, primeiro_acesso, senha_temporaria)
+     VALUES (?, 'Usuario Primeiro Acesso', ?, 'colaborador', 'Ativo', 1, 1)`,
+    [matriculaPrimeiroAcesso, senhaHash]
+  );
+  const usuario = await db.get('SELECT id FROM colaboradores WHERE matricula = ?', [matricula]);
+  const usuarioPrimeiroAcesso = await db.get(
+    'SELECT id FROM colaboradores WHERE matricula = ?',
+    [matriculaPrimeiroAcesso]
+  );
+
+  try {
+    const login = await request(app)
+      .post('/api/auth/login')
+      .send({ matricula, senha })
+      .expect(200);
+    assert.ok(login.body.token);
+
+    const primeiroAcesso = await request(app)
+      .post('/api/auth/login')
+      .send({ matricula: matriculaPrimeiroAcesso, senha })
+      .expect(200);
+    assert.equal(primeiroAcesso.body.requiresPasswordChange, true);
+    assert.equal(primeiroAcesso.body.token, undefined);
+
+    const eventos = await db.all(
+      `SELECT colaborador_id, data, hora
+         FROM logins_autenticados
+        WHERE colaborador_id IN (?, ?)`,
+      [usuario.id, usuarioPrimeiroAcesso.id]
+    );
+    assert.equal(eventos.length, 1);
+    assert.equal(Number(eventos[0].colaborador_id), Number(usuario.id));
+    assert.match(eventos[0].data, /^\d{4}-\d{2}-\d{2}$/);
+    assert.ok(Number(eventos[0].hora) >= 0 && Number(eventos[0].hora) <= 23);
+
+    const adminToken = jwt.sign(
+      { id: usuario.id, matricula, perfil: 'admin' },
+      process.env.JWT_SECRET,
+      { expiresIn: '5m' }
+    );
+    const metrics = await request(app)
+      .get('/api/admin/logins')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    assert.ok(metrics.body.total_logins >= 1);
+    assert.ok(metrics.body.usuarios_unicos_total >= 1);
+    assert.ok(metrics.body.history.some((item) => item.data === eventos[0].data));
+  } finally {
+    await db.run('DELETE FROM logins_autenticados WHERE colaborador_id IN (?, ?)', [usuario.id, usuarioPrimeiroAcesso.id]);
+    await db.run('DELETE FROM colaboradores WHERE id IN (?, ?)', [usuario.id, usuarioPrimeiroAcesso.id]);
+  }
+});
+
 test('login bloqueia forca bruta sem alterar resposta das tentativas normais', async () => {
   for (let attempt = 1; attempt <= 10; attempt += 1) {
     const response = await request(app)

@@ -420,8 +420,8 @@ export async function addPlanoComment(id, comment) {
   return request(`/planos-melhoria/cards/${id}/comments`, { method: 'POST', body: JSON.stringify({ comment }) });
 }
 
-export async function getAdminAccessMetrics() {
-  return request('/admin/acessos');
+export async function getAdminLoginMetrics() {
+  return request('/admin/logins');
 }
 
 export async function getSatisfacaoYuriStatus() {
