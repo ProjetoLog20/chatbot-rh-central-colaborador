@@ -5,6 +5,7 @@ import {
   ArrowRight,
   ChartBar,
   CheckCircle,
+  ClockCounterClockwise,
   CurrencyDollar,
   BellRinging,
   Handshake,
@@ -125,6 +126,18 @@ const adminCard = {
   action: 'Acessar painel',
   color: '#E87522',
   route: '/admin',
+  badge: 'Admin',
+  featured: true
+};
+
+const adminBancoHorasCard = {
+  id: 'banco_horas',
+  icon: ClockCounterClockwise,
+  title: 'Banco de Horas',
+  description: 'Consulte colaboradores, calendário de ponto e saldos do banco de horas.',
+  action: 'Abrir painel',
+  color: '#005A8C',
+  route: '/admin/banco-de-horas',
   badge: 'Admin',
   featured: true
 };
@@ -375,7 +388,7 @@ export default function Dashboard({ user }) {
       return baseCard;
     });
 
-    return isAdmin ? [adminCard, ...shapedCards] : shapedCards;
+    return isAdmin ? [adminCard, adminBancoHorasCard, ...shapedCards] : shapedCards;
   }, [isAdmin, isDistribution, modulos, prontuario, skap]);
 
   return (
