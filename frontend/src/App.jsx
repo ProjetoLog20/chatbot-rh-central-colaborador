@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
-import { ChartBar, CheckCircle, ClipboardText, FileText, GearSix, House, MapTrifold, Medal, Recycle, UserCircle } from '@phosphor-icons/react';
+import { ChartBar, CheckCircle, ClipboardText, ClockCounterClockwise, FileText, GearSix, House, MapTrifold, Medal, Recycle, UserCircle } from '@phosphor-icons/react';
 import { getUser, clearToken, getToken } from './auth.js';
 import { getPlanosMelhoriaAccess } from './api.js';
 import LoginPage from './components/LoginPage.jsx';
@@ -9,6 +9,7 @@ import Dashboard from './components/Dashboard.jsx';
 import ProfilePage from './components/ProfilePage.jsx';
 import DriverPage from './components/DriverPage.jsx';
 import AdminPage from './components/AdminPage.jsx';
+import AdminBancoHorasPage from './components/AdminBancoHorasPage.jsx';
 import ChatAssistant from './components/ChatAssistant.jsx';
 import NotFound from './components/NotFound.jsx';
 import PesquisaClimaPage from './components/PesquisaClimaPage.jsx';
@@ -61,6 +62,7 @@ const pageMeta = {
   '/3rs': ['Cultura', '3Rs'],
   '/profile': ['Minha conta', 'Meus dados'],
   '/admin': ['Gestão', 'Administração'],
+  '/admin/banco-de-horas': ['Gestão', 'Banco de Horas'],
   '/admin/planos-de-acao': ['Gestão', 'Plano de Melhorias'],
   '/_preview/planos-de-acao': ['Demonstração local', 'Plano de Melhorias']
 };
@@ -76,6 +78,7 @@ function NavIcon({ name }) {
     recycle: Recycle,
     user: UserCircle,
     settings: GearSix,
+    hours: ClockCounterClockwise,
     plans: ClipboardText
   };
   const Icon = icons[name] || House;
@@ -247,6 +250,7 @@ function App() {
             <div className="sidebar-admin">
               <small>ADMIN</small>
               <Link className={location.pathname === '/admin' ? 'active' : ''} to="/admin"><span><NavIcon name="settings" /></span> Administração</Link>
+              <Link className={location.pathname.startsWith('/admin/banco-de-horas') ? 'active' : ''} to="/admin/banco-de-horas"><span><NavIcon name="hours" /></span> Banco de horas</Link>
               {plansAccess?.allowed ? <Link className={location.pathname === '/admin/planos-de-acao' ? 'active' : ''} to="/admin/planos-de-acao"><span><NavIcon name="plans" /></span> Plano de melhorias</Link> : null}
             </div>
           ) : null}
@@ -270,6 +274,7 @@ function App() {
           <Route path="/skap" element={requireAuth(<SkapPage user={user} />)} />
           <Route path="/produtividade" element={requireAuth(<ProdutividadePage user={user} />)} />
           <Route path="/admin" element={requireAuth(<AdminPage />, ['admin'])} />
+          <Route path="/admin/banco-de-horas" element={requireAuth(<AdminBancoHorasPage />, ['admin'])} />
           <Route path="/admin/planos-de-acao" element={plansAccess === null ? <div className="loading">Validando seu acesso...</div> : plansAccess.allowed ? requireAuth(<PlanosMelhoriaRoute user={user} />, ['admin']) : <Navigate to="/admin" replace />} />
           <Route path="/_preview/planos-de-acao" element={import.meta.env.DEV ? <PlanosMelhoriaRoute previewMode user={user} /> : <Navigate to="/login" replace />} />
           <Route path="/admin/pesquisa-clima" element={requireAuth(<AdminPesquisaClimaPage />, ['admin'])} />
