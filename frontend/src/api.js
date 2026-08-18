@@ -424,6 +424,69 @@ export async function getAdminLoginMetrics() {
   return request('/admin/logins');
 }
 
+export async function getBancoHorasImports() {
+  return request('/banco-horas/admin/importacoes');
+}
+
+export async function getBancoHorasImport(id) {
+  return request(`/banco-horas/admin/importacoes/${id}`);
+}
+
+export async function importBancoHorasReport(file) {
+  const token = localStorage.getItem('token');
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE}/banco-horas/admin/importacoes`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData
+  });
+  const body = await res.json().catch(() => null);
+  if (res.status === 401 && token) {
+    clearToken();
+    window.location.assign('/login');
+  }
+  if (!res.ok) throw body || { error: 'Erro ao importar o relatório do Kairos' };
+  return body;
+}
+
+export async function linkBancoHorasIdentity(importId, payload) {
+  return request(`/banco-horas/admin/importacoes/${importId}/vinculo`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function updateBancoHorasBalance(importId, balanceId, payload) {
+  return request(`/banco-horas/admin/importacoes/${importId}/saldos/${balanceId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function classifyBancoHorasDay(importId, dayId, payload) {
+  return request(`/banco-horas/admin/importacoes/${importId}/dias/${dayId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function approveBancoHorasImport(importId, revision) {
+  return request(`/banco-horas/admin/importacoes/${importId}/aprovar`, {
+    method: 'POST',
+    body: JSON.stringify({ revisao: revision })
+  });
+}
+
+export async function getBancoHorasCollaborators() {
+  return request('/banco-horas/admin/colaboradores');
+}
+
+export async function getBancoHorasCollaborator(id, month) {
+  const query = month ? `?mes=${encodeURIComponent(month)}` : '';
+  return request(`/banco-horas/admin/colaboradores/${id}${query}`);
+}
+
 export async function getSatisfacaoYuriStatus() {
   return request('/satisfacao-yuri/status');
 }

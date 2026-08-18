@@ -848,6 +848,181 @@ function connectSqlite() {
       ['observacao_cruzamento', 'TEXT'],
       ['mensagem_rh', 'TEXT']
     ].forEach(([name, definition]) => ensureProdutividadeColumn(name, definition));
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS bh_importacoes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      arquivo_nome TEXT NOT NULL,
+      arquivo_hash TEXT NOT NULL,
+      formato TEXT NOT NULL,
+      tipo_relatorio TEXT NOT NULL,
+      periodo_inicio TEXT,
+      periodo_fim TEXT,
+      status TEXT NOT NULL DEFAULT 'rascunho',
+      total_saldos INTEGER NOT NULL DEFAULT 0,
+      total_dias INTEGER NOT NULL DEFAULT 0,
+      total_vinculados INTEGER NOT NULL DEFAULT 0,
+      total_pendencias INTEGER NOT NULL DEFAULT 0,
+      revisao INTEGER NOT NULL DEFAULT 1,
+      avisos_json TEXT,
+      criado_por INTEGER NOT NULL,
+      aprovado_por INTEGER,
+      aprovado_em TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (criado_por) REFERENCES colaboradores(id) ON DELETE RESTRICT,
+      FOREIGN KEY (aprovado_por) REFERENCES colaboradores(id) ON DELETE SET NULL
+    )`);
+    sqliteDb.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_bh_importacoes_hash_publicado
+      ON bh_importacoes (arquivo_hash) WHERE status = 'publicado'`);
+    sqliteDb.run(`CREATE INDEX IF NOT EXISTS idx_bh_importacoes_status_periodo
+      ON bh_importacoes (status, periodo_fim DESC, created_at DESC)`);
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS bh_saldos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      importacao_id INTEGER NOT NULL,
+      colaborador_id INTEGER,
+      linha_origem INTEGER NOT NULL,
+      matricula_kairos TEXT,
+      nome_kairos TEXT NOT NULL,
+      nome_kairos_normalizado TEXT NOT NULL,
+      estrutura_kairos TEXT,
+      nome_ginfo_snapshot TEXT,
+      matricula_ginfo_snapshot TEXT,
+      saldo_anterior_min INTEGER NOT NULL DEFAULT 0,
+      debito_min INTEGER NOT NULL DEFAULT 0,
+      credito_min INTEGER NOT NULL DEFAULT 0,
+      saldo_periodo_min INTEGER NOT NULL DEFAULT 0,
+      saldo_atual_min INTEGER NOT NULL DEFAULT 0,
+      status_vinculo TEXT NOT NULL DEFAULT 'pendente',
+      metodo_vinculo TEXT,
+      confianca_vinculo REAL,
+      sugestoes_json TEXT,
+      dados_originais_json TEXT,
+      revisado_por INTEGER,
+      revisado_em TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (importacao_id, linha_origem),
+      FOREIGN KEY (importacao_id) REFERENCES bh_importacoes(id) ON DELETE CASCADE,
+      FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE RESTRICT,
+      FOREIGN KEY (revisado_por) REFERENCES colaboradores(id) ON DELETE SET NULL
+    )`);
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_bh_saldos_importacao ON bh_saldos (importacao_id)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_bh_saldos_colaborador ON bh_saldos (colaborador_id)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_bh_saldos_nome_kairos ON bh_saldos (nome_kairos_normalizado)');
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS bh_dias (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      importacao_id INTEGER NOT NULL,
+      colaborador_id INTEGER,
+      linha_origem INTEGER NOT NULL,
+      matricula_kairos TEXT,
+      nome_kairos TEXT NOT NULL,
+      nome_kairos_normalizado TEXT NOT NULL,
+      cargo_kairos TEXT,
+      estrutura_kairos TEXT,
+      nome_ginfo_snapshot TEXT,
+      matricula_ginfo_snapshot TEXT,
+      data TEXT NOT NULL,
+      horario_previsto TEXT,
+      batidas_json TEXT,
+      horas_trabalhadas_min INTEGER,
+      debito_min INTEGER NOT NULL DEFAULT 0,
+      credito_min INTEGER NOT NULL DEFAULT 0,
+      justificativa_kairos TEXT,
+      classificacao_original TEXT NOT NULL,
+      classificacao TEXT NOT NULL,
+      status_vinculo TEXT NOT NULL DEFAULT 'pendente',
+      metodo_vinculo TEXT,
+      confianca_vinculo REAL,
+      sugestoes_json TEXT,
+      justificativa_admin TEXT,
+      dados_originais_json TEXT,
+      revisado_por INTEGER,
+      revisado_em TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (importacao_id, linha_origem),
+      FOREIGN KEY (importacao_id) REFERENCES bh_importacoes(id) ON DELETE CASCADE,
+      FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE RESTRICT,
+      FOREIGN KEY (revisado_por) REFERENCES colaboradores(id) ON DELETE SET NULL
+    )`);
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_bh_dias_importacao ON bh_dias (importacao_id)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_bh_dias_colaborador_data ON bh_dias (colaborador_id, data)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_bh_dias_classificacao ON bh_dias (classificacao)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_bh_dias_nome_kairos ON bh_dias (nome_kairos_normalizado)');
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS bh_vinculos_nome (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome_kairos TEXT NOT NULL,
+      nome_kairos_normalizado TEXT NOT NULL,
+      matricula_kairos TEXT NOT NULL DEFAULT '',
+      colaborador_id INTEGER NOT NULL,
+      origem TEXT NOT NULL DEFAULT 'manual_admin',
+      criado_por INTEGER,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (nome_kairos_normalizado, matricula_kairos),
+      FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE CASCADE,
+      FOREIGN KEY (criado_por) REFERENCES colaboradores(id) ON DELETE SET NULL
+    )`);
+    // A primeira versao local vinculava apenas pelo nome. A reconstrucao remove
+    // essa restricao antiga e preserva os aliases adicionando a matricula Kairos.
+    sqliteDb.run(
+      "ALTER TABLE bh_vinculos_nome ADD COLUMN matricula_kairos TEXT NOT NULL DEFAULT ''",
+      () => {}
+    );
+    sqliteDb.exec(`BEGIN;
+      DROP TABLE IF EXISTS bh_vinculos_nome_v2;
+      CREATE TABLE bh_vinculos_nome_v2 (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome_kairos TEXT NOT NULL,
+        nome_kairos_normalizado TEXT NOT NULL,
+        matricula_kairos TEXT NOT NULL DEFAULT '',
+        colaborador_id INTEGER NOT NULL,
+        origem TEXT NOT NULL DEFAULT 'manual_admin',
+        criado_por INTEGER,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (nome_kairos_normalizado, matricula_kairos),
+        FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id) ON DELETE CASCADE,
+        FOREIGN KEY (criado_por) REFERENCES colaboradores(id) ON DELETE SET NULL
+      );
+      INSERT OR REPLACE INTO bh_vinculos_nome_v2 (
+        id, nome_kairos, nome_kairos_normalizado, matricula_kairos, colaborador_id,
+        origem, criado_por, created_at, updated_at
+      )
+      SELECT id, nome_kairos, nome_kairos_normalizado, COALESCE(matricula_kairos, ''),
+        colaborador_id, origem, criado_por, created_at, updated_at
+      FROM bh_vinculos_nome;
+      DROP TABLE bh_vinculos_nome;
+      ALTER TABLE bh_vinculos_nome_v2 RENAME TO bh_vinculos_nome;
+      COMMIT;`);
+    sqliteDb.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_bh_vinculos_identidade_kairos
+      ON bh_vinculos_nome (nome_kairos_normalizado, matricula_kairos)`);
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_bh_vinculos_colaborador ON bh_vinculos_nome (colaborador_id)');
+
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS bh_auditoria (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      importacao_id INTEGER,
+      entidade TEXT NOT NULL,
+      entidade_id INTEGER,
+      campo TEXT NOT NULL,
+      valor_anterior TEXT,
+      valor_novo TEXT,
+      motivo TEXT NOT NULL,
+      alterado_por INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (importacao_id) REFERENCES bh_importacoes(id) ON DELETE CASCADE,
+      FOREIGN KEY (alterado_por) REFERENCES colaboradores(id) ON DELETE RESTRICT
+    )`);
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_bh_auditoria_importacao ON bh_auditoria (importacao_id, created_at DESC)');
+
+    sqliteDb.run(`INSERT OR IGNORE INTO bh_vinculos_nome (
+      nome_kairos, nome_kairos_normalizado, matricula_kairos, colaborador_id, origem
+    )
+    SELECT 'LAINE TAUANA POMMER ARCANJO', 'laine tauana pommer arcanjo', '19232', id, 'confirmacao_cliente'
+    FROM colaboradores WHERE matricula = '19232'`);
   });
 
   return sqliteDb;
