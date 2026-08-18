@@ -23,6 +23,7 @@ const rotogramasRoutes = require('./routes/rotogramas');
 const notificacoesRoutes = require('./routes/notificacoes');
 const satisfacaoYuriRoutes = require('./routes/satisfacao-yuri');
 const planosMelhoriaRoutes = require('./routes/planos-melhoria');
+const bancoHorasRoutes = require('./routes/banco-horas');
 const { getAccessMetrics } = require('./accessCounter');
 const { getAuthenticatedLoginMetrics } = require('./loginCounter');
 const { authenticateToken, authorizeRoles } = require('./authMiddleware');
@@ -136,6 +137,7 @@ app.use('/api/rotogramas', rotogramasRoutes);
 app.use('/api/notificacoes', notificacoesRoutes);
 app.use('/api/satisfacao-yuri', satisfacaoYuriRoutes);
 app.use('/api/planos-melhoria', planosMelhoriaRoutes);
+app.use('/api/banco-horas', bancoHorasRoutes);
 
 // Serve static files from frontend dist
 const frontendDist = path.resolve(__dirname, "../../frontend/dist");

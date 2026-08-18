@@ -16,8 +16,8 @@ test('aplica as migrations idempotentes de runtime antes de iniciar no PostgreSQ
   const result = await ensureRuntimeSchema({ database, usePostgres: true });
 
   assert.equal(result.applied, true);
-  assert.equal(result.migration, '024_rotograma_mapa.sql, 025_planos_melhoria_yuri.sql, 026_pesquisa_clima_integridade.sql, 027_logins_autenticados.sql');
-  assert.equal(executed.length, 4);
+  assert.equal(result.migration, '024_rotograma_mapa.sql, 025_planos_melhoria_yuri.sql, 026_pesquisa_clima_integridade.sql, 027_logins_autenticados.sql, 028_banco_horas_mvp.sql');
+  assert.equal(executed.length, 5);
   assert.match(executed[0], /ADD COLUMN IF NOT EXISTS map_path_json/i);
   assert.match(executed[0], /CREATE TABLE IF NOT EXISTS rotograma_areas_suporte/i);
   assert.match(executed[1], /CREATE TABLE IF NOT EXISTS planos_melhoria_buckets/i);
@@ -29,6 +29,11 @@ test('aplica as migrations idempotentes de runtime antes de iniciar no PostgreSQ
   assert.match(executed[2], /ON CONFLICT \(pesquisa_id, colaborador_id\) DO NOTHING/i);
   assert.match(executed[3], /CREATE TABLE IF NOT EXISTS logins_autenticados/i);
   assert.match(executed[3], /idx_logins_autenticados_colaborador/i);
+  assert.match(executed[4], /CREATE TABLE IF NOT EXISTS bh_importacoes/i);
+  assert.match(executed[4], /CREATE TABLE IF NOT EXISTS bh_dias/i);
+  assert.match(executed[4], /idx_bh_vinculos_identidade_kairos/i);
+  assert.match(executed[4], /nome_kairos_normalizado, matricula_kairos/i);
+  assert.match(executed[4], /confirmacao_cliente/i);
 });
 
 test('não executa SQL adicional no SQLite, que já mantém o schema local', async () => {
