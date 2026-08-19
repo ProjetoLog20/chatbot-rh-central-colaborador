@@ -3,7 +3,6 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
 const { getJwtSecret } = require('../authMiddleware');
-const { recordAuthenticatedLogin } = require('../loginCounter');
 
 const router = express.Router();
 
@@ -84,12 +83,6 @@ router.post('/login', async (req, res) => {
       getJwtSecret(),
       { expiresIn: '8h' }
     );
-
-    try {
-      await recordAuthenticatedLogin(usuario.id);
-    } catch (metricError) {
-      console.error('Erro ao registrar login autenticado:', metricError.message);
-    }
 
     return res.json({ token, usuario: usuarioResponse });
   } catch (error) {
