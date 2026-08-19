@@ -5,7 +5,6 @@ const db = require('./db');
 const ROTOGRAMA_MAP_MIGRATION = path.join(__dirname, '../migrations/024_rotograma_mapa.sql');
 const PLANOS_MELHORIA_MIGRATION = path.join(__dirname, '../migrations/025_planos_melhoria_yuri.sql');
 const PESQUISA_CLIMA_INTEGRIDADE_MIGRATION = path.join(__dirname, '../migrations/026_pesquisa_clima_integridade.sql');
-const LOGINS_AUTENTICADOS_MIGRATION = path.join(__dirname, '../migrations/027_logins_autenticados.sql');
 const BANCO_HORAS_MIGRATION = path.join(__dirname, '../migrations/028_banco_horas_mvp.sql');
 
 async function ensureRuntimeSchema({
@@ -18,7 +17,6 @@ async function ensureRuntimeSchema({
     ROTOGRAMA_MAP_MIGRATION,
     PLANOS_MELHORIA_MIGRATION,
     PESQUISA_CLIMA_INTEGRIDADE_MIGRATION,
-    LOGINS_AUTENTICADOS_MIGRATION,
     BANCO_HORAS_MIGRATION
   ];
   for (const migration of migrations) {
@@ -32,7 +30,6 @@ module.exports = {
   ROTOGRAMA_MAP_MIGRATION,
   PLANOS_MELHORIA_MIGRATION,
   PESQUISA_CLIMA_INTEGRIDADE_MIGRATION,
-  LOGINS_AUTENTICADOS_MIGRATION,
   BANCO_HORAS_MIGRATION,
   ensureRuntimeSchema
 };

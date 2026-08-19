@@ -24,8 +24,7 @@ const notificacoesRoutes = require('./routes/notificacoes');
 const satisfacaoYuriRoutes = require('./routes/satisfacao-yuri');
 const planosMelhoriaRoutes = require('./routes/planos-melhoria');
 const bancoHorasRoutes = require('./routes/banco-horas');
-const { getAccessMetrics } = require('./accessCounter');
-const { getAuthenticatedLoginMetrics } = require('./loginCounter');
+const { incrementAccessCounter, getAccessMetrics } = require('./accessCounter');
 const { authenticateToken, authorizeRoles } = require('./authMiddleware');
 const errorHandler = require('./errorHandler');
 const { geoRestriction } = require('./geoRestriction');
@@ -81,6 +80,15 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+app.use(async (req, res, next) => {
+  const isAssetRequest = /\.(css|js|png|jpg|jpeg|svg|ico|webp|woff2?|ttf|map)$/i.test(req.path);
+  const isPageView = req.method === 'GET' && !req.path.startsWith('/api') && !isAssetRequest;
+  if (process.env.ACCESS_COUNTER_ENABLED !== 'false' && isPageView) {
+    incrementAccessCounter(req).catch(() => {});
+  }
+  next();
+});
+
 app.get('/api/health', async (req, res) => {
   try {
     await db.get('SELECT 1 AS ok');
@@ -99,16 +107,6 @@ app.get('/api/admin/acessos', authenticateToken, authorizeRoles('admin'), async 
   } catch (error) {
     console.error('Erro ao consultar acessos:', error);
     res.status(500).json({ error: 'Erro ao consultar contador de acessos' });
-  }
-});
-
-app.get('/api/admin/logins', authenticateToken, authorizeRoles('admin'), async (req, res) => {
-  try {
-    const metrics = await getAuthenticatedLoginMetrics();
-    res.json(metrics);
-  } catch (error) {
-    console.error('Erro ao consultar logins autenticados:', error);
-    res.status(500).json({ error: 'Erro ao consultar contador de logins' });
   }
 });
 
