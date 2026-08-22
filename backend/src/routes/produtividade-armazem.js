@@ -137,7 +137,11 @@ function shapeArmazemRow(row) {
   return {
     ...row,
     turno_armazem: normalizeWarehouseShift(row.turno_armazem) || warehouseShiftFromOriginal(original),
-    tarefas_detalhadas: Array.isArray(original.atividades) ? original.atividades : []
+    tarefas_detalhadas: Array.isArray(original.atividades) ? original.atividades : [],
+    indicadores_confirmados: Array.isArray(original.indicators) ? original.indicators : [],
+    valor_indicadores_total: Number(original.indicatorsTotal || 0),
+    valores_adicionais: Array.isArray(original.additionalValues) ? original.additionalValues : [],
+    valor_adicional_total: Number(original.additionalTotal || 0)
   };
 }
 
@@ -503,7 +507,7 @@ router.post('/importar', authenticateToken, authorizeRoles('admin'), uploadCsv, 
       status: 'aguardando_confirmacao',
       preview_token: staged.token,
       expira_em_minutos: staged.expiresInMinutes,
-      message: `RV combinada lida: ${report.crossed.length} vínculo(s) confirmado(s) e ${report.ignored} ignorado(s). Confira tarefas, indicadores e ajustes antes de publicar.`,
+      message: `RV combinada lida: ${report.crossed.length} vínculo(s) confirmado(s) e ${report.ignored} ignorado(s). Os indicadores externos não foram somados e exigem marcação manual.`,
       report: {
         competencia: report.competencia,
         periodo: report.periodo,
@@ -545,6 +549,8 @@ router.post('/importar/aprovar', authenticateToken, authorizeRoles('admin'), asy
       createMissing: false,
       activateModule: false,
       allowMissingValues: false,
+      indicatorReviews: req.body.indicator_reviews,
+      additionalValues: req.body.additional_values,
       originalFilename: staged.originalName,
       createdBy: req.user.id
     });

@@ -80,6 +80,14 @@ function normalizeName(value) {
   return stripAccents(value).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
+function normalizeComparableName(value) {
+  const ignoredWords = new Set(['da', 'das', 'de', 'do', 'dos']);
+  return normalizeName(value)
+    .split(' ')
+    .filter((part) => part && !ignoredWords.has(part))
+    .join(' ');
+}
+
 function trim(value) {
   return String(value ?? '').trim();
 }
@@ -89,6 +97,35 @@ function numberValue(value) {
   if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
   const parsed = Number(trim(value).replace(/\./g, '').replace(',', '.'));
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function normalizeIndicatorReviews(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const reviews = {};
+  for (const [rawMatricula, rawItems] of Object.entries(value)) {
+    const matricula = trim(rawMatricula);
+    if (!matricula || !Array.isArray(rawItems)) continue;
+    reviews[matricula] = rawItems.slice(0, 20).map((item) => ({
+      nome: trim(item?.nome).slice(0, 120),
+      valor: Number(Math.min(100000, Math.max(0, numberValue(item?.valor))).toFixed(2)),
+      confirmado: item?.confirmado === true
+    })).filter((item) => item.nome);
+  }
+  return reviews;
+}
+
+function normalizeAdditionalValues(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const additions = {};
+  for (const [rawMatricula, rawItem] of Object.entries(value)) {
+    const matricula = trim(rawMatricula);
+    if (!matricula || !rawItem || typeof rawItem !== 'object' || Array.isArray(rawItem)) continue;
+    const valor = Number(Math.min(100000, Math.max(0, numberValue(rawItem.valor))).toFixed(2));
+    const observacao = trim(rawItem.observacao).slice(0, 500);
+    if (valor > 0 && !observacao) throw new Error(`Informe a observação do valor adicional da matrícula ${matricula}.`);
+    additions[matricula] = { valor, observacao };
+  }
+  return additions;
 }
 
 function parseDate(value) {
@@ -106,14 +143,29 @@ function competenciaFromDate(date) {
   return `${String(finalMonth).padStart(2, '0')}/${competencyYear}`;
 }
 
+function normalizeCompetencia(value) {
+  const text = trim(value);
+  let match = text.match(/^(\d{4})-(\d{1,2})$/);
+  if (match) {
+    const month = Number(match[2]);
+    return month >= 1 && month <= 12 ? `${String(month).padStart(2, '0')}/${match[1]}` : null;
+  }
+  match = text.match(/^(\d{1,2})\/(\d{4})$/);
+  if (!match) return null;
+  const month = Number(match[1]);
+  return month >= 1 && month <= 12 ? `${String(month).padStart(2, '0')}/${match[2]}` : null;
+}
+
 function monthYearFromCompetencia(competencia) {
-  const match = trim(competencia).match(/^(\d{1,2})\/(\d{4})$/);
+  const normalized = normalizeCompetencia(competencia);
+  const match = normalized?.match(/^(\d{2})\/(\d{4})$/);
   if (!match) return trim(competencia);
   return `${match[2]}-${match[1].padStart(2, '0')}`;
 }
 
 function officialPeriodForCompetencia(competencia) {
-  const match = trim(competencia).match(/^(\d{1,2})\/(\d{4})$/);
+  const normalized = normalizeCompetencia(competencia);
+  const match = normalized?.match(/^(\d{2})\/(\d{4})$/);
   if (!match) return { inicio: null, fim: null };
   const month = Number(match[1]);
   const year = Number(match[2]);
@@ -142,15 +194,34 @@ function canonicalActivity(activity) {
   return 'Demais Atividades';
 }
 
-function readCsv(file) {
-  const content = fs.readFileSync(file, 'utf8');
-  return parse(content, {
+function decodeCsv(buffer) {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+  } catch {
+    return new TextDecoder('windows-1252').decode(buffer);
+  }
+}
+
+function parseCsvBuffer(buffer) {
+  return parse(decodeCsv(buffer), {
     columns: true,
     delimiter: ';',
     skip_empty_lines: true,
     trim: true,
     bom: true
   }).map((row) => Object.fromEntries(Object.entries(row).map(([key, value]) => [normalizeKey(key), value])));
+}
+
+function readCsv(file) {
+  return parseCsvBuffer(fs.readFileSync(file));
+}
+
+function requireCsvColumns(csvRows, requiredColumns, sourceName) {
+  const available = new Set(Object.keys(csvRows[0] || {}));
+  const missing = requiredColumns.filter((column) => !available.has(column));
+  if (missing.length) {
+    throw new Error(`O arquivo ${sourceName} não possui as colunas esperadas: ${missing.join(', ')}.`);
+  }
 }
 
 function readTaskValues(file) {
@@ -210,7 +281,9 @@ function buildWmsSeparationRows(csvRows, options = {}) {
     }))
     .filter((row) => row.date && row.usuario && row.pontos >= 0);
 
-  const competencia = options.competencia || (parsedRows[0] ? competenciaFromDate(parsedRows[0].date) : null);
+  const competencia = trim(options.competencia)
+    ? normalizeCompetencia(options.competencia)
+    : (parsedRows[0] ? competenciaFromDate(parsedRows[0].date) : null);
   const period = officialPeriodForCompetencia(competencia);
   if (!period.inicio || !period.fim) throw new Error('Competencia invalida. Informe a competencia no formato MM/AAAA.');
 
@@ -319,6 +392,7 @@ function buildWmsSeparationRows(csvRows, options = {}) {
 }
 
 function buildOperatorActivities(csvRows, competencia) {
+  requireCsvColumns(csvRows, ['usuario', 'status', 'tipo', 'data_de_criacao'], 'Monitorar Tarefas');
   const period = officialPeriodForCompetencia(competencia);
   const buckets = new Map();
   let validRows = 0;
@@ -420,7 +494,30 @@ function parseOriginal(row) {
   }
 }
 
-function applyCombinedRules(row, colaborador, operatorContext, officialRules, existing) {
+function resolveManualIndicators(colaborador, officialRules, indicatorReviews = {}) {
+  const matricula = trim(colaborador.matricula);
+  const rule = officialRules.collaborators[matricula] || {};
+  const availableIndicators = (Array.isArray(rule.indicators) ? rule.indicators : []).map((item) => ({
+    nome: trim(item.nome || item.type),
+    valor: Number(numberValue(item.valor ?? item.value).toFixed(2))
+  })).filter((item) => item.nome);
+  const reviews = indicatorReviews?.[matricula];
+  const indicatorsReviewed = Array.isArray(reviews);
+  const selectedIndicators = availableIndicators.flatMap((candidate) => {
+    const review = reviews?.find((item) => normalizeName(item.nome) === normalizeName(candidate.nome));
+    if (!review?.confirmado) return [];
+    return [{ nome: candidate.nome, valor: review.valor }];
+  });
+
+  return {
+    availableIndicators,
+    selectedIndicators,
+    indicatorsReviewed,
+    indicatorsTotal: Number(selectedIndicators.reduce((sum, item) => sum + item.valor, 0).toFixed(2))
+  };
+}
+
+function applyCombinedRules(row, colaborador, operatorContext, officialRules, indicatorReviews = {}) {
   const matricula = trim(colaborador.matricula);
   const rule = officialRules.collaborators[matricula] || {};
   const original = parseOriginal(row);
@@ -441,18 +538,13 @@ function applyCombinedRules(row, colaborador, operatorContext, officialRules, ex
     ...adjustments
   ];
 
-  let indicators = Array.isArray(rule.indicators) ? rule.indicators : [];
-  if (!indicators.length && existing) {
-    const previous = parseOriginal(existing);
-    if (Array.isArray(previous.indicators)) indicators = previous.indicators;
-  }
-  indicators = indicators.map((item) => ({
-    nome: trim(item.nome || item.type),
-    valor: Number(numberValue(item.valor ?? item.value).toFixed(2))
-  }));
+  const indicatorState = resolveManualIndicators(colaborador, officialRules, indicatorReviews);
+  const indicatorCandidates = indicatorState.availableIndicators;
+  const indicatorsReviewed = indicatorState.indicatorsReviewed;
+  const indicators = indicatorState.selectedIndicators;
 
   const tasksTotal = Number(activities.reduce((sum, item) => sum + numberValue(item.total), 0).toFixed(2));
-  const indicatorsTotal = Number(indicators.reduce((sum, item) => sum + item.valor, 0).toFixed(2));
+  const indicatorsTotal = indicatorState.indicatorsTotal;
   const total = Number((tasksTotal + indicatorsTotal).toFixed(2));
   const expectedTotal = rule.expected_total === undefined ? null : numberValue(rule.expected_total);
   const difference = expectedTotal === null ? 0 : Number((total - expectedTotal).toFixed(2));
@@ -467,7 +559,9 @@ function applyCombinedRules(row, colaborador, operatorContext, officialRules, ex
   row.indicador_2 = indicators[1] ? `${indicators[1].nome}: R$ ${indicators[1].valor.toFixed(2)}` : '';
   row.indicador_3 = indicators[2] ? `${indicators[2].nome}: R$ ${indicators[2].valor.toFixed(2)}` : '';
   row.origem_calculo = 'on_demand+monitorar_tarefas+indicadores_yuri';
-  row.status_auditoria = Math.abs(difference) < 0.01 ? 'ok' : 'divergencia_bi';
+  row.status_auditoria = indicatorCandidates.length && !indicatorsReviewed
+    ? 'pendente_indicadores'
+    : (Math.abs(difference) < 0.01 ? 'ok' : 'divergencia_bi');
   row.observacao_cruzamento = Math.abs(difference) < 0.01
     ? 'Cruzamento conferido com o fechamento oficial.'
     : `Diferença de R$ ${difference.toFixed(2)} em relação ao fechamento oficial.`;
@@ -480,17 +574,110 @@ function applyCombinedRules(row, colaborador, operatorContext, officialRules, ex
     tarefasTotal: tasksTotal,
     indicatorsTotal,
     indicators,
+    indicatorCandidates,
+    indicatorsReviewed,
     adjustments,
     expectedTasks: rule.expected_tasks ?? null,
     expectedTotal,
     difference,
     fontes: ['on_demand', ...(operatorContext ? ['relatorio_monitorar_tarefas'] : []), 'indicadores_yuri']
   });
-  return { tasksTotal, indicatorsTotal, total, expectedTotal, difference, adjustments };
+  return {
+    tasksTotal,
+    indicatorsTotal,
+    total,
+    expectedTotal,
+    difference,
+    adjustments,
+    availableIndicators: indicatorCandidates,
+    selectedIndicators: indicators,
+    indicatorsReviewed
+  };
+}
+
+function applyWmsIndicatorRules(row, colaborador, officialRules, indicatorReviews = {}, totals = {}) {
+  const indicatorState = resolveManualIndicators(colaborador, officialRules, indicatorReviews);
+  const tasksTotal = Number(numberValue(totals.tasksTotal ?? row.rv_nova).toFixed(2));
+  const total = Number((tasksTotal + indicatorState.indicatorsTotal).toFixed(2));
+  const rule = officialRules.collaborators[trim(colaborador.matricula)] || {};
+  const expectedTotal = rule.expected_total === undefined ? null : numberValue(rule.expected_total);
+  const difference = expectedTotal === null ? 0 : Number((total - expectedTotal).toFixed(2));
+  const original = parseOriginal(row);
+
+  row.rv_nova = total;
+  row.valor_total_previsto = total;
+  row.faixa = total > 0 ? row.faixa : 'Sem premio';
+  row.status_produtividade = total > 0 ? 'Elegivel' : 'Sem premio';
+  row.origem_calculo = `${row.origem_calculo || 'wms_separacao'}+indicadores_manuais`;
+  if (indicatorState.availableIndicators.length && !indicatorState.indicatorsReviewed) {
+    row.status_auditoria = 'pendente_indicadores';
+  }
+  if (indicatorState.selectedIndicators.length) {
+    const summary = indicatorState.selectedIndicators
+      .map((item) => `${item.nome}: R$ ${item.valor.toFixed(2)}`)
+      .join('; ');
+    row.mensagem_rh = `${trim(row.mensagem_rh)} Indicadores confirmados: ${summary}.`.trim();
+  }
+  row.dados_originais_json = JSON.stringify({
+    ...original,
+    tarefasTotal: tasksTotal,
+    indicatorsTotal: indicatorState.indicatorsTotal,
+    indicators: indicatorState.selectedIndicators,
+    indicatorCandidates: indicatorState.availableIndicators,
+    indicatorsReviewed: indicatorState.indicatorsReviewed,
+    expectedTotal,
+    difference
+  });
+
+  return {
+    ...totals,
+    tasksTotal,
+    indicatorsTotal: indicatorState.indicatorsTotal,
+    total,
+    expectedTotal,
+    difference,
+    availableIndicators: indicatorState.availableIndicators,
+    selectedIndicators: indicatorState.selectedIndicators,
+    indicatorsReviewed: indicatorState.indicatorsReviewed,
+    adjustments: totals.adjustments || []
+  };
+}
+
+function applyAdditionalValue(row, colaborador, totals, additionalValues = {}) {
+  const item = additionalValues?.[trim(colaborador.matricula)];
+  const additionalTotal = Number(numberValue(item?.valor).toFixed(2));
+  if (additionalTotal <= 0) return { ...totals, additionalTotal: 0, additionalValue: null };
+
+  const additionalValue = { valor: additionalTotal, observacao: trim(item.observacao) };
+  const total = Number((numberValue(totals.total) + additionalTotal).toFixed(2));
+  const difference = totals.expectedTotal === null || totals.expectedTotal === undefined
+    ? 0
+    : Number((total - totals.expectedTotal).toFixed(2));
+  const original = parseOriginal(row);
+  row.rv_nova = total;
+  row.valor_total_previsto = total;
+  row.faixa = total > 0 ? 'Elegivel' : 'Sem premio';
+  row.status_produtividade = total > 0 ? 'Elegivel' : 'Sem premio';
+  row.origem_calculo = `${row.origem_calculo || 'rv_armazem'}+valor_adicional`;
+  if (row.status_auditoria !== 'pendente_indicadores' && totals.expectedTotal !== null && totals.expectedTotal !== undefined) {
+    row.status_auditoria = Math.abs(difference) < 0.01 ? 'ok' : 'divergencia_bi';
+  }
+  row.mensagem_rh = `${trim(row.mensagem_rh)} Valor adicional: R$ ${additionalTotal.toFixed(2)} — ${additionalValue.observacao}.`.trim();
+  row.dados_originais_json = JSON.stringify({
+    ...original,
+    additionalValues: [additionalValue],
+    additionalTotal
+  });
+  return { ...totals, total, difference, additionalTotal, additionalValue };
 }
 
 function buildRows(csvRows, options) {
   if (isWmsSeparationCsv(csvRows)) return buildWmsSeparationRows(csvRows, options);
+  requireCsvColumns(csvRows, ['usuario', 'atividade', 'observacao', 'status_tarefa'], 'On Demand');
+  const columns = new Set(Object.keys(csvRows[0] || {}));
+  if (!columns.has('finalizacao') && !columns.has('criacao')) {
+    throw new Error('O arquivo On Demand não possui a coluna Finalização ou Criação.');
+  }
   const validRows = csvRows
     .map((row) => {
       const date = parseDate(row.finalizacao || row.criacao);
@@ -504,7 +691,9 @@ function buildRows(csvRows, options) {
     })
     .filter((row) => row.usuario && row.date && normalizeName(row.status_tarefa || 'finalizado').includes('finalizado'));
 
-  const competencia = options.competencia || (validRows[0] ? competenciaFromDate(validRows[0].date) : null);
+  const competencia = trim(options.competencia)
+    ? normalizeCompetencia(options.competencia)
+    : (validRows[0] ? competenciaFromDate(validRows[0].date) : null);
   const period = officialPeriodForCompetencia(competencia);
   if (!period.inicio || !period.fim) throw new Error('Competencia invalida. Informe --competencia MM/AAAA.');
 
@@ -660,16 +849,6 @@ async function findColaborador(row) {
   return null;
 }
 
-async function findExistingArmazem(colaboradorId, competencia) {
-  return db.get(
-    `SELECT * FROM produtividade_armazem_colaboradores
-     WHERE colaborador_id = ? AND competencia = ?
-     ORDER BY updated_at DESC, id DESC
-     LIMIT 1`,
-    [colaboradorId, competencia]
-  );
-}
-
 function applyCollaboratorRoleRules(row, colaborador) {
   const role = normalizeName(`${colaborador.cargo || ''} ${colaborador.tipo_colaborador || ''}`);
   if (role.includes('operador') || role.includes('empilhadeira')) {
@@ -792,6 +971,8 @@ async function importOnDemand(file, options = {}) {
   const context = buildRows(csvRows, options);
   const isWmsSeparation = context.sourceType === 'wms_separacao';
   const officialRules = readOfficialRules(options.officialRules, context.competencia);
+  const indicatorReviews = normalizeIndicatorReviews(options.indicatorReviews);
+  const additionalValues = normalizeAdditionalValues(options.additionalValues);
   const operatorCsvRows = options.operatorFile ? readCsv(options.operatorFile) : [];
   const operatorContext = options.operatorFile && !isWmsSeparation
     ? buildOperatorActivities(operatorCsvRows, context.competencia)
@@ -853,8 +1034,7 @@ async function importOnDemand(file, options = {}) {
           continue;
         }
         if (!isWmsSeparation) applyCollaboratorRoleRules(row, match.colaborador);
-        const existing = await findExistingArmazem(match.colaborador.id, context.competencia);
-        const totals = isWmsSeparation
+        const baseTotals = isWmsSeparation
           ? {
               tasksTotal: row.rv_nova,
               indicatorsTotal: 0,
@@ -863,7 +1043,11 @@ async function importOnDemand(file, options = {}) {
               difference: 0,
               adjustments: []
             }
-          : applyCombinedRules(row, match.colaborador, operatorContext, officialRules, existing);
+          : null;
+        const calculatedTotals = isWmsSeparation
+          ? applyWmsIndicatorRules(row, match.colaborador, officialRules, indicatorReviews, baseTotals)
+          : applyCombinedRules(row, match.colaborador, operatorContext, officialRules, indicatorReviews);
+        const totals = applyAdditionalValue(row, match.colaborador, calculatedTotals, additionalValues);
         report.crossed.push({
           colaborador_id: match.colaborador.id,
           matricula: match.colaborador.matricula,
@@ -874,6 +1058,10 @@ async function importOnDemand(file, options = {}) {
           valor_tarefas: totals.tasksTotal,
           valor_indicadores: totals.indicatorsTotal,
           ajustes: totals.adjustments,
+          indicadores_disponiveis: totals.availableIndicators || [],
+          indicadores_confirmados: totals.selectedIndicators || [],
+          valor_adicional: totals.additionalTotal,
+          observacao_valor_adicional: totals.additionalValue?.observacao || '',
           valor_total_previsto: row.valor_total_previsto,
           valor_esperado: totals.expectedTotal,
           diferenca: totals.difference
@@ -890,9 +1078,13 @@ async function importOnDemand(file, options = {}) {
         indicador_1: row.indicador_1,
         indicador_2: row.indicador_2,
         indicador_3: row.indicador_3,
-        valor_tarefas: match ? (isWmsSeparation ? row.rv_nova : parseOriginal(row).tarefasTotal) : 0,
-        valor_indicadores: match ? (isWmsSeparation ? 0 : parseOriginal(row).indicatorsTotal) : 0,
-        ajustes: match ? (isWmsSeparation ? [] : parseOriginal(row).adjustments) : []
+        valor_tarefas: match ? numberValue(parseOriginal(row).tarefasTotal ?? (isWmsSeparation ? parseOriginal(row).dias?.reduce((sum, day) => sum + numberValue(day.valor_rv), 0) : 0)) : 0,
+        valor_indicadores: match ? numberValue(parseOriginal(row).indicatorsTotal) : 0,
+        ajustes: match ? (isWmsSeparation ? [] : parseOriginal(row).adjustments) : [],
+        indicadores_disponiveis: match ? parseOriginal(row).indicatorCandidates || [] : [],
+        indicadores_confirmados: match ? parseOriginal(row).indicators || [] : [],
+        valor_adicional: match ? numberValue(parseOriginal(row).additionalTotal) : 0,
+        observacao_valor_adicional: match ? parseOriginal(row).additionalValues?.[0]?.observacao || '' : ''
       });
     }
     return report;
@@ -934,8 +1126,7 @@ async function importOnDemand(file, options = {}) {
       ? `Cruzamento ${match.metodo} confirmado. Valor bruto calculado; o CSV não contém ocorrências de conferência para desconto.`
       : `Cruzamento ${match.metodo} com o cadastro ativo do Yuri.`;
     if (!isWmsSeparation) applyCollaboratorRoleRules(row, match.colaborador);
-    const existing = await findExistingArmazem(match.colaborador.id, context.competencia);
-    const totals = isWmsSeparation
+    const baseTotals = isWmsSeparation
       ? {
           tasksTotal: row.rv_nova,
           indicatorsTotal: 0,
@@ -944,7 +1135,11 @@ async function importOnDemand(file, options = {}) {
           difference: 0,
           adjustments: []
         }
-      : applyCombinedRules(row, match.colaborador, operatorContext, officialRules, existing);
+      : null;
+    const calculatedTotals = isWmsSeparation
+      ? applyWmsIndicatorRules(row, match.colaborador, officialRules, indicatorReviews, baseTotals)
+      : applyCombinedRules(row, match.colaborador, operatorContext, officialRules, indicatorReviews);
+    const totals = applyAdditionalValue(row, match.colaborador, calculatedTotals, additionalValues);
     const result = await upsertArmazem(row, match.colaborador, importacaoId);
     if (result === 'created') report.created += 1;
     if (result === 'updated') report.updated += 1;
@@ -958,6 +1153,10 @@ async function importOnDemand(file, options = {}) {
       valor_tarefas: totals.tasksTotal,
       valor_indicadores: totals.indicatorsTotal,
       ajustes: totals.adjustments,
+      indicadores_disponiveis: totals.availableIndicators || [],
+      indicadores_confirmados: totals.selectedIndicators || [],
+      valor_adicional: totals.additionalTotal,
+      observacao_valor_adicional: totals.additionalValue?.observacao || '',
       valor_total_previsto: row.valor_total_previsto,
       valor_esperado: totals.expectedTotal,
       diferenca: totals.difference
@@ -1033,9 +1232,16 @@ module.exports = {
   wmsDailyRange,
   WMS_DAILY_RV_RANGES,
   canonicalActivity,
+  normalizeComparableName,
+  normalizeCompetencia,
   applyCollaboratorRoleRules,
   buildOperatorActivities,
   applyCombinedRules,
+  applyWmsIndicatorRules,
+  applyAdditionalValue,
+  normalizeIndicatorReviews,
+  normalizeAdditionalValues,
+  parseCsvBuffer,
   readOfficialRules,
   officialPeriodForCompetencia
 };
