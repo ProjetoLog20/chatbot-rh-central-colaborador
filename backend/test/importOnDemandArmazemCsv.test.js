@@ -12,7 +12,9 @@ const {
   applyCombinedRules,
   applyWmsIndicatorRules,
   applyAdditionalValue,
+  applyManualCorrection,
   normalizeAdditionalValues,
+  normalizeManualCorrections,
   parseCsvBuffer,
   normalizeComparableName,
   normalizeCompetencia
@@ -274,4 +276,42 @@ test('valor adicional exige observação, entra no total e fica registrado para 
   assert.equal(row.valor_total_previsto, 35.5);
   assert.match(row.mensagem_rh, /Apoio no inventário/);
   assert.deepEqual(original.additionalValues, [{ valor: 25.5, observacao: 'Apoio no inventário' }]);
+});
+
+test('correção manual substitui o prêmio final e exige justificativa de auditoria', () => {
+  assert.throws(
+    () => normalizeManualCorrections({ 123: { valor_final: 'valor inválido', observacao: 'Teste' } }),
+    /Informe um valor final válido/
+  );
+  assert.throws(
+    () => normalizeManualCorrections({ 123: { valor_final: 80, observacao: '' } }),
+    /Informe o motivo da correção manual/
+  );
+
+  const row = {
+    rv_nova: 125,
+    valor_total_previsto: 125,
+    faixa: 'Elegivel',
+    status_produtividade: 'Elegivel',
+    origem_calculo: 'on_demand+indicadores',
+    status_auditoria: 'ok',
+    observacao_cruzamento: 'Cálculo automático.',
+    mensagem_rh: 'RV calculada.',
+    dados_originais_json: JSON.stringify({ atividades: [], indicatorsTotal: 100 })
+  };
+  const corrections = normalizeManualCorrections({ 123: { valor_final: '90,50', observacao: 'Ajuste conferido com o BI' } });
+  const totals = applyManualCorrection(row, { matricula: '123' }, { total: 125, expectedTotal: null, difference: 0 }, corrections);
+  const original = JSON.parse(row.dados_originais_json);
+
+  assert.equal(totals.total, 90.5);
+  assert.equal(row.valor_total_previsto, 90.5);
+  assert.equal(row.rv_nova, 90.5);
+  assert.equal(row.status_auditoria, 'corrigido_manualmente');
+  assert.deepEqual(original.manualCorrection, {
+    valorAnterior: 125,
+    valorFinal: 90.5,
+    diferenca: -34.5,
+    observacao: 'Ajuste conferido com o BI'
+  });
+  assert.match(row.mensagem_rh, /Valor final corrigido manualmente/);
 });

@@ -2218,7 +2218,8 @@ tr:not(:last-child) td {
 }
 
 .warehouse-indicator-editor,
-.warehouse-additional-editor {
+.warehouse-additional-editor,
+.warehouse-manual-correction-editor {
   padding: 0.9rem;
   border: 1px solid #D7E5EE;
   border-radius: 13px;
@@ -2260,14 +2261,13 @@ tr:not(:last-child) td {
 
 .warehouse-indicator-option {
   display: grid;
-  grid-template-columns: auto minmax(140px, 1fr) minmax(110px, 150px);
+  grid-template-columns: minmax(150px, 1fr) auto minmax(110px, 150px);
   align-items: center;
   gap: 0.65rem;
   padding: 0.7rem;
   border: 1px solid #D7E5EE;
   border-radius: 11px;
   background: #fff;
-  cursor: pointer;
   transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
 
@@ -2275,15 +2275,51 @@ tr:not(:last-child) td {
   border-color: #70AFCF;
 }
 
-.warehouse-indicator-option.is-confirmed {
+.warehouse-indicator-option.is-atingiu {
   border-color: #4CAF7A;
   background: #F1FBF5;
   box-shadow: 0 0 0 2px rgba(0, 107, 60, 0.08);
 }
 
-.warehouse-indicator-option > input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
+.warehouse-indicator-option.is-nao_atingiu {
+  border-color: #E0A2A2;
+  background: #FFF7F7;
+}
+
+.warehouse-indicator-decision {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.warehouse-indicator-decision label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 36px;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid #C7D8E2;
+  border-radius: 8px;
+  color: #345267;
+  background: #F8FBFC;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.warehouse-indicator-decision label.selected.yes {
+  border-color: #27895A;
+  color: #075C35;
+  background: #E4F7EC;
+}
+
+.warehouse-indicator-decision label.selected.no {
+  border-color: #C75C5C;
+  color: #8C2424;
+  background: #FDEAEA;
+}
+
+.warehouse-indicator-decision input {
   accent-color: #006B3C;
 }
 
@@ -2305,7 +2341,8 @@ tr:not(:last-child) td {
 }
 
 .warehouse-indicator-value input,
-.warehouse-additional-inputs input {
+.warehouse-additional-inputs input,
+.warehouse-correction-inputs input {
   width: 100%;
   min-height: 38px;
   border: 1px solid #B8CCD8;
@@ -2324,12 +2361,99 @@ tr:not(:last-child) td {
   gap: 0.75rem;
 }
 
-.warehouse-additional-inputs label {
+.warehouse-additional-inputs label,
+.warehouse-correction-inputs label {
   display: grid;
   gap: 0.3rem;
   color: #345267;
   font-size: 0.75rem;
   font-weight: 800;
+}
+
+.warehouse-manual-correction-editor {
+  grid-column: 1 / -1;
+  border-color: #E0C46C;
+  background: #FFFCF0;
+}
+
+.warehouse-manual-correction-editor.is-active {
+  border-color: #D39A20;
+  box-shadow: 0 0 0 2px rgba(211, 154, 32, 0.12);
+}
+
+.warehouse-correction-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 0.8rem;
+}
+
+.warehouse-correction-summary > div {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #ECDFAE;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.warehouse-correction-summary span,
+.warehouse-correction-summary strong {
+  display: block;
+}
+
+.warehouse-correction-summary span {
+  color: #765D1B;
+  font-size: 0.7rem;
+}
+
+.warehouse-correction-summary strong {
+  margin-top: 0.15rem;
+  color: #4E3B08;
+}
+
+.warehouse-correction-inputs {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.6fr) minmax(280px, 1.6fr) auto;
+  align-items: end;
+  gap: 0.75rem;
+}
+
+.prod-manual-correction-detail {
+  display: grid;
+  gap: 0.75rem;
+  border-color: #E0C46C;
+  background: #FFFCF0;
+}
+
+.prod-manual-correction-detail h3,
+.prod-manual-correction-detail p {
+  margin: 0;
+}
+
+.prod-manual-correction-values {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(130px, 1fr));
+  gap: 0.65rem;
+}
+
+.prod-manual-correction-values > div {
+  padding: 0.7rem;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.prod-manual-correction-values span,
+.prod-manual-correction-values strong {
+  display: block;
+}
+
+.prod-manual-correction-values span {
+  color: #765D1B;
+  font-size: 0.72rem;
+}
+
+.prod-manual-correction-values strong {
+  margin-top: 0.2rem;
+  color: #4E3B08;
 }
 
 .warehouse-conference-adjustments {
@@ -2463,11 +2587,26 @@ tr:not(:last-child) td {
   }
 
   .warehouse-indicator-option {
-    grid-template-columns: auto 1fr;
+    grid-template-columns: 1fr;
   }
 
   .warehouse-indicator-value {
-    grid-column: 1 / -1;
+    grid-column: auto;
+  }
+
+  .warehouse-indicator-decision,
+  .warehouse-indicator-decision label {
+    width: 100%;
+  }
+
+  .warehouse-indicator-decision label {
+    justify-content: center;
+  }
+
+  .warehouse-correction-summary,
+  .warehouse-correction-inputs,
+  .prod-manual-correction-values {
+    grid-template-columns: 1fr;
   }
 }
 
