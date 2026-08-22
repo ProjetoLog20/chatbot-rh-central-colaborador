@@ -147,6 +147,28 @@ function normalizeAdditionalValues(value) {
   return additions;
 }
 
+function normalizeManualCorrections(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const corrections = {};
+  for (const [rawMatricula, rawItem] of Object.entries(value)) {
+    const matricula = trim(rawMatricula);
+    if (!matricula || !rawItem || typeof rawItem !== 'object' || Array.isArray(rawItem)) continue;
+    const rawValue = rawItem.valor_final ?? rawItem.valor;
+    if (rawValue === '' || rawValue === null || rawValue === undefined) continue;
+    const parsedValue = typeof rawValue === 'number'
+      ? rawValue
+      : Number(trim(rawValue).replace(/\./g, '').replace(',', '.'));
+    if (!Number.isFinite(parsedValue) || parsedValue < 0) {
+      throw new Error(`Informe um valor final válido para a matrícula ${matricula}.`);
+    }
+    const valorFinal = Number(Math.min(100000, parsedValue).toFixed(2));
+    const observacao = trim(rawItem.observacao).slice(0, 500);
+    if (!observacao) throw new Error(`Informe o motivo da correção manual da matrícula ${matricula}.`);
+    corrections[matricula] = { valorFinal, observacao };
+  }
+  return corrections;
+}
+
 function parseDate(value) {
   const text = trim(value);
   const match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
@@ -701,6 +723,39 @@ function applyAdditionalValue(row, colaborador, totals, additionalValues = {}) {
   return { ...totals, total, difference, additionalTotal, additionalValue };
 }
 
+function applyManualCorrection(row, colaborador, totals, manualCorrections = {}) {
+  const item = manualCorrections?.[trim(colaborador.matricula)];
+  if (!item) return { ...totals, manualCorrection: null };
+
+  const previousTotal = Number(numberValue(totals.total).toFixed(2));
+  const finalTotal = Number(numberValue(item.valorFinal).toFixed(2));
+  const manualCorrection = {
+    valorAnterior: previousTotal,
+    valorFinal: finalTotal,
+    diferenca: Number((finalTotal - previousTotal).toFixed(2)),
+    observacao: trim(item.observacao)
+  };
+  const difference = totals.expectedTotal === null || totals.expectedTotal === undefined
+    ? 0
+    : Number((finalTotal - totals.expectedTotal).toFixed(2));
+  const original = parseOriginal(row);
+
+  row.rv_nova = finalTotal;
+  row.valor_total_previsto = finalTotal;
+  row.faixa = finalTotal > 0 ? 'Elegivel' : 'Sem premio';
+  row.status_produtividade = finalTotal > 0 ? 'Elegivel' : 'Sem premio';
+  row.origem_calculo = `${row.origem_calculo || 'rv_armazem'}+correcao_manual_conferencia`;
+  row.status_auditoria = 'corrigido_manualmente';
+  row.observacao_cruzamento = `${trim(row.observacao_cruzamento)} Correção manual: ${manualCorrection.observacao}.`.trim();
+  row.mensagem_rh = `${trim(row.mensagem_rh)} Valor final corrigido manualmente de R$ ${previousTotal.toFixed(2)} para R$ ${finalTotal.toFixed(2)} — ${manualCorrection.observacao}.`.trim();
+  row.dados_originais_json = JSON.stringify({
+    ...original,
+    manualCorrection
+  });
+
+  return { ...totals, total: finalTotal, difference, manualCorrection };
+}
+
 function buildRows(csvRows, options) {
   if (isWmsSeparationCsv(csvRows)) return buildWmsSeparationRows(csvRows, options);
   requireCsvColumns(csvRows, ['usuario', 'atividade', 'observacao', 'status_tarefa'], 'On Demand');
@@ -1003,6 +1058,7 @@ async function importOnDemand(file, options = {}) {
   const officialRules = readOfficialRules(options.officialRules, context.competencia);
   const indicatorReviews = normalizeIndicatorReviews(options.indicatorReviews);
   const additionalValues = normalizeAdditionalValues(options.additionalValues);
+  const manualCorrections = normalizeManualCorrections(options.manualCorrections);
   const operatorCsvRows = options.operatorFile ? readCsv(options.operatorFile) : [];
   const operatorContext = options.operatorFile && !isWmsSeparation
     ? buildOperatorActivities(operatorCsvRows, context.competencia)
@@ -1078,7 +1134,8 @@ async function importOnDemand(file, options = {}) {
         const calculatedTotals = isWmsSeparation
           ? applyWmsIndicatorRules(row, match.colaborador, officialRules, indicatorReviews, baseTotals)
           : applyCombinedRules(row, match.colaborador, operatorContext, officialRules, indicatorReviews);
-        const totals = applyAdditionalValue(row, match.colaborador, calculatedTotals, additionalValues);
+        const totalsWithAdditional = applyAdditionalValue(row, match.colaborador, calculatedTotals, additionalValues);
+        const totals = applyManualCorrection(row, match.colaborador, totalsWithAdditional, manualCorrections);
         report.crossed.push({
           colaborador_id: match.colaborador.id,
           matricula: match.colaborador.matricula,
@@ -1093,6 +1150,7 @@ async function importOnDemand(file, options = {}) {
           indicadores_confirmados: totals.selectedIndicators || [],
           valor_adicional: totals.additionalTotal,
           observacao_valor_adicional: totals.additionalValue?.observacao || '',
+          correcao_manual: totals.manualCorrection,
           valor_total_previsto: row.valor_total_previsto,
           valor_esperado: totals.expectedTotal,
           diferenca: totals.difference
@@ -1171,7 +1229,8 @@ async function importOnDemand(file, options = {}) {
     const calculatedTotals = isWmsSeparation
       ? applyWmsIndicatorRules(row, match.colaborador, officialRules, indicatorReviews, baseTotals)
       : applyCombinedRules(row, match.colaborador, operatorContext, officialRules, indicatorReviews);
-    const totals = applyAdditionalValue(row, match.colaborador, calculatedTotals, additionalValues);
+    const totalsWithAdditional = applyAdditionalValue(row, match.colaborador, calculatedTotals, additionalValues);
+    const totals = applyManualCorrection(row, match.colaborador, totalsWithAdditional, manualCorrections);
     const result = await upsertArmazem(row, match.colaborador, importacaoId);
     if (result === 'created') report.created += 1;
     if (result === 'updated') report.updated += 1;
@@ -1189,6 +1248,7 @@ async function importOnDemand(file, options = {}) {
       indicadores_confirmados: totals.selectedIndicators || [],
       valor_adicional: totals.additionalTotal,
       observacao_valor_adicional: totals.additionalValue?.observacao || '',
+      correcao_manual: totals.manualCorrection,
       valor_total_previsto: row.valor_total_previsto,
       valor_esperado: totals.expectedTotal,
       diferenca: totals.difference
@@ -1271,8 +1331,10 @@ module.exports = {
   applyCombinedRules,
   applyWmsIndicatorRules,
   applyAdditionalValue,
+  applyManualCorrection,
   normalizeIndicatorReviews,
   normalizeAdditionalValues,
+  normalizeManualCorrections,
   parseCsvBuffer,
   readOfficialRules,
   officialPeriodForCompetencia

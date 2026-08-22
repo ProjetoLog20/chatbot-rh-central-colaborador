@@ -325,13 +325,14 @@ export async function importOnDemandArmazemFile(file, operatorFile, competencia 
   return body;
 }
 
-export async function approveOnDemandArmazemImport(previewToken, indicatorReviews = {}, additionalValues = {}) {
+export async function approveOnDemandArmazemImport(previewToken, indicatorReviews = {}, additionalValues = {}, manualCorrections = {}) {
   return request('/produtividade-armazem/importar/aprovar', {
     method: 'POST',
     body: JSON.stringify({
       preview_token: previewToken,
       indicator_reviews: indicatorReviews,
-      additional_values: additionalValues
+      additional_values: additionalValues,
+      manual_corrections: manualCorrections
     })
   });
 }

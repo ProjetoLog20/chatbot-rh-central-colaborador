@@ -141,7 +141,8 @@ function shapeArmazemRow(row) {
     indicadores_confirmados: Array.isArray(original.indicators) ? original.indicators : [],
     valor_indicadores_total: Number(original.indicatorsTotal || 0),
     valores_adicionais: Array.isArray(original.additionalValues) ? original.additionalValues : [],
-    valor_adicional_total: Number(original.additionalTotal || 0)
+    valor_adicional_total: Number(original.additionalTotal || 0),
+    correcao_manual_premio: original.manualCorrection || null
   };
 }
 
@@ -551,6 +552,7 @@ router.post('/importar/aprovar', authenticateToken, authorizeRoles('admin'), asy
       allowMissingValues: false,
       indicatorReviews: req.body.indicator_reviews,
       additionalValues: req.body.additional_values,
+      manualCorrections: req.body.manual_corrections,
       originalFilename: staged.originalName,
       createdBy: req.user.id
     });

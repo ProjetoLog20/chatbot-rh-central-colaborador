@@ -444,6 +444,17 @@ function ProdutividadeDetail({ registro, variant = 'rota', detailedTasks = false
           ))}
         </section>
       ) : null}
+      {isArmazem && registro.correcao_manual_premio ? (
+        <section className="prod-task-breakdown prod-manual-correction-detail">
+          <h3>Correção manual realizada na conferência</h3>
+          <div className="prod-manual-correction-values">
+            <div><span>Valor calculado</span><strong>{formatMoney(registro.correcao_manual_premio.valorAnterior)}</strong></div>
+            <div><span>Valor final corrigido</span><strong>{formatMoney(registro.correcao_manual_premio.valorFinal)}</strong></div>
+            <div><span>Diferença</span><strong>{formatMoney(registro.correcao_manual_premio.diferenca)}</strong></div>
+          </div>
+          <p>{registro.correcao_manual_premio.observacao}</p>
+        </section>
+      ) : null}
     </section>
   );
 }
@@ -739,13 +750,38 @@ function ColaboradorProdutividade() {
   );
 }
 
+function defaultConferenceIndicators(row = {}) {
+  const role = normalizeWarehouseAudience(`${row.funcao_armazem || ''} ${row.cargo || ''}`);
+  if (role.includes('operador') || role.includes('empilhadeira')) {
+    return [
+      { nome: 'Eficiência de carregamento', valor: 50 },
+      { nome: 'TMA', valor: 100 },
+      { nome: 'Eficiência de descarga', valor: 50 }
+    ];
+  }
+  if (role.includes('ajudante') || role.includes('amarrador')) {
+    return [
+      { nome: 'Eficiência de carregamento', valor: 50 },
+      { nome: 'Ressuprimento', valor: 50 },
+      { nome: 'TMA', valor: 100 }
+    ];
+  }
+  return [
+    { nome: 'Eficiência de carregamento', valor: 50 },
+    { nome: 'Ressuprimento', valor: 50 },
+    { nome: 'TMA', valor: 100 },
+    { nome: 'Eficiência de descarga', valor: 50 }
+  ];
+}
+
 function buildIndicatorReviewState(rows = []) {
   return Object.fromEntries(rows.filter((row) => row.matricula).map((row) => [
     String(row.matricula),
-    (row.indicadores_disponiveis || []).map((indicator) => ({
+    (row.indicadores_disponiveis?.length ? row.indicadores_disponiveis : defaultConferenceIndicators(row)).map((indicator) => ({
       nome: indicator.nome,
       valor: asNumber(indicator.valor),
-      confirmado: (row.indicadores_confirmados || []).some((selected) => selected.nome === indicator.nome)
+      confirmado: (row.indicadores_confirmados || []).some((selected) => selected.nome === indicator.nome),
+      decisao: (row.indicadores_confirmados || []).some((selected) => selected.nome === indicator.nome) ? 'atingiu' : ''
     }))
   ]));
 }
@@ -763,8 +799,21 @@ function buildAdditionalValueState(rows = []) {
   ]));
 }
 
-function WarehouseConferenceCard({ row, reviews, additional, indicatorTotal, publishing, onIndicatorChange, onAdditionalChange }) {
-  const finalTotal = asNumber(row.valor_total_previsto) + indicatorTotal + asNumber(additional.valor);
+function buildManualCorrectionState(rows = []) {
+  return Object.fromEntries(rows.filter((row) => row.matricula).map((row) => [
+    String(row.matricula),
+    { valor_final: row.correcao_manual?.valorFinal ?? '', observacao: row.correcao_manual?.observacao || '' }
+  ]));
+}
+
+function hasManualCorrection(correction = {}) {
+  return correction.valor_final !== '' && correction.valor_final !== null && correction.valor_final !== undefined;
+}
+
+function WarehouseConferenceCard({ row, reviews, additional, correction, indicatorTotal, publishing, onIndicatorChange, onAdditionalChange, onCorrectionChange }) {
+  const calculatedTotal = asNumber(row.valor_total_previsto) + indicatorTotal + asNumber(additional.valor);
+  const correctionActive = hasManualCorrection(correction);
+  const finalTotal = correctionActive ? asNumber(correction.valor_final) : calculatedTotal;
   const adjustments = Array.isArray(row.ajustes) ? row.ajustes : [];
 
   return (
@@ -798,17 +847,32 @@ function WarehouseConferenceCard({ row, reviews, additional, indicatorTotal, pub
             {reviews.length ? (
               <div className="warehouse-indicator-options">
                 {reviews.map((indicator, indicatorIndex) => (
-                  <label className={`warehouse-indicator-option${indicator.confirmado ? ' is-confirmed' : ''}`} key={`${indicator.nome}-${indicatorIndex}`}>
-                    <input
-                      type="checkbox"
-                      checked={indicator.confirmado}
-                      disabled={publishing}
-                      aria-label={`${indicator.nome}: bateu a meta`}
-                      onChange={(event) => onIndicatorChange(row.matricula, indicatorIndex, { confirmado: event.target.checked })}
-                    />
+                  <div className={`warehouse-indicator-option${indicator.decisao ? ` is-${indicator.decisao}` : ''}`} key={`${indicator.nome}-${indicatorIndex}`}>
                     <span className="warehouse-indicator-copy">
                       <strong>{indicator.nome}</strong>
-                      <small>{indicator.confirmado ? 'Meta atingida e incluída no total' : 'Marque se bateu a meta'}</small>
+                      <small>{indicator.decisao === 'atingiu' ? 'Meta atingida e incluída no total' : indicator.decisao === 'nao_atingiu' ? 'Meta não atingida; valor não somado' : 'Informe obrigatoriamente o resultado'}</small>
+                    </span>
+                    <span className="warehouse-indicator-decision" role="radiogroup" aria-label={`Resultado de ${indicator.nome}`}>
+                      <label className={indicator.decisao === 'atingiu' ? 'selected yes' : ''}>
+                        <input
+                          type="radio"
+                          name={`indicator-${row.matricula}-${indicatorIndex}`}
+                          checked={indicator.decisao === 'atingiu'}
+                          disabled={publishing}
+                          onChange={() => onIndicatorChange(row.matricula, indicatorIndex, { decisao: 'atingiu', confirmado: true })}
+                        />
+                        Atingiu
+                      </label>
+                      <label className={indicator.decisao === 'nao_atingiu' ? 'selected no' : ''}>
+                        <input
+                          type="radio"
+                          name={`indicator-${row.matricula}-${indicatorIndex}`}
+                          checked={indicator.decisao === 'nao_atingiu'}
+                          disabled={publishing}
+                          onChange={() => onIndicatorChange(row.matricula, indicatorIndex, { decisao: 'nao_atingiu', confirmado: false })}
+                        />
+                        Não atingiu
+                      </label>
                     </span>
                     <span className="warehouse-indicator-value">
                       <small>Valor do indicador</small>
@@ -822,7 +886,7 @@ function WarehouseConferenceCard({ row, reviews, additional, indicatorTotal, pub
                         onChange={(event) => onIndicatorChange(row.matricula, indicatorIndex, { valor: event.target.value })}
                       />
                     </span>
-                  </label>
+                  </div>
                 ))}
               </div>
             ) : <div className="prod-warning">Nenhum indicador foi configurado para este colaborador. Não publique antes de revisar o cadastro.</div>}
@@ -844,6 +908,29 @@ function WarehouseConferenceCard({ row, reviews, additional, indicatorTotal, pub
               </label>
             </div>
           </section>
+
+          <section className={`warehouse-manual-correction-editor${correctionActive ? ' is-active' : ''}`}>
+            <div className="warehouse-editor-heading">
+              <div><span>CORREÇÃO DO PRÊMIO</span><h4>Substituir o valor final calculado</h4></div>
+              <p>Preencha somente quando o total calculado estiver incorreto. O novo valor substituirá o total acima.</p>
+            </div>
+            <div className="warehouse-correction-summary">
+              <div><span>Valor calculado</span><strong>{formatMoney(calculatedTotal)}</strong></div>
+              <div><span>Valor final após correção</span><strong>{formatMoney(finalTotal)}</strong></div>
+              {correctionActive ? <div><span>Diferença manual</span><strong>{formatMoney(finalTotal - calculatedTotal)}</strong></div> : null}
+            </div>
+            <div className="warehouse-correction-inputs">
+              <label>
+                Valor final corrigido
+                <input type="number" min="0" step="0.01" placeholder={calculatedTotal.toFixed(2)} value={correction.valor_final} disabled={publishing} onChange={(event) => onCorrectionChange(row.matricula, 'valor_final', event.target.value)} />
+              </label>
+              <label>
+                Motivo da correção {correctionActive ? '(obrigatório)' : ''}
+                <input type="text" maxLength="500" placeholder="Explique por que o prêmio calculado foi alterado" value={correction.observacao} disabled={publishing} onChange={(event) => onCorrectionChange(row.matricula, 'observacao', event.target.value)} />
+              </label>
+              {correctionActive ? <button type="button" className="secondary-button" disabled={publishing} onClick={() => onCorrectionChange(row.matricula, 'limpar')}>Remover correção</button> : null}
+            </div>
+          </section>
         </div>
       ) : <div className="prod-warning">Este registro não possui vínculo válido e não será publicado.</div>}
 
@@ -858,17 +945,25 @@ function ImportConference({ variant, data, publishing, onApprove, onCancel }) {
   const rows = isArmazem ? report?.linhas || [] : report?.rows || [];
   const [indicatorReviews, setIndicatorReviews] = useState(() => buildIndicatorReviewState(rows));
   const [additionalValues, setAdditionalValues] = useState(() => buildAdditionalValueState(rows));
+  const [manualCorrections, setManualCorrections] = useState(() => buildManualCorrectionState(rows));
   if (!data) return null;
   const valid = isArmazem ? report?.cruzamentos?.length || 0 : report?.validRows || 0;
   const ignored = isArmazem ? report?.ignorados || 0 : report?.ignored || 0;
   const total = isArmazem
-    ? rows.reduce((sum, row) => sum + asNumber(row.valor_total_previsto) + confirmedIndicatorTotal(indicatorReviews, row.matricula) + asNumber(additionalValues[String(row.matricula)]?.valor), 0)
+    ? rows.reduce((sum, row) => {
+        if (!row.vinculado) return sum;
+        const calculated = asNumber(row.valor_total_previsto) + confirmedIndicatorTotal(indicatorReviews, row.matricula) + asNumber(additionalValues[String(row.matricula)]?.valor);
+        const correction = manualCorrections[String(row.matricula)] || {};
+        return sum + (hasManualCorrection(correction) ? asNumber(correction.valor_final) : calculated);
+      }, 0)
     : report?.totalPremioProdutividade || 0;
   const issues = isArmazem
     ? [...(report?.nao_encontrados || []), ...(report?.tarefas_sem_valor || []), ...(report?.excluidos_regra_oficial || [])]
     : [...(report?.notFound || []), ...(report?.errors || []), ...(report?.periodAlerts || [])];
-  const availableIndicatorCount = rows.reduce((sum, row) => sum + (row.indicadores_disponiveis?.length || 0), 0);
+  const availableIndicatorCount = Object.values(indicatorReviews).reduce((sum, reviews) => sum + reviews.length, 0);
+  const pendingIndicatorDecisions = rows.filter((row) => row.vinculado).reduce((sum, row) => sum + (indicatorReviews[String(row.matricula)] || []).filter((indicator) => !indicator.decisao).length, 0);
   const missingAdditionalNotes = Object.values(additionalValues).filter((item) => asNumber(item.valor) > 0 && !String(item.observacao || '').trim()).length;
+  const missingCorrectionNotes = Object.values(manualCorrections).filter((item) => hasManualCorrection(item) && !String(item.observacao || '').trim()).length;
 
   function updateIndicator(matricula, index, patch) {
     const key = String(matricula);
@@ -883,6 +978,16 @@ function ImportConference({ variant, data, publishing, onApprove, onCancel }) {
     setAdditionalValues((current) => ({
       ...current,
       [key]: { ...(current[key] || { valor: '', observacao: '' }), [field]: value }
+    }));
+  }
+
+  function updateManualCorrection(matricula, field, value) {
+    const key = String(matricula);
+    setManualCorrections((current) => ({
+      ...current,
+      [key]: field === 'limpar'
+        ? { valor_final: '', observacao: '' }
+        : { ...(current[key] || { valor_final: '', observacao: '' }), [field]: value }
     }));
   }
 
@@ -910,10 +1015,12 @@ function ImportConference({ variant, data, publishing, onApprove, onCancel }) {
               row={row}
               reviews={indicatorReviews[String(row.matricula)] || []}
               additional={additionalValues[String(row.matricula)] || { valor: '', observacao: '' }}
+              correction={manualCorrections[String(row.matricula)] || { valor_final: '', observacao: '' }}
               indicatorTotal={confirmedIndicatorTotal(indicatorReviews, row.matricula)}
               publishing={publishing}
               onIndicatorChange={updateIndicator}
               onAdditionalChange={updateAdditionalValue}
+              onCorrectionChange={updateManualCorrection}
             />
           ))}
         </div>
@@ -928,8 +1035,8 @@ function ImportConference({ variant, data, publishing, onApprove, onCancel }) {
         </div>
       )}
       <div className="import-conference-approval">
-        <p><strong>{missingAdditionalNotes ? `Informe a observação de ${missingAdditionalNotes} valor(es) adicional(is) antes de publicar.` : 'Ao confirmar, os valores válidos serão publicados na competência correspondente.'}</strong></p>
-        <button type="button" onClick={() => onApprove(isArmazem ? indicatorReviews : undefined, isArmazem ? additionalValues : undefined)} disabled={publishing || !valid || missingAdditionalNotes > 0}>{publishing ? 'Publicando...' : `Aprovar e publicar ${valid} registro(s)`}</button>
+        <p><strong>{pendingIndicatorDecisions ? `Responda se atingiu ou não atingiu ${pendingIndicatorDecisions} indicador(es).` : missingAdditionalNotes ? `Informe a observação de ${missingAdditionalNotes} valor(es) adicional(is) antes de publicar.` : missingCorrectionNotes ? `Informe o motivo de ${missingCorrectionNotes} correção(ões) manual(is) antes de publicar.` : 'Ao confirmar, os valores válidos serão publicados na competência correspondente.'}</strong></p>
+        <button type="button" onClick={() => onApprove(isArmazem ? indicatorReviews : undefined, isArmazem ? additionalValues : undefined, isArmazem ? manualCorrections : undefined)} disabled={publishing || !valid || pendingIndicatorDecisions > 0 || missingAdditionalNotes > 0 || missingCorrectionNotes > 0}>{publishing ? 'Publicando...' : `Aprovar e publicar ${valid} registro(s)`}</button>
       </div>
     </section>
   );
@@ -1227,10 +1334,10 @@ function AdminArmazemPanel() {
     }
   }
 
-  async function approveWarehouseConference(indicatorReviews, additionalValues) {
+  async function approveWarehouseConference(indicatorReviews, additionalValues, manualCorrections) {
     setPublishingImport(true);
     try {
-      const result = await approveOnDemandArmazemImport(pendingImport.preview_token, indicatorReviews, additionalValues);
+      const result = await approveOnDemandArmazemImport(pendingImport.preview_token, indicatorReviews, additionalValues, manualCorrections);
       setPendingImport(null);
       setImportReport(null);
       await refresh();
