@@ -378,15 +378,15 @@ function ProdutividadeDetail({ registro, variant = 'rota', detailedTasks = false
       {isArmazem && registro.tarefas_detalhadas?.length ? (
         <section className="prod-task-breakdown">
           <h3>Tarefas consideradas no cálculo</h3>
-          <div className="table-scroll">
+          <div className="table-scroll prod-task-table">
             <table>
               <thead><tr><th>Tarefa</th>{detailedTasks ? <><th>Quantidade</th><th>Valor unitário</th></> : null}<th>Valor</th></tr></thead>
               <tbody>
                 {registro.tarefas_detalhadas.map((task, index) => (
                   <tr key={`${task.atividade}-${index}`}>
-                    <td>{task.atividade}</td>
-                    {detailedTasks ? <><td>{formatNumber(task.quantidade)}</td><td>{formatMoney(task.valuePerUnit)}</td></> : null}
-                    <td>{formatMoney(task.total)}</td>
+                    <td className="prod-task-name" data-label="Tarefa">{task.atividade}</td>
+                    {detailedTasks ? <><td data-label="Quantidade">{formatNumber(task.quantidade)}</td><td data-label="Valor unitário">{formatMoney(task.valuePerUnit)}</td></> : null}
+                    <td data-label="Valor total">{formatMoney(task.total)}</td>
                   </tr>
                 ))}
               </tbody>
