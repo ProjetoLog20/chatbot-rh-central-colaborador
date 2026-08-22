@@ -335,6 +335,8 @@ function ProdutividadeDetail({ registro, variant = 'rota', detailedTasks = false
   const metricFields = isArmazem ? armazemMetricFields : rotaMetricFields;
   const detailFields = isArmazem ? armazemDetailFields : rotaDetailFields;
   const funcao = isArmazem ? formatArmazemFuncao(registro.funcao_armazem) : formatRotaFuncao(registro.funcao_rv);
+  const tarefas = isArmazem && Array.isArray(registro.tarefas_detalhadas) ? registro.tarefas_detalhadas : [];
+  const valorTotalTarefas = tarefas.reduce((total, tarefa) => total + asNumber(tarefa.total), 0);
 
   return (
     <section className="prod-detail">
@@ -375,22 +377,39 @@ function ProdutividadeDetail({ registro, variant = 'rota', detailedTasks = false
           </div>
         ))}
       </div>
-      {isArmazem && registro.tarefas_detalhadas?.length ? (
+      {tarefas.length ? (
         <section className="prod-task-breakdown">
-          <h3>Tarefas consideradas no cálculo</h3>
-          <div className="table-scroll prod-task-table">
-            <table>
-              <thead><tr><th>Tarefa</th>{detailedTasks ? <><th>Quantidade</th><th>Valor unitário</th></> : null}<th>Valor</th></tr></thead>
-              <tbody>
-                {registro.tarefas_detalhadas.map((task, index) => (
-                  <tr key={`${task.atividade}-${index}`}>
-                    <td className="prod-task-name" data-label="Tarefa">{task.atividade}</td>
-                    {detailedTasks ? <><td data-label="Quantidade">{formatNumber(task.quantidade)}</td><td data-label="Valor unitário">{formatMoney(task.valuePerUnit)}</td></> : null}
-                    <td data-label="Valor total">{formatMoney(task.total)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="prod-task-card">
+            <div className="prod-task-card-heading">
+              <div>
+                <span>Detalhamento das tarefas</span>
+                <h3>Tarefas consideradas no cálculo</h3>
+                <p>{tarefas.length} {tarefas.length === 1 ? 'tarefa considerada' : 'tarefas consideradas'}</p>
+              </div>
+              <div className="prod-task-total">
+                <span>Valor total das tarefas</span>
+                <strong>{formatMoney(valorTotalTarefas)}</strong>
+              </div>
+            </div>
+            <div className="prod-task-list">
+              {tarefas.map((task, index) => (
+                <article className="prod-task-item" key={`${task.atividade}-${index}`}>
+                  <div className="prod-task-name">
+                    <span>Tarefa {index + 1}</span>
+                    <strong>{task.atividade}</strong>
+                  </div>
+                  <div className="prod-task-values">
+                    {detailedTasks ? (
+                      <>
+                        <div><span>Quantidade</span><strong>{formatNumber(task.quantidade)}</strong></div>
+                        <div><span>Valor unitário</span><strong>{formatMoney(task.valuePerUnit)}</strong></div>
+                      </>
+                    ) : null}
+                    <div className="prod-task-item-total"><span>Valor</span><strong>{formatMoney(task.total)}</strong></div>
+                  </div>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
       ) : null}
@@ -591,12 +610,10 @@ function ColaboradorArmazemPanel({ rows }) {
 
   return (
     <>
-      <ArmazemGoalsCard registro={selected} />
-      <div className="prod-info-note">Seu prêmio do armazém é calculado com base nos dados importados da apuração oficial da RV.</div>
       {rows.length ? (
         <>
           <section className="prod-summary-grid">
-            <div><span>Valor previsto</span><strong>{formatMoney(selected?.valor_total_previsto)}</strong></div>
+            <div className="prod-highlight-value"><span>Valor previsto nesta competência</span><strong>{formatMoney(selected?.valor_total_previsto)}</strong></div>
             <div><span>Função</span><strong>{formatArmazemFuncao(selected?.funcao_armazem)}</strong></div>
             <div><span>Competência</span><strong>{selected?.competencia || '-'}</strong></div>
             <div><span>Indicadores principais</span><strong>{formatNumber(selected?.pontos)} pontos</strong></div>
@@ -610,8 +627,11 @@ function ColaboradorArmazemPanel({ rows }) {
               </select>
             </label>
           ) : null}
-          {selected?.mensagem_rh ? <div className="prod-info-note">{selected.mensagem_rh}</div> : null}
           <ProdutividadeDetail registro={selected} variant="armazem" />
+          <details className="prod-goals-disclosure">
+            <summary>Metas do Armazém</summary>
+            <ArmazemGoalsCard registro={selected} />
+          </details>
         </>
       ) : null}
     </>
@@ -1126,7 +1146,6 @@ function AdminArmazemPanel() {
         </section>
       ) : (
         <>
-      <ArmazemGoalsCard />
       <section className="prod-summary-grid">
         {summaryCards.map(([label, value, type]) => <div key={label}><span>{label}</span><strong>{formatValue(value, type)}</strong></div>)}
       </section>

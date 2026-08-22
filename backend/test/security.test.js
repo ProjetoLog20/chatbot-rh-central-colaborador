@@ -374,6 +374,37 @@ test('administrador reseta senha e servidor confirma o novo primeiro acesso', as
     assert.equal(Boolean(after.primeiro_acesso), true);
     assert.equal(Boolean(after.senha_temporaria), true);
     assert.equal(after.data_ultima_troca_senha, null);
+
+    const senhaCurta = await request(app)
+      .post('/api/auth/primeiro-acesso')
+      .send({
+        matricula: colaboradorMatricula,
+        senhaAtual: 'log20',
+        nomePreferido: 'Colaborador',
+        novaSenha: '12345',
+        confirmarSenha: '12345'
+      })
+      .expect(400);
+    assert.equal(senhaCurta.body.error, 'A nova senha deve ter pelo menos 6 caracteres.');
+
+    await request(app)
+      .post('/api/auth/primeiro-acesso')
+      .send({
+        matricula: colaboradorMatricula,
+        senhaAtual: 'log20',
+        nomePreferido: 'Colaborador',
+        novaSenha: '123456',
+        confirmarSenha: '123456'
+      })
+      .expect(200);
+
+    const afterFirstAccess = await db.get(
+      'SELECT senha_hash, primeiro_acesso, senha_temporaria FROM colaboradores WHERE id = ?',
+      [colaborador.id]
+    );
+    assert.equal(await bcrypt.compare('123456', afterFirstAccess.senha_hash), true);
+    assert.equal(Boolean(afterFirstAccess.primeiro_acesso), false);
+    assert.equal(Boolean(afterFirstAccess.senha_temporaria), false);
   } finally {
     await db.run('DELETE FROM colaboradores WHERE id IN (?, ?)', [admin.id, colaborador.id]);
   }
