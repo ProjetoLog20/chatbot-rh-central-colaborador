@@ -101,7 +101,7 @@ Em producão, o backend serve o frontend gerado em `frontend/dist` e mantém as
 
 ## Fluxo de Primeiro Acesso
 
-No cadastro manual, no reset administrativo e para novos usuários importados sem senha informada, o servidor gera uma senha temporária individual. No primeiro login:
+No cadastro manual e para novos usuários importados sem senha informada, o servidor gera uma senha temporária individual. No reset administrativo, a senha temporária é redefinida para `log20`. No primeiro login:
 1. O colaborador faz login com sua matrícula e a senha temporária.
 2. O sistema o redireciona para a página de mudança obrigatória de senha.
 3. A nova senha deve ter pelo menos 10 caracteres e não pode repetir a senha temporária.
@@ -109,7 +109,7 @@ No cadastro manual, no reset administrativo e para novos usuários importados se
 
 ### Administrador: Resetar Senha de Colaborador
 
-Se um administrador resetar a senha, o sistema gera uma credencial temporária individual, exibe-a uma única vez ao administrador e marca o cadastro como primeiro acesso novamente.
+Se um administrador resetar a senha, o sistema define a credencial temporária como `log20`, exibe-a ao administrador e marca o cadastro como primeiro acesso novamente.
 
 ## Usuarios de teste
 

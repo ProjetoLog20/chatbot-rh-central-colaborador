@@ -361,7 +361,7 @@ test('administrador reseta senha e servidor confirma o novo primeiro acesso', as
       .expect(200);
 
     assert.equal(response.body.reset_realizado, true);
-    assert.match(response.body.senha_temporaria, /^[A-HJ-NP-Za-km-z2-9]{10,32}$/);
+    assert.equal(response.body.senha_temporaria, 'log20');
     assert.equal(Boolean(response.body.colaborador.primeiro_acesso), true);
     assert.equal(Boolean(response.body.colaborador.senha_temporaria), true);
 
@@ -376,6 +376,62 @@ test('administrador reseta senha e servidor confirma o novo primeiro acesso', as
     assert.equal(after.data_ultima_troca_senha, null);
   } finally {
     await db.run('DELETE FROM colaboradores WHERE id IN (?, ?)', [admin.id, colaborador.id]);
+  }
+});
+
+test('produtividade do armazem informa o turno individual vindo da importacao', async () => {
+  const suffix = Date.now();
+  const matricula = `turno-armazem-${suffix}`;
+  const modules = await db.all(
+    `SELECT chave, ativo, em_manutencao
+       FROM configuracoes_modulos
+      WHERE chave IN ('premio_produtividade', 'premio_produtividade_armazem')`
+  );
+
+  await db.run(
+    `INSERT INTO colaboradores
+     (matricula, nome_completo, senha_hash, perfil, status, primeiro_acesso, senha_temporaria)
+     VALUES (?, 'Colaborador Turno B', 'hash', 'colaborador', 'Ativo', 0, 0)`,
+    [matricula]
+  );
+  const colaborador = await db.get('SELECT id FROM colaboradores WHERE matricula = ?', [matricula]);
+  const token = jwt.sign(
+    { id: colaborador.id, matricula, perfil: 'colaborador' },
+    process.env.JWT_SECRET,
+    { expiresIn: '5m' }
+  );
+
+  try {
+    await db.run(
+      `UPDATE configuracoes_modulos
+          SET ativo = true, em_manutencao = false
+        WHERE chave IN ('premio_produtividade', 'premio_produtividade_armazem')`
+    );
+    await db.run(
+      `INSERT INTO produtividade_armazem_colaboradores
+       (colaborador_id, competencia, matricula, nome_completo, funcao_armazem, cargo,
+        status_produtividade, dados_originais_json, publicado)
+       VALUES (?, '08/2026', ?, 'Colaborador Turno B', 'Ajudante', 'Ajudante Armazem',
+               'Elegivel', ?, true)`,
+      [colaborador.id, matricula, JSON.stringify({ turno: 'Turno B', atividades: [] })]
+    );
+
+    const response = await request(app)
+      .get('/api/produtividade-armazem/meu')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    assert.equal(response.body.rows.length, 1);
+    assert.equal(response.body.rows[0].turno_armazem, 'B');
+  } finally {
+    await db.run('DELETE FROM produtividade_armazem_colaboradores WHERE colaborador_id = ?', [colaborador.id]);
+    await db.run('DELETE FROM colaboradores WHERE id = ?', [colaborador.id]);
+    for (const module of modules) {
+      await db.run(
+        'UPDATE configuracoes_modulos SET ativo = ?, em_manutencao = ? WHERE chave = ?',
+        [module.ativo, module.em_manutencao, module.chave]
+      );
+    }
   }
 });
 

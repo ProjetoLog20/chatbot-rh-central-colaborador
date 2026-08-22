@@ -98,6 +98,32 @@ function trim(value) {
   return String(value ?? '').trim();
 }
 
+function normalizeWarehouseShift(value) {
+  const normalized = trim(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  if (!normalized) return null;
+  if (/\b(?:turno|turma|equipe|shift)?\s*a\b/.test(normalized) || normalized === 'ta') return 'A';
+  if (/\b(?:turno|turma|equipe|shift)?\s*b\b/.test(normalized) || normalized === 'tb') return 'B';
+  if (/\b(?:turno|turma|equipe|shift)?\s*c\b/.test(normalized) || normalized === 'tc') return 'C';
+  return null;
+}
+
+function warehouseShiftFromOriginal(original = {}) {
+  return normalizeWarehouseShift(
+    original.turno_armazem
+      || original.turno
+      || original.shift
+      || original.equipe
+      || original.team
+      || original.employee?.turno
+      || original.employee?.shift
+      || original.employee?.equipe
+      || original.employee?.team
+  );
+}
+
 function shapeArmazemRow(row) {
   if (!row) return row;
   let original = {};
@@ -110,11 +136,23 @@ function shapeArmazemRow(row) {
   }
   return {
     ...row,
+    turno_armazem: normalizeWarehouseShift(row.turno_armazem) || warehouseShiftFromOriginal(original),
     tarefas_detalhadas: Array.isArray(original.atividades) ? original.atividades : []
   };
 }
 
 function manualPayload(body, colaborador, existing = {}) {
+  let existingOriginal = {};
+  try {
+    existingOriginal = typeof existing.dados_originais_json === 'string'
+      ? JSON.parse(existing.dados_originais_json)
+      : existing.dados_originais_json || {};
+  } catch {
+    existingOriginal = {};
+  }
+  const warehouseShift = normalizeWarehouseShift(body.turno_armazem)
+    || normalizeWarehouseShift(existing.turno_armazem)
+    || warehouseShiftFromOriginal(existingOriginal);
   const valorTotal = parseManualNumber(body.valor_total_previsto ?? existing.valor_total_previsto);
   const rvNova = parseManualNumber(body.rv_nova ?? existing.rv_nova ?? valorTotal);
   const rvAntiga = parseManualNumber(body.rv_antiga ?? existing.rv_antiga);
@@ -151,7 +189,11 @@ function manualPayload(body, colaborador, existing = {}) {
     confianca_cruzamento: 1,
     observacao_cruzamento: trim(body.observacao_cruzamento ?? existing.observacao_cruzamento),
     mensagem_rh: trim(body.mensagem_rh ?? existing.mensagem_rh),
-    dados_originais_json: JSON.stringify({ origem: 'manual_rh', atualizado_em: new Date().toISOString() })
+    dados_originais_json: JSON.stringify({
+      origem: 'manual_rh',
+      turno_armazem: warehouseShift,
+      atualizado_em: new Date().toISOString()
+    })
   };
 }
 

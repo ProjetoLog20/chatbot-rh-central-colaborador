@@ -474,6 +474,7 @@ function applyCombinedRules(row, colaborador, operatorContext, officialRules, ex
   row.mensagem_rh = `RV do armazém: tarefas R$ ${tasksTotal.toFixed(2)} + indicadores R$ ${indicatorsTotal.toFixed(2)}.`;
   row.dados_originais_json = JSON.stringify({
     ...original,
+    turno_armazem: trim(rule.turno_armazem || rule.turno || original.turno_armazem || original.turno) || null,
     atividades: activities,
     registros_operadores: operatorBucket?.registros || 0,
     tarefasTotal: tasksTotal,
