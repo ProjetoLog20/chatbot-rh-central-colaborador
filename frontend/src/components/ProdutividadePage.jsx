@@ -64,7 +64,6 @@ const armazemDetailFields = [
   ['periodo_inicio', 'Período inicial', 'date'],
   ['periodo_fim', 'Período final', 'date'],
   ['funcao_armazem', 'Função no armazém'],
-  ['turno_armazem', 'Grupo de indicadores'],
   ['pontos', 'Pontos', 'number'],
   ['faixa', 'Faixa'],
   ['rv_antiga', 'RV antiga', 'money'],
