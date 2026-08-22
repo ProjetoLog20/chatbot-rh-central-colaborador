@@ -467,7 +467,7 @@ function PasswordResetDialog({ dialog, onConfirm, onClose }) {
             </p>
             <dl className="password-reset-user">
               <div><dt>Matrícula</dt><dd>{dialog.user.matricula}</dd></div>
-              <div><dt>Nova senha temporária</dt><dd>Gerada com segurança após confirmar</dd></div>
+              <div><dt>Nova senha temporária</dt><dd>log20</dd></div>
             </dl>
             <p className="password-reset-warning">
               {isWorking ? 'Aguarde enquanto o reset é confirmado pelo servidor…' : 'A senha atual deixará de funcionar e o usuário deverá criar uma nova senha no próximo acesso.'}

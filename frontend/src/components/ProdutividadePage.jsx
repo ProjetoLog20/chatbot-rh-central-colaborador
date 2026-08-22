@@ -64,6 +64,7 @@ const armazemDetailFields = [
   ['periodo_inicio', 'Período inicial', 'date'],
   ['periodo_fim', 'Período final', 'date'],
   ['funcao_armazem', 'Função no armazém'],
+  ['turno_armazem', 'Grupo de indicadores'],
   ['pontos', 'Pontos', 'number'],
   ['faixa', 'Faixa'],
   ['rv_antiga', 'RV antiga', 'money'],
@@ -82,6 +83,7 @@ const armazemDetailFields = [
 
 const armazemGoalGroups = [
   {
+    key: 'turno-a',
     title: 'RV AJUDANTES - TURNO A',
     goals: [
       { code: 'EC', label: 'EFICIENCIA DE CARREGAMENTO', meta: '98%', value: 'R$ 50.00', accumulated: 'R$ 0.00' },
@@ -103,6 +105,7 @@ const armazemGoalGroups = [
     ]
   },
   {
+    key: 'turno-b',
     title: 'RV AJUDANTES - TURNO B',
     goals: [
       { code: 'RE', label: 'RESSUPRIMENTO', meta: '90%', value: 'R$ 50.00', accumulated: 'R$ 0.00' },
@@ -124,6 +127,7 @@ const armazemGoalGroups = [
     ]
   },
   {
+    key: 'operadores',
     title: 'RV OPERADORES',
     goals: [
       { code: 'EC', label: 'EFICIENCIA DE CARREGAMENTO', meta: '98%', value: 'R$ 50.00', accumulated: 'R$ 0.00' },
@@ -135,6 +139,59 @@ const armazemGoalGroups = [
     ]
   }
 ];
+
+function normalizeWarehouseAudience(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function warehouseAudienceKey(registro) {
+  const role = normalizeWarehouseAudience(`${registro?.funcao_armazem || ''} ${registro?.cargo || ''}`);
+  if (role.includes('operador') || role.includes('empilhadeira')) return 'operadores';
+
+  const declaredShift = normalizeWarehouseAudience(registro?.turno_armazem);
+  if (declaredShift === 'c' || /\b(?:turno|turma|equipe|shift)\s*c\b/.test(declaredShift)) return 'turno-c';
+  if (declaredShift === 'b' || /\b(?:turno|turma|equipe|shift)\s*b\b/.test(declaredShift)) return 'turno-b';
+  if (declaredShift === 'a' || /\b(?:turno|turma|equipe|shift)\s*a\b/.test(declaredShift)) return 'turno-a';
+
+  const indicators = normalizeWarehouseAudience([
+    registro?.indicador_1,
+    registro?.indicador_2,
+    registro?.indicador_3,
+    registro?.mensagem_rh
+  ].filter(Boolean).join(' '));
+  if (indicators.includes('ressuprimento')) return 'turno-b';
+  return 'turno-a';
+}
+
+function turnoCGoalGroup(registro) {
+  const goals = [registro?.indicador_1, registro?.indicador_2, registro?.indicador_3]
+    .filter(Boolean)
+    .map((indicator, index) => {
+      const [label, ...valueParts] = String(indicator).split(':');
+      return {
+        code: `I${index + 1}`,
+        label: label.trim().toUpperCase(),
+        meta: 'Conforme apuração',
+        value: valueParts.join(':').trim() || 'Consulte o detalhamento',
+        accumulated: ''
+      };
+    });
+  return {
+    key: 'turno-c',
+    title: 'RV AJUDANTES - TURNO C',
+    goals,
+    items: armazemGoalGroups[0].items
+  };
+}
+
+function warehouseGoalGroupsFor(registro) {
+  const audienceKey = warehouseAudienceKey(registro);
+  if (audienceKey === 'turno-c') return [turnoCGoalGroup(registro)];
+  return armazemGoalGroups.filter((group) => group.key === audienceKey);
+}
 
 const emptyRotaSummary = {
   total_colaboradores: 0,
@@ -341,29 +398,32 @@ function ProdutividadeDetail({ registro, variant = 'rota', detailedTasks = false
   );
 }
 
-function ArmazemGoalsCard() {
+function ArmazemGoalsCard({ registro = null }) {
+  const goalGroups = registro ? warehouseGoalGroupsFor(registro) : armazemGoalGroups;
   return (
     <section className="prod-armazem-goals" aria-label="Metas Armazém">
       <div className="prod-armazem-goals-heading">
         <h2>Metas Armazém</h2>
       </div>
       <div className="prod-goal-groups">
-        {armazemGoalGroups.map((group) => (
-          <article className="prod-goal-group" key={group.title}>
+        {goalGroups.map((group) => (
+          <article className="prod-goal-group" key={group.key}>
             <h3>{group.title}</h3>
-            <div className="prod-goal-metrics" style={{ '--goal-count': group.goals.length }}>
-              {group.goals.map((goal) => (
-                <div className="prod-goal-metric" key={`${group.title}-${goal.code}`}>
-                  <div className="prod-goal-code">{goal.code}</div>
-                  <div className="prod-goal-label">{goal.label}</div>
-                  <div className="prod-goal-copy">
-                    <strong>Meta {goal.meta}</strong>
-                    <span>Valor {goal.value}</span>
-                    <b>Acumulado: {goal.accumulated}</b>
+            {group.goals.length ? (
+              <div className="prod-goal-metrics" style={{ '--goal-count': group.goals.length }}>
+                {group.goals.map((goal) => (
+                  <div className="prod-goal-metric" key={`${group.title}-${goal.code}`}>
+                    <div className="prod-goal-code">{goal.code}</div>
+                    <div className="prod-goal-label">{goal.label}</div>
+                    <div className="prod-goal-copy">
+                      <strong>Meta {goal.meta}</strong>
+                      <span>Valor {goal.value}</span>
+                      {goal.accumulated ? <b>Acumulado: {goal.accumulated}</b> : null}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : <p className="prod-goal-empty">Os indicadores deste turno serão exibidos conforme a apuração oficial do período.</p>}
             <div className="prod-goal-items">
               {group.items.map(([icon, label, value]) => (
                 <div className="prod-goal-item" key={`${group.title}-${label}`}>
@@ -395,6 +455,7 @@ const armazemManualFields = [
   ['periodo_inicio', 'Período inicial', 'date'],
   ['periodo_fim', 'Período final', 'date'],
   ['funcao_armazem', 'Função no armazém', 'select'],
+  ['turno_armazem', 'Grupo de indicadores', 'warehouseShift'],
   ['pontos', 'Pontos', 'number'],
   ['faixa', 'Faixa', 'text'],
   ['rv_antiga', 'RV antiga', 'number'],
@@ -453,6 +514,13 @@ function ManualProdutividadeForm({ registro, variant = 'rota', onSubmit, onCance
                 <option value="Ajudante">Ajudante</option>
                 <option value="Operador de Empilhadeira">Operador de Empilhadeira</option>
                 <option value="Amarrador">Amarrador</option>
+              </select>
+            ) : type === 'warehouseShift' ? (
+              <select value={form[key] || ''} onChange={(event) => setForm({ ...form, [key]: event.target.value })}>
+                <option value="">Definir pela importação</option>
+                <option value="A">Turno A</option>
+                <option value="B">Turno B</option>
+                <option value="C">Turno C</option>
               </select>
             ) : (
               <input
@@ -523,7 +591,7 @@ function ColaboradorArmazemPanel({ rows }) {
 
   return (
     <>
-      <ArmazemGoalsCard />
+      <ArmazemGoalsCard registro={selected} />
       <div className="prod-info-note">Seu prêmio do armazém é calculado com base nos dados importados da apuração oficial da RV.</div>
       {rows.length ? (
         <>
@@ -609,7 +677,7 @@ function ColaboradorProdutividade() {
           <p>{activeTab === 'armazem' ? 'Consulte os dados oficiais importados da RV do Armazém.' : 'Seu prêmio é calculado com base nos indicadores importados da apuração oficial.'}</p>
         </div>
       </div>
-      <div className="prod-warning">Caso não concorde ou não entenda alguma informação, procure o RH.</div>
+      <div className="prod-warning">Caso não concorde com alguma informação, procure o seu supervisor.</div>
       {loading ? <p>Carregando produtividade...</p> : null}
       {!loading && !tabs.length ? <div className="empty-state">{message || 'Você ainda não possui dados de Prêmio de Produtividade para este período.'}</div> : null}
       {!loading && tabs.length > 1 ? <ProdTabs activeTab={activeTab} onChange={setActiveTab} tabs={tabs} /> : null}
@@ -1164,7 +1232,7 @@ function AdminProdutividade() {
       </div>
       <AdminProdutividadeResumo />
       <ProdTabs activeTab={activeTab} onChange={setActiveTab} tabs={[{ id: 'rota', label: 'Rota' }, { id: 'armazem', label: 'Armazém' }]} />
-      <div className="prod-warning">Caso não concorde ou não entenda alguma informação, procure o RH.</div>
+      <div className="prod-warning">Caso não concorde com alguma informação, procure o seu supervisor.</div>
       {activeTab === 'rota' ? <AdminRotaPanel /> : <AdminArmazemPanel />}
     </div>
   );

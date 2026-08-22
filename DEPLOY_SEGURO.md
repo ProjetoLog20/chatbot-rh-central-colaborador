@@ -52,7 +52,7 @@ A migration `026_pesquisa_clima_integridade.sql` é aditiva: cria o controle sep
 1. Fazer deploy da branch em ambiente de preview/homologação.
 2. Validar `/api/health`.
 3. Testar login de colaborador e administrador.
-4. Testar cadastro, reset e primeiro acesso com senha temporária individual.
+4. Testar cadastro com senha temporária individual, reset com a senha padrão `log20` e troca obrigatória no primeiro acesso.
 5. Testar Pesquisa de Clima ativa, resposta e dashboard.
 6. Testar Yuri com IA habilitada e desabilitada.
 7. Testar upload de rotograma abaixo do limite configurado.

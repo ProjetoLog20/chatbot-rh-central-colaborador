@@ -2,7 +2,7 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const db = require('../db');
 const { authenticateToken, authorizeRoles } = require('../authMiddleware');
-const { generateTemporaryPassword } = require('../temporaryPassword');
+const { DEFAULT_RESET_PASSWORD, generateTemporaryPassword } = require('../temporaryPassword');
 
 const router = express.Router();
 const ALLOWED_PROFILES = new Set(['admin', 'motorista', 'colaborador']);
@@ -131,7 +131,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     let dataTroca = user.data_ultima_troca_senha;
     let generatedTemporaryPassword = null;
     if (shouldResetPassword) {
-      generatedTemporaryPassword = generateTemporaryPassword();
+      generatedTemporaryPassword = DEFAULT_RESET_PASSWORD;
       senhaHash = await bcrypt.hash(generatedTemporaryPassword, 10);
       primeiroAcesso = true;
       senhaTemporaria = true;
