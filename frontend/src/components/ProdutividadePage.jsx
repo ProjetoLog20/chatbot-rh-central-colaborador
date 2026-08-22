@@ -52,6 +52,8 @@ const rotaDetailFields = [
 
 const armazemMetricFields = [
   ['valor_total_previsto', 'Valor previsto', 'money'],
+  ['valor_indicadores_total', 'Metas confirmadas', 'money'],
+  ['valor_adicional_total', 'Valores adicionais', 'money'],
   ['pontos', 'Pontuacao', 'number'],
   ['faixa', 'Faixa'],
   ['funcao_armazem', 'Função'],
@@ -293,8 +295,16 @@ function StatusBadge({ type, value }) {
   }
 
   if (type === 'auditoria') {
-    const revisar = String(value || '').toLowerCase() === 'revisar_cruzamento';
-    return <span className={`prod-badge ${revisar ? 'warning' : 'success'}`}>{revisar ? 'Revisar vinculo' : 'OK'}</span>;
+    const normalizedAudit = String(value || '').trim().toLowerCase();
+    const auditLabels = {
+      revisar_cruzamento: 'Revisar vínculo',
+      pendente_indicadores: 'Metas pendentes',
+      pendente_conferencia_erros: 'Conferir erros',
+      revisar_valores_atividade: 'Revisar valores',
+      divergencia_bi: 'Revisar cálculo'
+    };
+    const auditOk = normalizedAudit === 'ok';
+    return <span className={`prod-badge ${auditOk ? 'success' : 'warning'}`}>{auditOk ? 'OK' : (auditLabels[normalizedAudit] || value || 'Revisão pendente')}</span>;
   }
 
   const normalized = String(value || '').trim().toLowerCase();
@@ -410,6 +420,28 @@ function ProdutividadeDetail({ registro, variant = 'rota', detailedTasks = false
               ))}
             </div>
           </div>
+        </section>
+      ) : null}
+      {isArmazem && registro.valores_adicionais?.length ? (
+        <section className="prod-task-breakdown prod-additional-values">
+          <h3>Valores adicionais</h3>
+          {registro.valores_adicionais.map((item, index) => (
+            <div className="prod-additional-value" key={`${item.observacao}-${index}`}>
+              <strong>{formatMoney(item.valor)}</strong>
+              <span>{item.observacao}</span>
+            </div>
+          ))}
+        </section>
+      ) : null}
+      {isArmazem && registro.indicadores_confirmados?.length ? (
+        <section className="prod-task-breakdown prod-additional-values">
+          <h3>Metas e indicadores confirmados</h3>
+          {registro.indicadores_confirmados.map((item, index) => (
+            <div className="prod-additional-value" key={`${item.nome}-${index}`}>
+              <strong>{formatMoney(item.valor)}</strong>
+              <span>{item.nome}</span>
+            </div>
+          ))}
         </section>
       ) : null}
     </section>
@@ -707,19 +739,55 @@ function ColaboradorProdutividade() {
   );
 }
 
+function buildIndicatorReviewState(rows = []) {
+  return Object.fromEntries(rows.filter((row) => row.matricula).map((row) => [
+    String(row.matricula),
+    (row.indicadores_disponiveis || []).map((indicator) => ({
+      nome: indicator.nome,
+      valor: asNumber(indicator.valor),
+      confirmado: (row.indicadores_confirmados || []).some((selected) => selected.nome === indicator.nome)
+    }))
+  ]));
+}
+
+function confirmedIndicatorTotal(indicatorReviews, matricula) {
+  return (indicatorReviews[String(matricula)] || [])
+    .filter((indicator) => indicator.confirmado)
+    .reduce((sum, indicator) => sum + asNumber(indicator.valor), 0);
+}
+
+function buildAdditionalValueState(rows = []) {
+  return Object.fromEntries(rows.filter((row) => row.matricula).map((row) => [
+    String(row.matricula),
+    { valor: asNumber(row.valor_adicional) || '', observacao: row.observacao_valor_adicional || '' }
+  ]));
+}
+
 function ImportConference({ variant, data, publishing, onApprove, onCancel }) {
-  if (!data) return null;
   const isArmazem = variant === 'armazem';
-  const report = isArmazem ? data.report : data.preview;
+  const report = isArmazem ? data?.report : data?.preview;
   const rows = isArmazem ? report?.linhas || [] : report?.rows || [];
+  const [indicatorReviews, setIndicatorReviews] = useState(() => buildIndicatorReviewState(rows));
+  const [additionalValues, setAdditionalValues] = useState(() => buildAdditionalValueState(rows));
+  if (!data) return null;
   const valid = isArmazem ? report?.cruzamentos?.length || 0 : report?.validRows || 0;
   const ignored = isArmazem ? report?.ignorados || 0 : report?.ignored || 0;
   const total = isArmazem
-    ? (report?.cruzamentos || []).reduce((sum, item) => sum + asNumber(item.valor_total_previsto), 0)
+    ? rows.reduce((sum, row) => sum + asNumber(row.valor_total_previsto) + confirmedIndicatorTotal(indicatorReviews, row.matricula) + asNumber(additionalValues[String(row.matricula)]?.valor), 0)
     : report?.totalPremioProdutividade || 0;
   const issues = isArmazem
     ? [...(report?.nao_encontrados || []), ...(report?.tarefas_sem_valor || []), ...(report?.excluidos_regra_oficial || [])]
     : [...(report?.notFound || []), ...(report?.errors || []), ...(report?.periodAlerts || [])];
+  const availableIndicatorCount = rows.reduce((sum, row) => sum + (row.indicadores_disponiveis?.length || 0), 0);
+  const missingAdditionalNotes = Object.values(additionalValues).filter((item) => asNumber(item.valor) > 0 && !String(item.observacao || '').trim()).length;
+
+  function updateIndicator(matricula, index, patch) {
+    const key = String(matricula);
+    setIndicatorReviews((current) => ({
+      ...current,
+      [key]: (current[key] || []).map((indicator, itemIndex) => itemIndex === index ? { ...indicator, ...patch } : indicator)
+    }));
+  }
 
   return (
     <section className="import-conference">
@@ -736,24 +804,28 @@ function ImportConference({ variant, data, publishing, onApprove, onCancel }) {
         <div><span>Expiração</span><strong>{data.expira_em_minutos || 30} min</strong></div>
       </div>
       {issues.length ? <div className="prod-warning">Existem {issues.length} inconsistência(s). Linhas sem vínculo não serão publicadas.</div> : null}
+      {isArmazem && availableIndicatorCount ? <div className="prod-warning">TMA e demais metas não vêm no relatório. Marque somente os indicadores comprovados; apenas os marcados serão somados ao valor final.</div> : null}
       <div className="table-scroll import-conference-table">
         <table>
-          <thead><tr><th>Situação</th><th>Matrícula</th><th>Nome</th><th>Função</th><th>Competência</th>{isArmazem ? <><th>Tarefas/Pontos</th><th>Valor tarefas</th><th>Indicadores</th><th>Ajustes</th></> : <><th>Caixas</th><th>Entregas</th><th>Mapas</th></>}<th>Valor final</th></tr></thead>
+          <thead><tr><th>Situação</th><th>Matrícula</th><th>Nome</th><th>Função</th><th>Competência</th>{isArmazem ? <><th>Tarefas/Pontos</th><th>Valor tarefas</th><th>Indicadores</th><th>Valores adicionais</th><th>Ajustes</th></> : <><th>Caixas</th><th>Entregas</th><th>Mapas</th></>}<th>Valor final</th></tr></thead>
           <tbody>
-            {rows.map((row, index) => (
-              <tr className={row.vinculado ? '' : 'conference-row-error'} key={`${row.matricula || row.nome_completo}-${index}`}>
+            {rows.map((row, index) => {
+              const reviews = indicatorReviews[String(row.matricula)] || [];
+              const indicatorTotal = confirmedIndicatorTotal(indicatorReviews, row.matricula);
+              const additional = additionalValues[String(row.matricula)] || { valor: 0, observacao: '' };
+              return <tr className={row.vinculado ? '' : 'conference-row-error'} key={`${row.matricula || row.nome_completo}-${index}`}>
                 <td><span className={`conference-status ${row.vinculado ? 'ok' : 'error'}`}>{row.vinculado ? 'Pronto' : 'Ignorado'}</span></td>
                 <td>{row.matricula || '-'}</td><td>{row.nome_completo}</td><td>{formatArmazemFuncao(row.funcao_armazem || row.funcao_rv)}</td><td>{row.competencia}</td>
-                {isArmazem ? <><td>{formatNumber(row.pontos)}</td><td>{formatMoney(row.valor_tarefas)}</td><td>{formatMoney(row.valor_indicadores)}</td><td>{row.ajustes?.length ? row.ajustes.map((item) => `${item.atividade}: ${formatMoney(item.total)}`).join('; ') : '-'}</td></> : <><td>{formatNumber(row.caixas)}</td><td>{formatNumber(row.entregas)}</td><td>{formatNumber(row.mapas)}</td></>}
-                <td>{formatMoney(row.valor_total_previsto)}</td>
+                {isArmazem ? <><td>{formatNumber(row.pontos)}</td><td>{formatMoney(row.valor_tarefas)}</td><td>{reviews.length ? <div className="indicator-review-list">{reviews.map((indicator, indicatorIndex) => <label key={`${indicator.nome}-${indicatorIndex}`}><input type="checkbox" checked={indicator.confirmado} disabled={!row.vinculado || publishing} onChange={(event) => updateIndicator(row.matricula, indicatorIndex, { confirmado: event.target.checked })} /><span>{indicator.nome}</span><input type="number" min="0" step="0.01" value={indicator.valor} disabled={!row.vinculado || !indicator.confirmado || publishing} onChange={(event) => updateIndicator(row.matricula, indicatorIndex, { valor: event.target.value })} /></label>)}</div> : <span className="muted-value">Sem meta externa</span>}</td><td><div className="additional-value-fields"><input type="number" min="0" step="0.01" placeholder="Valor" value={additional.valor} disabled={!row.vinculado || publishing} onChange={(event) => setAdditionalValues((current) => ({ ...current, [String(row.matricula)]: { ...additional, valor: event.target.value } }))} /><input type="text" maxLength="500" placeholder="Observação obrigatória" value={additional.observacao} disabled={!row.vinculado || publishing} onChange={(event) => setAdditionalValues((current) => ({ ...current, [String(row.matricula)]: { ...additional, observacao: event.target.value } }))} /></div></td><td>{row.ajustes?.length ? row.ajustes.map((item) => `${item.atividade}: ${formatMoney(item.total)}`).join('; ') : '-'}</td></> : <><td>{formatNumber(row.caixas)}</td><td>{formatNumber(row.entregas)}</td><td>{formatNumber(row.mapas)}</td></>}
+                <td>{formatMoney(asNumber(row.valor_total_previsto) + indicatorTotal + asNumber(additional.valor))}</td>
               </tr>
-            ))}
+            })}
           </tbody>
         </table>
       </div>
       <div className="import-conference-approval">
-        <p><strong>Ao confirmar, os valores válidos serão publicados na competência correspondente.</strong></p>
-        <button type="button" onClick={onApprove} disabled={publishing || !valid}>{publishing ? 'Publicando...' : `Aprovar e publicar ${valid} registro(s)`}</button>
+        <p><strong>{missingAdditionalNotes ? `Informe a observação de ${missingAdditionalNotes} valor(es) adicional(is) antes de publicar.` : 'Ao confirmar, os valores válidos serão publicados na competência correspondente.'}</strong></p>
+        <button type="button" onClick={() => onApprove(isArmazem ? indicatorReviews : undefined, isArmazem ? additionalValues : undefined)} disabled={publishing || !valid || missingAdditionalNotes > 0}>{publishing ? 'Publicando...' : `Aprovar e publicar ${valid} registro(s)`}</button>
       </div>
     </section>
   );
@@ -983,6 +1055,7 @@ function AdminArmazemPanel() {
   const [publishingImport, setPublishingImport] = useState(false);
   const [onDemandFile, setOnDemandFile] = useState(null);
   const [operatorFile, setOperatorFile] = useState(null);
+  const [importCompetencia, setImportCompetencia] = useState('');
 
   const options = useMemo(() => {
     const uniq = (key) => [...new Set(rows.map((row) => row[key]).filter(Boolean))].sort();
@@ -1050,10 +1123,10 @@ function AdminArmazemPanel() {
     }
   }
 
-  async function approveWarehouseConference() {
+  async function approveWarehouseConference(indicatorReviews, additionalValues) {
     setPublishingImport(true);
     try {
-      const result = await approveOnDemandArmazemImport(pendingImport.preview_token);
+      const result = await approveOnDemandArmazemImport(pendingImport.preview_token, indicatorReviews, additionalValues);
       setPendingImport(null);
       setImportReport(null);
       await refresh();
@@ -1070,10 +1143,14 @@ function AdminArmazemPanel() {
       setMessage('Selecione o relatório de produtividade do armazém.');
       return;
     }
+    if (!importCompetencia) {
+      setMessage('Selecione a competência do arquivo antes de iniciar a conferência.');
+      return;
+    }
     setImporting(true);
     setImportReport(null);
     try {
-      const result = await importOnDemandArmazemFile(onDemandFile, operatorFile);
+      const result = await importOnDemandArmazemFile(onDemandFile, operatorFile, importCompetencia);
       setImportReport(result.report || null);
       setPendingImport(result);
       setMessage(result.message || 'Arquivos lidos e cruzados. Confira antes de publicar.');
@@ -1098,6 +1175,10 @@ function AdminArmazemPanel() {
   return (
     <>
       <div className="prod-actions">
+        <label className="prod-competencia-action">
+          Competência do arquivo
+          <input type="month" value={importCompetencia} disabled={importing || publishingImport} onChange={(event) => setImportCompetencia(event.target.value)} required />
+        </label>
         <label className={`prod-file-action ${importing ? 'disabled' : ''}`}>
           {onDemandFile ? `Arquivo principal: ${onDemandFile.name}` : 'Selecionar arquivo On Demand (.csv)'}
           <input type="file" accept=".csv,text/csv" disabled={importing} onChange={(event) => setOnDemandFile(event.target.files?.[0] || null)} />
@@ -1106,7 +1187,7 @@ function AdminArmazemPanel() {
           {operatorFile ? `Atividades: ${operatorFile.name}` : 'Monitorar Tarefas — opcional (.csv)'}
           <input type="file" accept=".csv,text/csv" disabled={importing} onChange={(event) => setOperatorFile(event.target.files?.[0] || null)} />
         </label>
-        <button type="button" disabled={importing || !onDemandFile} onClick={importOnDemand}>{importing ? 'Calculando RV...' : 'Conferir RV antes de publicar'}</button>
+        <button type="button" disabled={importing || !onDemandFile || !importCompetencia} onClick={importOnDemand}>{importing ? 'Calculando RV...' : 'Conferir RV antes de publicar'}</button>
         <button type="button" onClick={() => { setDetail(null); setEditing(false); setCreating(true); }}>Novo lançamento manual</button>
         <button onClick={() => exportAdminProdutividadeArmazem(filters)}>Exportar relatório</button>
       </div>

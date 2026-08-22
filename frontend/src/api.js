@@ -325,10 +325,14 @@ export async function importOnDemandArmazemFile(file, operatorFile, competencia 
   return body;
 }
 
-export async function approveOnDemandArmazemImport(previewToken) {
+export async function approveOnDemandArmazemImport(previewToken, indicatorReviews = {}, additionalValues = {}) {
   return request('/produtividade-armazem/importar/aprovar', {
     method: 'POST',
-    body: JSON.stringify({ preview_token: previewToken })
+    body: JSON.stringify({
+      preview_token: previewToken,
+      indicator_reviews: indicatorReviews,
+      additional_values: additionalValues
+    })
   });
 }
 
