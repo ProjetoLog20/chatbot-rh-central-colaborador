@@ -182,6 +182,35 @@ test('indicadores externos só entram no cálculo depois da confirmação manual
   assert.equal(confirmedRow.status_auditoria, 'ok');
 });
 
+test('conferência oferece indicadores padrão quando a competência ainda não possui regra específica', () => {
+  const buildRow = () => {
+    const row = buildRows([
+      { usuario: 'OPERADOR TESTE', atividade: 'Retrabalho/PTL', observacao: '10', finalizacao: '01/08/2026 08:00', status_tarefa: 'Finalizado' }
+    ], { competencia: '08/2026' }).rows[0];
+    applyCollaboratorRoleRules(row, { matricula: '123', cargo: 'Operador de Empilhadeira' });
+    return row;
+  };
+  const colaborador = { matricula: '123', cargo: 'Operador de Empilhadeira' };
+  const officialRules = { collaborators: {} };
+
+  const pendingRow = buildRow();
+  const pending = applyCombinedRules(pendingRow, colaborador, null, officialRules);
+  assert.deepEqual(pending.availableIndicators, [
+    { nome: 'Eficiência de carregamento', valor: 50 },
+    { nome: 'TMA', valor: 100 },
+    { nome: 'Eficiência de descarga', valor: 50 }
+  ]);
+  assert.equal(pending.indicatorsTotal, 0);
+  assert.equal(pendingRow.status_auditoria, 'pendente_indicadores');
+
+  const confirmedRow = buildRow();
+  const confirmed = applyCombinedRules(confirmedRow, colaborador, null, officialRules, {
+    123: [{ nome: 'TMA', valor: 100, confirmado: true }]
+  });
+  assert.equal(confirmed.indicatorsTotal, 100);
+  assert.deepEqual(confirmed.selectedIndicators, [{ nome: 'TMA', valor: 100 }]);
+});
+
 test('relatório WMS também exige confirmação manual antes de somar metas externas', () => {
   const officialRules = {
     collaborators: {

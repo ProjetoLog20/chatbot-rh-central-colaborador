@@ -14,6 +14,25 @@ const WMS_DAILY_RV_RANGES = [
   { faixa: 'Faixa 4', min: 20751, max: Number.POSITIVE_INFINITY, rate: 0.002786 }
 ];
 
+const DEFAULT_WAREHOUSE_INDICATORS = {
+  ajudante: [
+    { nome: 'Eficiência de carregamento', valor: 50 },
+    { nome: 'Ressuprimento', valor: 50 },
+    { nome: 'TMA', valor: 100 }
+  ],
+  operador: [
+    { nome: 'Eficiência de carregamento', valor: 50 },
+    { nome: 'TMA', valor: 100 },
+    { nome: 'Eficiência de descarga', valor: 50 }
+  ],
+  geral: [
+    { nome: 'Eficiência de carregamento', valor: 50 },
+    { nome: 'Ressuprimento', valor: 50 },
+    { nome: 'TMA', valor: 100 },
+    { nome: 'Eficiência de descarga', valor: 50 }
+  ]
+};
+
 const armazemColumns = [
   'importacao_id',
   'colaborador_id',
@@ -494,13 +513,24 @@ function parseOriginal(row) {
   }
 }
 
+function defaultManualIndicators(colaborador = {}) {
+  const role = normalizeName(`${colaborador.cargo || ''} ${colaborador.tipo_colaborador || ''} ${colaborador.funcao_armazem || ''}`);
+  const group = role.includes('operador') || role.includes('empilhadeira')
+    ? 'operador'
+    : (role.includes('ajudante') || role.includes('amarrador') ? 'ajudante' : 'geral');
+  return DEFAULT_WAREHOUSE_INDICATORS[group].map((indicator) => ({ ...indicator }));
+}
+
 function resolveManualIndicators(colaborador, officialRules, indicatorReviews = {}) {
   const matricula = trim(colaborador.matricula);
   const rule = officialRules.collaborators[matricula] || {};
-  const availableIndicators = (Array.isArray(rule.indicators) ? rule.indicators : []).map((item) => ({
+  const configuredIndicators = (Array.isArray(rule.indicators) ? rule.indicators : []).map((item) => ({
     nome: trim(item.nome || item.type),
     valor: Number(numberValue(item.valor ?? item.value).toFixed(2))
   })).filter((item) => item.nome);
+  const availableIndicators = configuredIndicators.length
+    ? configuredIndicators
+    : defaultManualIndicators(colaborador);
   const reviews = indicatorReviews?.[matricula];
   const indicatorsReviewed = Array.isArray(reviews);
   const selectedIndicators = availableIndicators.flatMap((candidate) => {
@@ -1023,6 +1053,7 @@ async function importOnDemand(file, options = {}) {
           });
           report.preview.push({
             nome_completo: match.colaborador.nome_completo,
+            competencia: row.competencia,
             pontos: row.pontos,
             valor_total_previsto: 0,
             funcao_armazem: row.funcao_armazem,
@@ -1069,6 +1100,7 @@ async function importOnDemand(file, options = {}) {
       }
       report.preview.push({
         nome_completo: row.nome_completo,
+        competencia: row.competencia,
         pontos: row.pontos,
         valor_total_previsto: row.valor_total_previsto,
         funcao_armazem: row.funcao_armazem,
