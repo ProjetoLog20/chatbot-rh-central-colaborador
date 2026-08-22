@@ -763,6 +763,95 @@ function buildAdditionalValueState(rows = []) {
   ]));
 }
 
+function WarehouseConferenceCard({ row, reviews, additional, indicatorTotal, publishing, onIndicatorChange, onAdditionalChange }) {
+  const finalTotal = asNumber(row.valor_total_previsto) + indicatorTotal + asNumber(additional.valor);
+  const adjustments = Array.isArray(row.ajustes) ? row.ajustes : [];
+
+  return (
+    <article className={`warehouse-conference-card${row.vinculado ? '' : ' is-ignored'}`}>
+      <header className="warehouse-conference-card-heading">
+        <div>
+          <span className={`conference-status ${row.vinculado ? 'ok' : 'error'}`}>{row.vinculado ? 'Pronto para conferir' : 'Ignorado'}</span>
+          <h3>{row.nome_completo}</h3>
+          <p>Matrícula {row.matricula || '-'} · {formatArmazemFuncao(row.funcao_armazem || row.funcao_rv)} · {row.competencia}</p>
+        </div>
+        <div className="warehouse-conference-total">
+          <span>Total após a conferência</span>
+          <strong>{formatMoney(finalTotal)}</strong>
+        </div>
+      </header>
+
+      <div className="warehouse-conference-base-values">
+        <div><span>Tarefas/Pontos</span><strong>{formatNumber(row.pontos)}</strong></div>
+        <div><span>Valor das tarefas</span><strong>{formatMoney(row.valor_tarefas)}</strong></div>
+        <div><span>Indicadores marcados</span><strong>{formatMoney(indicatorTotal)}</strong></div>
+        <div><span>Valor adicional</span><strong>{formatMoney(additional.valor)}</strong></div>
+      </div>
+
+      {row.vinculado ? (
+        <div className="warehouse-conference-editors">
+          <section className="warehouse-indicator-editor" aria-label={`Indicadores de ${row.nome_completo}`}>
+            <div className="warehouse-editor-heading">
+              <div><span>MARCAÇÃO MANUAL</span><h4>TMA e demais indicadores</h4></div>
+              <p>Marque somente quando a meta tiver sido atingida. O valor pode ser corrigido antes da publicação.</p>
+            </div>
+            {reviews.length ? (
+              <div className="warehouse-indicator-options">
+                {reviews.map((indicator, indicatorIndex) => (
+                  <label className={`warehouse-indicator-option${indicator.confirmado ? ' is-confirmed' : ''}`} key={`${indicator.nome}-${indicatorIndex}`}>
+                    <input
+                      type="checkbox"
+                      checked={indicator.confirmado}
+                      disabled={publishing}
+                      aria-label={`${indicator.nome}: bateu a meta`}
+                      onChange={(event) => onIndicatorChange(row.matricula, indicatorIndex, { confirmado: event.target.checked })}
+                    />
+                    <span className="warehouse-indicator-copy">
+                      <strong>{indicator.nome}</strong>
+                      <small>{indicator.confirmado ? 'Meta atingida e incluída no total' : 'Marque se bateu a meta'}</small>
+                    </span>
+                    <span className="warehouse-indicator-value">
+                      <small>Valor do indicador</small>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={indicator.valor}
+                        disabled={!indicator.confirmado || publishing}
+                        aria-label={`Valor de ${indicator.nome}`}
+                        onChange={(event) => onIndicatorChange(row.matricula, indicatorIndex, { valor: event.target.value })}
+                      />
+                    </span>
+                  </label>
+                ))}
+              </div>
+            ) : <div className="prod-warning">Nenhum indicador foi configurado para este colaborador. Não publique antes de revisar o cadastro.</div>}
+          </section>
+
+          <section className="warehouse-additional-editor">
+            <div className="warehouse-editor-heading">
+              <div><span>AJUSTE MANUAL</span><h4>Valor adicional</h4></div>
+              <p>Use apenas para um valor que não esteja nas tarefas ou nos indicadores.</p>
+            </div>
+            <div className="warehouse-additional-inputs">
+              <label>
+                Valor adicional
+                <input type="number" min="0" step="0.01" placeholder="R$ 0,00" value={additional.valor} disabled={publishing} onChange={(event) => onAdditionalChange(row.matricula, 'valor', event.target.value)} />
+              </label>
+              <label>
+                Observação {asNumber(additional.valor) > 0 ? '(obrigatória)' : ''}
+                <input type="text" maxLength="500" placeholder="Explique o motivo do valor adicional" value={additional.observacao} disabled={publishing} onChange={(event) => onAdditionalChange(row.matricula, 'observacao', event.target.value)} />
+              </label>
+            </div>
+          </section>
+        </div>
+      ) : <div className="prod-warning">Este registro não possui vínculo válido e não será publicado.</div>}
+
+      {adjustments.length ? <div className="warehouse-conference-adjustments"><strong>Ajustes das tarefas:</strong> {adjustments.map((item) => `${item.atividade}: ${formatMoney(item.total)}`).join('; ')}</div> : null}
+    </article>
+  );
+}
+
 function ImportConference({ variant, data, publishing, onApprove, onCancel }) {
   const isArmazem = variant === 'armazem';
   const report = isArmazem ? data?.report : data?.preview;
@@ -789,6 +878,14 @@ function ImportConference({ variant, data, publishing, onApprove, onCancel }) {
     }));
   }
 
+  function updateAdditionalValue(matricula, field, value) {
+    const key = String(matricula);
+    setAdditionalValues((current) => ({
+      ...current,
+      [key]: { ...(current[key] || { valor: '', observacao: '' }), [field]: value }
+    }));
+  }
+
   return (
     <section className="import-conference">
       <div className="import-conference-heading">
@@ -805,24 +902,31 @@ function ImportConference({ variant, data, publishing, onApprove, onCancel }) {
       </div>
       {issues.length ? <div className="prod-warning">Existem {issues.length} inconsistência(s). Linhas sem vínculo não serão publicadas.</div> : null}
       {isArmazem && availableIndicatorCount ? <div className="prod-warning">TMA e demais metas não vêm no relatório. Marque somente os indicadores comprovados; apenas os marcados serão somados ao valor final.</div> : null}
-      <div className="table-scroll import-conference-table">
-        <table>
-          <thead><tr><th>Situação</th><th>Matrícula</th><th>Nome</th><th>Função</th><th>Competência</th>{isArmazem ? <><th>Tarefas/Pontos</th><th>Valor tarefas</th><th>Indicadores</th><th>Valores adicionais</th><th>Ajustes</th></> : <><th>Caixas</th><th>Entregas</th><th>Mapas</th></>}<th>Valor final</th></tr></thead>
-          <tbody>
-            {rows.map((row, index) => {
-              const reviews = indicatorReviews[String(row.matricula)] || [];
-              const indicatorTotal = confirmedIndicatorTotal(indicatorReviews, row.matricula);
-              const additional = additionalValues[String(row.matricula)] || { valor: 0, observacao: '' };
-              return <tr className={row.vinculado ? '' : 'conference-row-error'} key={`${row.matricula || row.nome_completo}-${index}`}>
-                <td><span className={`conference-status ${row.vinculado ? 'ok' : 'error'}`}>{row.vinculado ? 'Pronto' : 'Ignorado'}</span></td>
-                <td>{row.matricula || '-'}</td><td>{row.nome_completo}</td><td>{formatArmazemFuncao(row.funcao_armazem || row.funcao_rv)}</td><td>{row.competencia}</td>
-                {isArmazem ? <><td>{formatNumber(row.pontos)}</td><td>{formatMoney(row.valor_tarefas)}</td><td>{reviews.length ? <div className="indicator-review-list">{reviews.map((indicator, indicatorIndex) => <label key={`${indicator.nome}-${indicatorIndex}`}><input type="checkbox" checked={indicator.confirmado} disabled={!row.vinculado || publishing} onChange={(event) => updateIndicator(row.matricula, indicatorIndex, { confirmado: event.target.checked })} /><span>{indicator.nome}</span><input type="number" min="0" step="0.01" value={indicator.valor} disabled={!row.vinculado || !indicator.confirmado || publishing} onChange={(event) => updateIndicator(row.matricula, indicatorIndex, { valor: event.target.value })} /></label>)}</div> : <span className="muted-value">Sem meta externa</span>}</td><td><div className="additional-value-fields"><input type="number" min="0" step="0.01" placeholder="Valor" value={additional.valor} disabled={!row.vinculado || publishing} onChange={(event) => setAdditionalValues((current) => ({ ...current, [String(row.matricula)]: { ...additional, valor: event.target.value } }))} /><input type="text" maxLength="500" placeholder="Observação obrigatória" value={additional.observacao} disabled={!row.vinculado || publishing} onChange={(event) => setAdditionalValues((current) => ({ ...current, [String(row.matricula)]: { ...additional, observacao: event.target.value } }))} /></div></td><td>{row.ajustes?.length ? row.ajustes.map((item) => `${item.atividade}: ${formatMoney(item.total)}`).join('; ') : '-'}</td></> : <><td>{formatNumber(row.caixas)}</td><td>{formatNumber(row.entregas)}</td><td>{formatNumber(row.mapas)}</td></>}
-                <td>{formatMoney(asNumber(row.valor_total_previsto) + indicatorTotal + asNumber(additional.valor))}</td>
-              </tr>
-            })}
-          </tbody>
-        </table>
-      </div>
+      {isArmazem ? (
+        <div className="warehouse-conference-list">
+          {rows.map((row, index) => (
+            <WarehouseConferenceCard
+              key={`${row.matricula || row.nome_completo}-${index}`}
+              row={row}
+              reviews={indicatorReviews[String(row.matricula)] || []}
+              additional={additionalValues[String(row.matricula)] || { valor: '', observacao: '' }}
+              indicatorTotal={confirmedIndicatorTotal(indicatorReviews, row.matricula)}
+              publishing={publishing}
+              onIndicatorChange={updateIndicator}
+              onAdditionalChange={updateAdditionalValue}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="table-scroll import-conference-table">
+          <table>
+            <thead><tr><th>Situação</th><th>Matrícula</th><th>Nome</th><th>Função</th><th>Competência</th><th>Caixas</th><th>Entregas</th><th>Mapas</th><th>Valor final</th></tr></thead>
+            <tbody>
+              {rows.map((row, index) => <tr className={row.vinculado ? '' : 'conference-row-error'} key={`${row.matricula || row.nome_completo}-${index}`}><td><span className={`conference-status ${row.vinculado ? 'ok' : 'error'}`}>{row.vinculado ? 'Pronto' : 'Ignorado'}</span></td><td>{row.matricula || '-'}</td><td>{row.nome_completo}</td><td>{formatArmazemFuncao(row.funcao_armazem || row.funcao_rv)}</td><td>{row.competencia}</td><td>{formatNumber(row.caixas)}</td><td>{formatNumber(row.entregas)}</td><td>{formatNumber(row.mapas)}</td><td>{formatMoney(row.valor_total_previsto)}</td></tr>)}
+            </tbody>
+          </table>
+        </div>
+      )}
       <div className="import-conference-approval">
         <p><strong>{missingAdditionalNotes ? `Informe a observação de ${missingAdditionalNotes} valor(es) adicional(is) antes de publicar.` : 'Ao confirmar, os valores válidos serão publicados na competência correspondente.'}</strong></p>
         <button type="button" onClick={() => onApprove(isArmazem ? indicatorReviews : undefined, isArmazem ? additionalValues : undefined)} disabled={publishing || !valid || missingAdditionalNotes > 0}>{publishing ? 'Publicando...' : `Aprovar e publicar ${valid} registro(s)`}</button>
