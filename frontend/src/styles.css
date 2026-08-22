@@ -2185,11 +2185,19 @@ tr:not(:last-child) td {
 
 .prod-task-breakdown {
   margin-top: 1.25rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .prod-task-breakdown h3 {
   margin-bottom: 0.75rem;
   color: #003B68;
+  overflow-wrap: anywhere;
+}
+
+.prod-task-table {
+  min-width: 0;
+  max-width: 100%;
 }
 
 @media (max-width: 720px) {
@@ -3481,7 +3489,6 @@ tr:not(:last-child) td {
   width: 100%;
   min-width: 0;
   max-width: 1200px;
-  overflow: hidden;
 }
 
 .produtividade-page > *,
@@ -5171,6 +5178,105 @@ tr:not(:last-child) td {
   .produtividade-page .prod-warning,
   .produtividade-page .prod-info-note {
     overflow-wrap: anywhere;
+  }
+
+  .prod-detail {
+    min-width: 0;
+    max-width: 100%;
+    padding: 0.85rem;
+  }
+
+  .prod-detail-heading {
+    flex-direction: column;
+  }
+
+  .prod-metric-grid,
+  .prod-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .prod-metric strong,
+  .prod-info-grid strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .prod-task-breakdown h3 {
+    font-size: 1.2rem;
+    line-height: 1.2;
+  }
+
+  .prod-task-table {
+    overflow: visible;
+    padding: 0.65rem;
+  }
+
+  .prod-task-table table,
+  .prod-task-table tbody,
+  .prod-task-table tr,
+  .prod-task-table td {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .prod-task-table table {
+    border-collapse: separate;
+  }
+
+  .prod-task-table thead {
+    display: none;
+  }
+
+  .prod-task-table tbody {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .prod-task-table tr {
+    border: 1px solid #DCE5EC;
+    border-radius: 10px;
+    background: #FFFFFF;
+    padding: 0.75rem;
+    box-shadow: 0 2px 7px rgba(15, 23, 42, 0.05);
+  }
+
+  .prod-task-table td {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+    border-bottom: 1px solid #E2E8F0;
+    padding: 0.55rem 0;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .prod-task-table td::before {
+    content: attr(data-label);
+    color: #64748B;
+    font-size: 0.75rem;
+    font-weight: 900;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .prod-task-table td:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .prod-task-table .prod-task-name {
+    grid-template-columns: 1fr;
+    padding-top: 0;
+    color: #003B68;
+    font-size: 1rem;
+    font-weight: 900;
+    text-align: left;
+  }
+
+  .prod-task-table .prod-task-name::before {
+    margin-bottom: -0.25rem;
   }
 
   .prod-armazem-goals-heading,
