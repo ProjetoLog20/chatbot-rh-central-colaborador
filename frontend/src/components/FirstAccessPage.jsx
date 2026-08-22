@@ -34,8 +34,8 @@ export default function FirstAccessPage({ onComplete }) {
       return;
     }
 
-    if (novaSenha.length < 10) {
-      setError('A nova senha deve ter pelo menos 10 caracteres.');
+    if (novaSenha.length < 6) {
+      setError('A nova senha deve ter pelo menos 6 caracteres.');
       return;
     }
 
@@ -103,12 +103,13 @@ export default function FirstAccessPage({ onComplete }) {
               type="password"
               value={novaSenha}
               onChange={(e) => setNovaSenha(e.target.value)}
+              minLength={6}
               required
             />
           </label>
 
           <div className="password-tips">
-            <span>Use pelo menos 10 caracteres.</span>
+            <span>Use pelo menos 6 caracteres.</span>
             <span>Não reutilize a senha temporária recebida.</span>
           </div>
 
@@ -118,6 +119,7 @@ export default function FirstAccessPage({ onComplete }) {
               type="password"
               value={confirmarSenha}
               onChange={(e) => setConfirmarSenha(e.target.value)}
+              minLength={6}
               required
             />
           </label>

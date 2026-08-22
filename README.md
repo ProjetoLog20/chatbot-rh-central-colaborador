@@ -104,7 +104,7 @@ Em producão, o backend serve o frontend gerado em `frontend/dist` e mantém as
 No cadastro manual e para novos usuários importados sem senha informada, o servidor gera uma senha temporária individual. No reset administrativo, a senha temporária é redefinida para `log20`. No primeiro login:
 1. O colaborador faz login com sua matrícula e a senha temporária.
 2. O sistema o redireciona para a página de mudança obrigatória de senha.
-3. A nova senha deve ter pelo menos 10 caracteres e não pode repetir a senha temporária.
+3. A nova senha deve ter pelo menos 6 caracteres, sem exigir uma combinação de letras e números, e não pode repetir a senha temporária.
 4. Após a mudança bem-sucedida, ele é redirecionado para a página inicial.
 
 ### Administrador: Resetar Senha de Colaborador
