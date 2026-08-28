@@ -18,6 +18,7 @@ import {
   updateAdminProdutividadeArmazemRegistro,
   updateAdminProdutividadeRegistro
 } from '../api.js';
+import { countPendingIndicatorDecisions } from './produtividadeConference.js';
 
 const rotaMetricFields = [
   ['competencia', 'Período', ''],
@@ -961,7 +962,7 @@ function ImportConference({ variant, data, publishing, onApprove, onCancel }) {
     ? [...(report?.nao_encontrados || []), ...(report?.tarefas_sem_valor || []), ...(report?.excluidos_regra_oficial || [])]
     : [...(report?.notFound || []), ...(report?.errors || []), ...(report?.periodAlerts || [])];
   const availableIndicatorCount = Object.values(indicatorReviews).reduce((sum, reviews) => sum + reviews.length, 0);
-  const pendingIndicatorDecisions = rows.filter((row) => row.vinculado).reduce((sum, row) => sum + (indicatorReviews[String(row.matricula)] || []).filter((indicator) => !indicator.decisao).length, 0);
+  const pendingIndicatorDecisions = countPendingIndicatorDecisions(variant, rows, indicatorReviews);
   const missingAdditionalNotes = Object.values(additionalValues).filter((item) => asNumber(item.valor) > 0 && !String(item.observacao || '').trim()).length;
   const missingCorrectionNotes = Object.values(manualCorrections).filter((item) => hasManualCorrection(item) && !String(item.observacao || '').trim()).length;
 
