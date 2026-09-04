@@ -57,9 +57,13 @@ body:has(.authenticated-main) {
     inset: 0 auto 0 0;
     display: flex;
     width: 248px !important;
-    min-height: 100vh;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
     padding: 20px 16px 18px !important;
     flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
     color: #fff;
     background: radial-gradient(circle at 15% 0, rgba(23, 160, 230, 0.24), transparent 17rem), linear-gradient(180deg, #073b65 0%, #052f53 58%, #042746 100%) !important;
     box-shadow: 14px 0 36px rgba(2, 37, 66, 0.14) !important;
